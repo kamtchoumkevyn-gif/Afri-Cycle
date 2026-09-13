@@ -22,7 +22,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             phoneNumber TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
+            passwordHash TEXT NOT NULL,
             role TEXT NOT NULL,
             guardianPhoneNumber TEXT,
             verified BOOLEAN DEFAULT 0,

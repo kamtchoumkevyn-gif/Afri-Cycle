@@ -1,0 +1,221 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login Page</title>
+
+    <style>
+        /* Remove default spacing */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Page background */
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+        }
+
+        /* Login card */
+        .login-card {
+            width: 350px;
+            padding: 40px 30px;
+            background: white;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+
+            /* Animation */
+            animation: cardAnimation 0.8s ease;
+        }
+
+        /* Card animation */
+        @keyframes cardAnimation {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Circular avatar */
+        .avatar {
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 20px;
+
+            border-radius: 50%;
+            background: #4facfe;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            font-size: 45px;
+            color: white;
+
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Title */
+        h2 {
+            margin-bottom: 25px;
+            color: #333;
+        }
+
+        /* Input container */
+        .input-box {
+            margin-bottom: 15px;
+        }
+
+        /* Inputs */
+        .input-box input {
+            width: 100%;
+            padding: 13px 15px;
+
+            border: 1px solid #ddd;
+            border-radius: 10px;
+
+            outline: none;
+            font-size: 15px;
+
+            transition: 0.3s;
+        }
+
+        /* Input animation when clicked */
+        .input-box input:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 8px rgba(79, 172, 254, 0.3);
+        }
+
+        /* Login button */
+        .login-button {
+            width: 100%;
+            padding: 13px;
+
+            margin-top: 10px;
+
+            border: none;
+            border-radius: 10px;
+
+            background: #4facfe;
+            color: white;
+
+            font-size: 16px;
+            font-weight: bold;
+
+            cursor: pointer;
+
+            transition: 0.3s;
+        }
+
+        /* Button hover animation */
+        .login-button:hover {
+            background: #168cf0;
+            transform: translateY(-2px);
+        }
+
+        /* Links */
+        .links {
+            margin-top: 20px;
+        }
+
+        .links a {
+            display: block;
+            margin: 10px 0;
+
+            text-decoration: none;
+            color: #4facfe;
+
+            font-size: 14px;
+
+            transition: 0.3s;
+        }
+
+        .links a:hover {
+            color: #168cf0;
+            text-decoration: underline;
+        }
+
+        /* Create account button */
+        .create-account {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .create-account a {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .create-account a:hover {
+            color: #4facfe;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Login Card -->
+    <div class="login-card">
+
+        <!-- Avatar -->
+        <div class="avatar">
+            👤
+        </div>
+
+        <!-- Title -->
+        <h2>Welcome Back</h2>
+
+        <!-- Username -->
+        <div class="input-box">
+            <input
+                type="text"
+                placeholder="Username"
+                required
+            >
+        </div>
+
+        <!-- Password -->
+        <div class="input-box">
+            <input
+                type="password"
+                placeholder="Password"
+                required
+            >
+        </div>
+
+        <!-- Login Button -->
+        <button class="login-button">
+            Login
+        </button>
+
+        <!-- Links -->
+        <div class="links">
+            <a href="#">Forgot Password?</a>
+        </div>
+
+        <!-- Create Account -->
+        <div class="create-account">
+            <p>Don't have an account?</p>
+            <a href="#">Create Account</a>
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,3238 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Afrique Cycle - Connexion</title>
+
+
+    <!-- =================================================
+         CSS
+    ================================================== -->
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --green: #168b55;
+            --green-dark: #0d6840;
+            --green-light: #e8f7ef;
+            --text: #17231d;
+            --muted: #718078;
+            --border: #dce6df;
+            --white: #ffffff;
+            --danger: #c93d3d;
+        }
+
+
+        /* ==============================
+           BODY
+        =============================== */
+
+        body {
+
+            min-height: 100vh;
+
+            font-family:
+                "Segoe UI",
+                Arial,
+                sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #eef8f2,
+                    #dceee5
+                );
+
+            color: var(--text);
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            padding: 25px;
+
+        }
+
+
+        /* ==============================
+           PRINCIPAL
+        =============================== */
+
+        .page {
+
+            width: min(1120px, 100%);
+
+            min-height: 680px;
+
+            background: white;
+
+            border-radius: 28px;
+
+            overflow: hidden;
+
+            box-shadow:
+                0 25px 70px
+                rgba(23, 63, 43, .16);
+
+            display: grid;
+
+            grid-template-columns:
+                1.05fr .95fr;
+
+        }
+
+
+        /* ==============================
+           CARTE
+        =============================== */
+
+        .login-card {
+
+            padding: 42px 50px;
+
+            animation:
+                appear .35s ease;
+
+        }
+
+
+        .hidden-screen {
+            display: none;
+        }
+
+
+        @keyframes appear {
+
+            from {
+
+                opacity: 0;
+
+                transform:
+                    translateY(8px);
+
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform:
+                    translateY(0);
+
+            }
+
+        }
+
+
+        /* ==============================
+           LOGO
+        =============================== */
+
+        .brand {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 13px;
+
+            margin-bottom: 32px;
+
+        }
+
+
+        .logo {
+
+            width: 48px;
+
+            height: 48px;
+
+            border-radius: 15px;
+
+            display: grid;
+
+            place-items: center;
+
+            color: white;
+
+            background:
+                var(--green);
+
+            font-size: 26px;
+
+            box-shadow:
+                0 8px 20px
+                rgba(22,139,85,.25);
+
+        }
+
+
+        .brand h1 {
+            font-size: 21px;
+        }
+
+
+        .brand p {
+
+            color: var(--muted);
+
+            font-size: 12px;
+
+            margin-top: 3px;
+
+        }
+
+
+        /* ==============================
+           WELCOME
+        =============================== */
+
+        .welcome h2 {
+
+            font-size: 31px;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .welcome p {
+
+            color: var(--muted);
+
+            font-size: 14px;
+
+            margin-bottom: 24px;
+
+        }
+
+
+        /* ==============================
+           VENDEUR / ACHETEUR
+        =============================== */
+
+        .role-choice {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 12px;
+
+            margin-bottom: 25px;
+
+        }
+
+
+        .role-card {
+
+            border:
+                1.5px solid
+                var(--border);
+
+            background: #fbfdfc;
+
+            border-radius: 17px;
+
+            padding: 15px;
+
+            text-align: left;
+
+            cursor: pointer;
+
+            transition: .25s;
+
+            color: var(--text);
+
+        }
+
+
+        .role-card:hover {
+
+            transform:
+                translateY(-2px);
+
+            border-color:
+                #9acbb2;
+
+        }
+
+
+        .role-card.active {
+
+            background:
+                var(--green-light);
+
+            border-color:
+                var(--green);
+
+            box-shadow:
+                0 7px 20px
+                rgba(22,139,85,.10);
+
+        }
+
+
+        .role-icon {
+
+            display: block;
+
+            font-size: 24px;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .role-title {
+
+            display: block;
+
+            font-weight: 750;
+
+            font-size: 14px;
+
+        }
+
+
+        .role-description {
+
+            display: block;
+
+            color: var(--muted);
+
+            font-size: 11px;
+
+            margin-top: 4px;
+
+        }
+
+
+        /* ==============================
+           FORMULAIRE
+        =============================== */
+
+        .form-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 13px;
+
+        }
+
+
+        .field {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 6px;
+
+        }
+
+
+        .field.full {
+
+            grid-column:
+                1 / -1;
+
+        }
+
+
+        .field label {
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+        }
+
+
+        .field input {
+
+            width: 100%;
+
+            height: 44px;
+
+            border:
+                1px solid
+                var(--border);
+
+            border-radius: 11px;
+
+            padding:
+                0 13px;
+
+            outline: none;
+
+            font-size: 13px;
+
+        }
+
+
+        .field input:focus {
+
+            border-color:
+                var(--green);
+
+            box-shadow:
+                0 0 0 3px
+                rgba(22,139,85,.10);
+
+        }
+
+
+        /* ==============================
+           PASSWORD
+        =============================== */
+
+        .password-box {
+
+            position: relative;
+
+        }
+
+
+        .password-box input {
+
+            padding-right: 45px;
+
+        }
+
+
+        .eye {
+
+            position: absolute;
+
+            right: 8px;
+
+            top: 5px;
+
+            width: 35px;
+
+            height: 35px;
+
+            border: 0;
+
+            background: transparent;
+
+            cursor: pointer;
+
+        }
+
+
+        .hint {
+
+            color: var(--muted);
+
+            font-size: 10px;
+
+        }
+
+
+        .error {
+
+            color: var(--danger);
+
+            font-size: 10px;
+
+            min-height: 11px;
+
+        }
+
+
+        /* ==============================
+           RESTER CONNECTÉ
+        =============================== */
+
+        .remember {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            margin-top: 12px;
+
+            color: var(--muted);
+
+            font-size: 11px;
+
+            cursor: pointer;
+
+        }
+
+
+        .remember input {
+
+            accent-color:
+                var(--green);
+
+        }
+
+
+        /* ==============================
+           BOUTONS
+        =============================== */
+
+        .submit-btn {
+
+            width: 100%;
+
+            height: 49px;
+
+            margin-top: 17px;
+
+            border: 0;
+
+            border-radius: 12px;
+
+            background:
+                var(--green);
+
+            color: white;
+
+            font-weight: 750;
+
+            cursor: pointer;
+
+            display: flex;
+
+            justify-content: center;
+
+            gap: 12px;
+
+            align-items: center;
+
+            transition: .25s;
+
+        }
+
+
+        .submit-btn:hover {
+
+            background:
+                var(--green-dark);
+
+            transform:
+                translateY(-1px);
+
+        }
+
+
+        .secondary-btn {
+
+            width: 100%;
+
+            height: 49px;
+
+            margin-top: 16px;
+
+            border:
+                1px solid
+                var(--border);
+
+            border-radius: 12px;
+
+            background: white;
+
+            color: var(--text);
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+        }
+
+
+        .secondary-btn:hover {
+
+            border-color:
+                var(--green);
+
+            color:
+                var(--green-dark);
+
+        }
+
+
+        /* ==============================
+           MESSAGES
+        =============================== */
+
+        .message,
+        .location-message {
+
+            text-align: center;
+
+            margin-top: 11px;
+
+            font-size: 12px;
+
+            min-height: 18px;
+
+        }
+
+
+        .message.success {
+
+            color:
+                var(--green-dark);
+
+        }
+
+
+        .message.fail,
+        .location-message.error {
+
+            color:
+                var(--danger);
+
+        }
+
+
+        /* ==============================
+           GPS
+        =============================== */
+
+        .location-intro {
+
+            text-align: center;
+
+            max-width: 500px;
+
+            margin:
+                15px auto 25px;
+
+        }
+
+
+        .location-icon {
+
+            width: 75px;
+
+            height: 75px;
+
+            margin:
+                0 auto 15px;
+
+            border-radius: 50%;
+
+            background:
+                var(--green-light);
+
+            display: grid;
+
+            place-items: center;
+
+        }
+
+
+        .gps-icon {
+
+            font-family:
+                "Segoe UI Symbol",
+                "Arial Unicode MS",
+                sans-serif;
+
+            font-size: 45px;
+
+            font-weight: 700;
+
+            color:
+                var(--green-dark);
+
+        }
+
+
+        .location-intro h2 {
+
+            font-size: 26px;
+
+            margin-bottom: 9px;
+
+        }
+
+
+        .location-intro p {
+
+            color: var(--muted);
+
+            font-size: 13px;
+
+            line-height: 1.6;
+
+        }
+
+
+        /* ==============================
+           GPS CHOICES
+        =============================== */
+
+        .accuracy-choice {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 13px;
+
+        }
+
+
+        .accuracy-card {
+
+            border:
+                1.5px solid
+                var(--border);
+
+            background:
+                #fbfdfc;
+
+            border-radius: 17px;
+
+            padding: 19px;
+
+            text-align: left;
+
+            cursor: pointer;
+
+            transition: .25s;
+
+            color:
+                var(--text);
+
+        }
+
+
+        .accuracy-card:hover {
+
+            transform:
+                translateY(-2px);
+
+            border-color:
+                #9acbb2;
+
+        }
+
+
+        .accuracy-card span {
+
+            display: block;
+
+            font-size: 26px;
+
+            margin-bottom: 10px;
+
+        }
+
+
+        .accuracy-card strong {
+
+            display: block;
+
+            font-size: 14px;
+
+            margin-bottom: 6px;
+
+        }
+
+
+        .accuracy-card small {
+
+            display: block;
+
+            color: var(--muted);
+
+            line-height: 1.5;
+
+            font-size: 11px;
+
+        }
+
+
+        /* ==============================
+           DASHBOARD
+        =============================== */
+
+        .dashboard-top {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            gap: 15px;
+
+            align-items: flex-start;
+
+        }
+
+
+        .dashboard-top .brand {
+
+            margin-bottom: 0;
+
+        }
+
+
+        .logout-btn {
+
+            border:
+                1px solid
+                #f0cccc;
+
+            color:
+                var(--danger);
+
+            background:
+                #fff8f8;
+
+            padding:
+                9px 12px;
+
+            border-radius: 9px;
+
+            cursor: pointer;
+
+            font-size: 11px;
+
+        }
+
+
+        .profile-box {
+
+            margin-top: 38px;
+
+            padding: 22px;
+
+            border-radius: 19px;
+
+            background:
+                var(--green-light);
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 15px;
+
+        }
+
+
+        .avatar {
+
+            width: 58px;
+
+            height: 58px;
+
+            border-radius: 50%;
+
+            display: grid;
+
+            place-items: center;
+
+            background:
+                var(--green);
+
+            color: white;
+
+            font-weight: 800;
+
+            font-size: 21px;
+
+        }
+
+
+        .small-label {
+
+            color: var(--muted);
+
+            font-size: 10px;
+
+        }
+
+
+        .profile-box h2 {
+
+            font-size: 22px;
+
+            margin: 4px 0;
+
+        }
+
+
+        .profile-box p {
+
+            color: var(--muted);
+
+            font-size: 12px;
+
+        }
+
+
+        .dashboard-grid {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 1fr;
+
+            gap: 13px;
+
+            margin-top: 18px;
+
+        }
+
+
+        .info-box {
+
+            border:
+                1px solid
+                var(--border);
+
+            border-radius: 15px;
+
+            padding: 17px;
+
+        }
+
+
+        .info-box span {
+
+            display: block;
+
+            font-size: 24px;
+
+            margin-bottom: 8px;
+
+        }
+
+
+        .info-box strong,
+        .info-box small {
+
+            display: block;
+
+        }
+
+
+        .info-box strong {
+
+            font-size: 13px;
+
+        }
+
+
+        .info-box small {
+
+            color: var(--muted);
+
+            font-size: 10px;
+
+            margin-top: 4px;
+
+        }
+
+
+        .gps-small {
+
+            font-family:
+                "Segoe UI Symbol",
+                "Arial Unicode MS",
+                sans-serif;
+
+            font-size: 29px !important;
+
+            font-weight: 700;
+
+            color:
+                var(--green-dark);
+
+        }
+
+
+        /* ==============================
+           PARTIE DROITE
+        =============================== */
+
+        .visual-panel {
+
+            position: relative;
+
+            min-height: 680px;
+
+            overflow: hidden;
+
+            background:
+
+                linear-gradient(
+                    140deg,
+                    rgba(8,75,47,.91),
+                    rgba(20,142,87,.72)
+                ),
+
+                url(
+                    "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=1200&q=80"
+                )
+
+                center / cover;
+
+            display: flex;
+
+            align-items: flex-end;
+
+        }
+
+
+        .visual-overlay {
+
+            position: absolute;
+
+            inset: 0;
+
+            background:
+                radial-gradient(
+                    circle at 75% 25%,
+                    rgba(255,255,255,.22),
+                    transparent 35%
+                );
+
+        }
+
+
+        .visual-content {
+
+            position: relative;
+
+            color: white;
+
+            padding: 55px;
+
+            max-width: 500px;
+
+        }
+
+
+        .badge {
+
+            display: inline-block;
+
+            border:
+                1px solid
+                rgba(255,255,255,.45);
+
+            background:
+                rgba(255,255,255,.10);
+
+            padding:
+                8px 11px;
+
+            border-radius: 100px;
+
+            font-size: 9px;
+
+            letter-spacing: 1px;
+
+            margin-bottom: 20px;
+
+        }
+
+
+        .visual-content h2 {
+
+            font-size: 42px;
+
+            line-height: 1.08;
+
+            margin-bottom: 18px;
+
+        }
+
+
+        .visual-content h2 strong {
+
+            color:
+                #c8f3d9;
+
+        }
+
+
+        .visual-content p {
+
+            font-size: 14px;
+
+            line-height: 1.7;
+
+            color:
+                rgba(255,255,255,.85);
+
+        }
+
+
+        .mini-stats {
+
+            display: flex;
+
+            gap: 25px;
+
+            margin-top: 30px;
+
+        }
+
+
+        .mini-stats div {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            font-size: 11px;
+
+        }
+
+
+        .mini-stats strong {
+
+            font-size: 21px;
+
+        }
+
+
+        /* ==============================
+           RESPONSIVE
+        =============================== */
+
+        @media (max-width: 850px) {
+
+            body {
+                padding: 12px;
+            }
+
+
+            .page {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+
+            .visual-panel {
+
+                display: none;
+
+            }
+
+
+            .login-card {
+
+                padding:
+                    32px 25px;
+
+            }
+
+        }
+
+
+        @media (max-width: 500px) {
+
+            .form-grid,
+            .role-choice,
+            .accuracy-choice,
+            .dashboard-grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+
+            .field.full {
+
+                grid-column:
+                    auto;
+
+            }
+
+
+            .dashboard-top {
+
+                flex-direction:
+                    column;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<main class="page">
+
+
+    <!-- =================================================
+         CONNEXION
+    ================================================== -->
+
+    <section
+        id="authScreen"
+        class="login-card"
+    >
+
+
+        <div class="brand">
+
+            <div class="logo">
+                ♻
+            </div>
+
+            <div>
+
+                <h1>
+                    Afrique Cycle
+                </h1>
+
+                <p>
+                    Vendez ou achetez facilement
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="welcome">
+
+            <h2>
+                Bienvenue
+            </h2>
+
+            <p>
+                Choisissez votre profil pour vous connecter.
+            </p>
+
+        </div>
+
+
+        <!-- VENDEUR / ACHETEUR -->
+
+        <div class="role-choice">
+
+
+            <button
+                type="button"
+                class="role-card active"
+                data-role="seller"
+            >
+
+                <span class="role-icon">
+                    🏪
+                </span>
+
+                <span class="role-title">
+                    Vendeur
+                </span>
+
+                <span class="role-description">
+                    Je propose des produits
+                </span>
+
+            </button>
+
+
+            <button
+                type="button"
+                class="role-card"
+                data-role="buyer"
+            >
+
+                <span class="role-icon">
+                    🛒
+                </span>
+
+                <span class="role-title">
+                    Acheteur
+                </span>
+
+                <span class="role-description">
+                    Je recherche des produits
+                </span>
+
+            </button>
+
+        </div>
+
+
+        <!-- FORMULAIRE -->
+
+        <form id="loginForm">
+
+
+            <input
+                type="hidden"
+                id="role"
+                value="seller"
+            >
+
+
+            <div class="form-grid">
+
+
+                <!-- NOM -->
+
+                <div class="field">
+
+                    <label for="name">
+                        Nom
+                    </label>
+
+                    <input
+                        id="name"
+                        type="text"
+                        placeholder="Entrez votre nom"
+                        required
+                    >
+
+                    <small
+                        class="error"
+                        id="nameError"
+                    ></small>
+
+                </div>
+
+
+                <!-- TELEPHONE -->
+
+                <div class="field">
+
+                    <label for="phone">
+                        Numéro de téléphone
+                    </label>
+
+                    <input
+                        id="phone"
+                        type="tel"
+                        placeholder="Ex : 6 70 00 00 00"
+                        required
+                    >
+
+                    <small
+                        class="error"
+                        id="phoneError"
+                    ></small>
+
+                </div>
+
+
+                <!-- PASSWORD -->
+
+                <div class="field full">
+
+                    <label for="password">
+                        Mot de passe
+                    </label>
+
+                    <div class="password-box">
+
+                        <input
+                            id="password"
+                            type="password"
+                            placeholder="Votre mot de passe"
+                            required
+                        >
+
+
+                        <button
+                            type="button"
+                            id="togglePassword"
+                            class="eye"
+                        >
+                            👁
+                        </button>
+
+                    </div>
+
+
+                    <small
+                        class="error"
+                        id="passwordError"
+                    ></small>
+
+                </div>
+
+
+                <!-- VENDEUR -->
+
+                <div
+                    class="field full"
+                    id="sellerFields"
+                >
+
+                    <label for="registration">
+                        Numéro d'enregistrement
+                    </label>
+
+                    <input
+                        id="registration"
+                        type="text"
+                        placeholder="Numéro d'enregistrement"
+                    >
+
+                    <small class="hint">
+                        Demandé uniquement pour le vendeur.
+                    </small>
+
+                    <small
+                        class="error"
+                        id="registrationError"
+                    ></small>
+
+                </div>
+
+            </div>
+
+
+            <!-- RESTER CONNECTE -->
+
+            <label class="remember">
+
+                <input
+                    type="checkbox"
+                    id="rememberMe"
+                    checked
+                >
+
+                <span>
+                    Rester connecté sur cet appareil
+                </span>
+
+            </label>
+
+
+            <button
+                class="submit-btn"
+                type="submit"
+            >
+
+                <span>
+                    Se connecter
+                </span>
+
+                <span>
+                    →
+                </span>
+
+            </button>
+
+
+            <div
+                id="message"
+                class="message"
+            ></div>
+
+        </form>
+
+
+        <p class="footer-note">
+
+            Vous contrôlez toujours
+            l'autorisation de localisation.
+
+        </p>
+
+    </section>
+
+
+
+    <!-- =================================================
+         GPS
+    ================================================== -->
+
+    <section
+        id="locationScreen"
+        class="login-card hidden-screen"
+    >
+
+
+        <div class="brand">
+
+            <div class="logo">
+                ⌖
+            </div>
+
+            <div>
+
+                <h1>
+                    Afrique Cycle
+                </h1>
+
+                <p>
+                    Autorisation de localisation
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="location-intro">
+
+
+            <!-- ICONE GPS -->
+
+            <div
+                class="location-icon gps-icon"
+            >
+                ⌖
+            </div>
+
+
+            <h2>
+                Utiliser votre position ?
+            </h2>
+
+
+            <p>
+
+                Afrique Cycle peut utiliser
+                votre position pour vous
+                proposer des services proches
+                de vous.
+
+            </p>
+
+        </div>
+
+
+        <!-- CHOIX GPS -->
+
+        <div class="accuracy-choice">
+
+
+            <button
+                class="accuracy-card"
+                data-accuracy="approximate"
+                type="button"
+            >
+
+                <span>
+                    🌐
+                </span>
+
+                <strong>
+                    Position approximative
+                </strong>
+
+                <small>
+
+                    Une zone générale sans
+                    rechercher une position
+                    très précise.
+
+                </small>
+
+            </button>
+
+
+            <button
+                class="accuracy-card"
+                data-accuracy="exact"
+                type="button"
+            >
+
+                <span>
+                    🎯
+                </span>
+
+                <strong>
+                    Position exacte
+                </strong>
+
+                <small>
+
+                    Utilise la localisation
+                    la plus précise disponible.
+
+                </small>
+
+            </button>
+
+        </div>
+
+
+        <button
+            id="skipLocation"
+            class="secondary-btn"
+            type="button"
+        >
+
+            Ne pas autoriser maintenant
+
+        </button>
+
+
+        <p
+            id="locationMessage"
+            class="location-message"
+        ></p>
+
+    </section>
+
+
+
+    <!-- =================================================
+         DASHBOARD
+    ================================================== -->
+
+    <section
+        id="dashboardScreen"
+        class="login-card hidden-screen"
+    >
+
+
+        <div class="dashboard-top">
+
+
+            <div class="brand">
+
+                <div class="logo">
+                    ♻
+                </div>
+
+                <div>
+
+                    <h1>
+                        Afrique Cycle
+                    </h1>
+
+                    <p id="dashboardRole">
+                        Espace utilisateur
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <button
+                id="logoutBtn"
+                class="logout-btn"
+            >
+
+                Se déconnecter
+
+            </button>
+
+        </div>
+
+
+        <!-- PROFIL -->
+
+        <div class="profile-box">
+
+
+            <div
+                class="avatar"
+                id="avatar"
+            >
+                A
+            </div>
+
+
+            <div>
+
+                <span class="small-label">
+                    Connecté en tant que
+                </span>
+
+                <h2 id="dashboardName">
+                    Utilisateur
+                </h2>
+
+                <p id="dashboardPhone">
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- INFORMATIONS -->
+
+        <div class="dashboard-grid">
+
+
+            <div class="info-box">
+
+                <span>
+                    👤
+                </span>
+
+                <strong
+                    id="dashboardRoleText"
+                >
+                    Vendeur
+                </strong>
+
+                <small>
+                    Profil actif
+                </small>
+
+            </div>
+
+
+            <div class="info-box">
+
+                <!-- GPS -->
+
+                <span class="gps-small">
+                    ⌖
+                </span>
+
+                <strong
+                    id="locationStatus"
+                >
+                    Localisation non définie
+                </strong>
+
+                <small
+                    id="locationDetails"
+                >
+                    Tu peux modifier ton choix.
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <button
+            id="changeLocationBtn"
+            class="secondary-btn"
+            type="button"
+        >
+
+            Modifier l'autorisation
+            de localisation
+
+        </button>
+
+
+        <p class="dashboard-note">
+
+            Vous restez connecté sur cet appareil
+            jusqu'à votre déconnexion.
+
+        </p>
+
+    </section>
+
+
+
+    <!-- =================================================
+         PARTIE DROITE
+    ================================================== -->
+
+    <aside class="visual-panel">
+
+
+        <div class="visual-overlay"></div>
+
+
+        <div class="visual-content">
+
+
+            <span class="badge">
+
+                RECYCLAGE • COMMERCE • COMMUNAUTÉ
+
+            </span>
+
+
+            <h2>
+
+                Un même espace,
+
+                <br>
+
+                <strong>
+                    deux profils.
+                </strong>
+
+            </h2>
+
+
+            <p>
+
+                Connectez-vous comme vendeur
+                ou acheteur et participez
+                à une économie plus circulaire.
+
+            </p>
+
+
+            <div class="mini-stats">
+
+
+                <div>
+
+                    <strong>
+                        ♻
+                    </strong>
+
+                    <span>
+                        Réutiliser
+                    </span>
+
+                </div>
+
+
+                <div>
+
+                    <strong>
+                        🤝
+                    </strong>
+
+                    <span>
+                        Échanger
+                    </span>
+
+                </div>
+
+
+                <div>
+
+                    <strong>
+                        🌍
+                    </strong>
+
+                    <span>
+                        Protéger
+                    </span>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </aside>
+
+</main>
+
+
+
+<!-- =====================================================
+     JAVASCRIPT
+====================================================== -->
+
+<script>
+
+
+/* =====================================================
+   AFRIQUE CYCLE
+   CONNEXION + SESSION + GPS
+===================================================== */
+
+
+const STORAGE_KEY =
+    "afrique_cycle_user";
+
+
+const LOCATION_KEY =
+    "afrique_cycle_location";
+
+
+/* ==============================
+   ELEMENTS
+============================== */
+
+const authScreen =
+    document.getElementById(
+        "authScreen"
+    );
+
+
+const locationScreen =
+    document.getElementById(
+        "locationScreen"
+    );
+
+
+const dashboardScreen =
+    document.getElementById(
+        "dashboardScreen"
+    );
+
+
+const roleButtons =
+    document.querySelectorAll(
+        ".role-card"
+    );
+
+
+const accuracyButtons =
+    document.querySelectorAll(
+        ".accuracy-card"
+    );
+
+
+const roleInput =
+    document.getElementById(
+        "role"
+    );
+
+
+const sellerFields =
+    document.getElementById(
+        "sellerFields"
+    );
+
+
+const registrationInput =
+    document.getElementById(
+        "registration"
+    );
+
+
+const loginForm =
+    document.getElementById(
+        "loginForm"
+    );
+
+
+const password =
+    document.getElementById(
+        "password"
+    );
+
+
+const message =
+    document.getElementById(
+        "message"
+    );
+
+
+let selectedRole =
+    "seller";
+
+
+/* =====================================================
+   CHANGER D'ECRAN
+===================================================== */
+
+function showScreen(screen) {
+
+    authScreen.classList.add(
+        "hidden-screen"
+    );
+
+    locationScreen.classList.add(
+        "hidden-screen"
+    );
+
+    dashboardScreen.classList.add(
+        "hidden-screen"
+    );
+
+
+    screen.classList.remove(
+        "hidden-screen"
+    );
+
+}
+
+
+/* =====================================================
+   CHOIX VENDEUR / ACHETEUR
+===================================================== */
+
+roleButtons.forEach(
+    (button) => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+
+                selectedRole =
+                    button.dataset.role;
+
+
+                roleInput.value =
+                    selectedRole;
+
+
+                roleButtons.forEach(
+                    (item) => {
+
+                        item.classList.remove(
+                            "active"
+                        );
+
+                    }
+                );
+
+
+                button.classList.add(
+                    "active"
+                );
+
+
+                if (
+                    selectedRole ===
+                    "seller"
+                ) {
+
+
+                    sellerFields.classList.remove(
+                        "hidden-screen"
+                    );
+
+
+                    registrationInput.required =
+                        true;
+
+
+                } else {
+
+
+                    sellerFields.classList.add(
+                        "hidden-screen"
+                    );
+
+
+                    registrationInput.required =
+                        false;
+
+
+                    registrationInput.value =
+                        "";
+
+                }
+
+
+                clearErrors();
+
+
+                message.textContent =
+                    "";
+
+            }
+        );
+
+    }
+);
+
+
+/* =====================================================
+   AFFICHER / CACHER PASSWORD
+===================================================== */
+
+document
+    .getElementById(
+        "togglePassword"
+    )
+    .addEventListener(
+        "click",
+        () => {
+
+
+            if (
+                password.type ===
+                "password"
+            ) {
+
+
+                password.type =
+                    "text";
+
+
+                document
+                    .getElementById(
+                        "togglePassword"
+                    )
+                    .textContent =
+                    "🙈";
+
+
+            } else {
+
+
+                password.type =
+                    "password";
+
+
+                document
+                    .getElementById(
+                        "togglePassword"
+                    )
+                    .textContent =
+                    "👁";
+
+            }
+
+        }
+    );
+
+
+/* =====================================================
+   EFFACER ERREURS
+===================================================== */
+
+function clearErrors() {
+
+    document
+        .querySelectorAll(
+            ".error"
+        )
+        .forEach(
+            (error) => {
+
+                error.textContent =
+                    "";
+
+            }
+        );
+
+}
+
+
+/* =====================================================
+   VALIDATION
+===================================================== */
+
+function validateForm() {
+
+    clearErrors();
+
+
+    let valid =
+        true;
+
+
+    const name =
+        document
+            .getElementById(
+                "name"
+            )
+            .value
+            .trim();
+
+
+    const phone =
+        document
+            .getElementById(
+                "phone"
+            )
+            .value
+            .trim();
+
+
+    const pass =
+        password.value;
+
+
+    /* NOM */
+
+    if (
+        name.length < 2
+    ) {
+
+        document
+            .getElementById(
+                "nameError"
+            )
+            .textContent =
+            "Veuillez entrer un nom valide.";
+
+        valid =
+            false;
+
+    }
+
+
+    /* TELEPHONE */
+
+    if (
+        !/^[0-9+ ()-]{8,}$/.test(
+            phone
+        )
+    ) {
+
+        document
+            .getElementById(
+                "phoneError"
+            )
+            .textContent =
+            "Veuillez entrer un numéro valide.";
+
+        valid =
+            false;
+
+    }
+
+
+    /* PASSWORD */
+
+    if (
+        pass.length < 6
+    ) {
+
+        document
+            .getElementById(
+                "passwordError"
+            )
+            .textContent =
+            "Au moins 6 caractères.";
+
+        valid =
+            false;
+
+    }
+
+
+    /* VENDEUR */
+
+    if (
+        selectedRole ===
+            "seller" &&
+
+        registrationInput
+            .value
+            .trim()
+            .length < 2
+    ) {
+
+        document
+            .getElementById(
+                "registrationError"
+            )
+            .textContent =
+            "Numéro d'enregistrement requis.";
+
+        valid =
+            false;
+
+    }
+
+
+    return valid;
+
+}
+
+
+/* =====================================================
+   CONNEXION
+===================================================== */
+
+loginForm.addEventListener(
+    "submit",
+    (event) => {
+
+
+        event.preventDefault();
+
+
+        if (
+            !validateForm()
+        ) {
+
+
+            message.textContent =
+                "Veuillez corriger les informations.";
+
+
+            message.className =
+                "message fail";
+
+
+            return;
+
+        }
+
+
+        const user = {
+
+
+            role:
+                selectedRole,
+
+
+            name:
+                document
+                    .getElementById(
+                        "name"
+                    )
+                    .value
+                    .trim(),
+
+
+            phone:
+                document
+                    .getElementById(
+                        "phone"
+                    )
+                    .value
+                    .trim(),
+
+
+            registration:
+
+                selectedRole ===
+                "seller"
+
+                    ?
+
+                    registrationInput
+                        .value
+                        .trim()
+
+                    :
+
+                    null
+
+        };
+
+
+        const remember =
+            document
+                .getElementById(
+                    "rememberMe"
+                )
+                .checked;
+
+
+        /*
+          IMPORTANT :
+
+          Le mot de passe n'est
+          PAS sauvegardé.
+
+          Pour une vraie application,
+          le backend devra gérer
+          l'authentification.
+        */
+
+
+        if (
+            remember
+        ) {
+
+
+            localStorage.setItem(
+
+                STORAGE_KEY,
+
+                JSON.stringify(
+                    user
+                )
+
+            );
+
+
+        } else {
+
+
+            sessionStorage.setItem(
+
+                STORAGE_KEY,
+
+                JSON.stringify(
+                    user
+                )
+
+            );
+
+        }
+
+
+        message.textContent =
+            "Connexion réussie...";
+
+
+        message.className =
+            "message success";
+
+
+        setTimeout(
+            () => {
+
+                showLocationScreen();
+
+            },
+            500
+        );
+
+    }
+);
+
+
+/* =====================================================
+   ECRAN GPS
+===================================================== */
+
+function showLocationScreen() {
+
+
+    const locationMessage =
+        document.getElementById(
+            "locationMessage"
+        );
+
+
+    locationMessage.textContent =
+        "";
+
+
+    locationMessage.className =
+        "location-message";
+
+
+    showScreen(
+        locationScreen
+    );
+
+}
+
+
+/* =====================================================
+   CHOIX GPS
+===================================================== */
+
+accuracyButtons.forEach(
+    (button) => {
+
+
+        button.addEventListener(
+            "click",
+            () => {
+
+
+                accuracyButtons
+                    .forEach(
+                        (item) => {
+
+                            item.classList.remove(
+                                "active"
+                            );
+
+                        }
+                    );
+
+
+                button.classList.add(
+                    "active"
+                );
+
+
+                const accuracy =
+                    button.dataset
+                        .accuracy;
+
+
+                requestLocation(
+                    accuracy
+                );
+
+            }
+        );
+
+    }
+);
+
+
+/* =====================================================
+   DEMANDE GPS
+===================================================== */
+
+function requestLocation(
+    accuracy
+) {
+
+
+    const locationMessage =
+        document.getElementById(
+            "locationMessage"
+        );
+
+
+    /* GPS disponible ? */
+
+    if (
+        !navigator.geolocation
+    ) {
+
+
+        locationMessage.textContent =
+            "La géolocalisation n'est pas disponible sur cet appareil.";
+
+
+        locationMessage.className =
+            "location-message error";
+
+
+        finishLocation({
+
+            permission:
+                "unsupported"
+
+        });
+
+
+        return;
+
+    }
+
+
+    locationMessage.textContent =
+        "Demande d'autorisation au navigateur...";
+
+
+    /*
+        Position exacte :
+
+        enableHighAccuracy = true
+
+
+        Position approximative :
+
+        enableHighAccuracy = false
+    */
+
+
+    navigator.geolocation.getCurrentPosition(
+
+
+        /* ==========================
+           SUCCES
+        =========================== */
+
+        (position) => {
+
+
+            const locationData = {
+
+
+                permission:
+                    "granted",
+
+
+                accuracyChoice:
+                    accuracy,
+
+
+                latitude:
+                    position
+                        .coords
+                        .latitude,
+
+
+                longitude:
+                    position
+                        .coords
+                        .longitude,
+
+
+                accuracyMeters:
+                    position
+                        .coords
+                        .accuracy,
+
+
+                savedAt:
+                    new Date()
+                        .toISOString()
+
+            };
+
+
+            localStorage.setItem(
+
+                LOCATION_KEY,
+
+                JSON.stringify(
+                    locationData
+                )
+
+            );
+
+
+            locationMessage.textContent =
+                "Localisation autorisée.";
+
+
+            finishLocation(
+                locationData
+            );
+
+        },
+
+
+        /* ==========================
+           ERREUR
+        =========================== */
+
+        (error) => {
+
+
+            let reason =
+                "Localisation refusée ou indisponible.";
+
+
+            if (
+                error.code === 1
+            ) {
+
+                reason =
+                    "Vous avez refusé l'autorisation de localisation.";
+
+            }
+
+
+            else if (
+                error.code === 2
+            ) {
+
+                reason =
+                    "Position actuellement indisponible.";
+
+            }
+
+
+            else if (
+                error.code === 3
+            ) {
+
+                reason =
+                    "La recherche de position a pris trop de temps.";
+
+            }
+
+
+            locationMessage.textContent =
+                reason;
+
+
+            locationMessage.className =
+                "location-message error";
+
+
+            const denied = {
+
+
+                permission:
+                    "denied",
+
+
+                accuracyChoice:
+                    accuracy,
+
+
+                savedAt:
+                    new Date()
+                        .toISOString()
+
+            };
+
+
+            localStorage.setItem(
+
+                LOCATION_KEY,
+
+                JSON.stringify(
+                    denied
+                )
+
+            );
+
+
+            setTimeout(
+                () => {
+
+                    finishLocation(
+                        denied
+                    );
+
+                },
+                900
+            );
+
+        },
+
+
+        /* ==========================
+           OPTIONS
+        =========================== */
+
+        {
+
+
+            enableHighAccuracy:
+
+                accuracy ===
+                "exact",
+
+
+            timeout:
+                10000,
+
+
+            maximumAge:
+
+                accuracy ===
+                "approximate"
+
+                    ?
+
+                    300000
+
+                    :
+
+                    0
+
+        }
+
+    );
+
+}
+
+
+/* =====================================================
+   NE PAS AUTORISER
+===================================================== */
+
+document
+    .getElementById(
+        "skipLocation"
+    )
+    .addEventListener(
+        "click",
+        () => {
+
+
+            const data = {
+
+
+                permission:
+                    "not_now",
+
+
+                savedAt:
+                    new Date()
+                        .toISOString()
+
+            };
+
+
+            localStorage.setItem(
+
+                LOCATION_KEY,
+
+                JSON.stringify(
+                    data
+                )
+
+            );
+
+
+            finishLocation(
+                data
+            );
+
+        }
+    );
+
+
+/* =====================================================
+   FIN GPS
+===================================================== */
+
+function finishLocation(
+    locationData
+) {
+
+
+    updateDashboard(
+        locationData
+    );
+
+
+    setTimeout(
+        () => {
+
+            showScreen(
+                dashboardScreen
+            );
+
+        },
+        500
+    );
+
+}
+
+
+/* =====================================================
+   DASHBOARD
+===================================================== */
+
+function updateDashboard(
+    locationData = null
+) {
+
+
+    const user =
+        getSavedUser();
+
+
+    if (!user) {
+
+
+        showScreen(
+            authScreen
+        );
+
+
+        return;
+
+    }
+
+
+    document
+        .getElementById(
+            "dashboardName"
+        )
+        .textContent =
+        user.name;
+
+
+    document
+        .getElementById(
+            "dashboardPhone"
+        )
+        .textContent =
+        user.phone;
+
+
+    document
+        .getElementById(
+            "avatar"
+        )
+        .textContent =
+
+        user.name
+            .charAt(0)
+            .toUpperCase();
+
+
+    const roleName =
+
+        user.role === "seller"
+
+            ?
+
+            "Vendeur"
+
+            :
+
+            "Acheteur";
+
+
+    document
+        .getElementById(
+            "dashboardRole"
+        )
+        .textContent =
+
+        "Espace " +
+        roleName;
+
+
+    document
+        .getElementById(
+            "dashboardRoleText"
+        )
+        .textContent =
+        roleName;
+
+
+    const location =
+
+        locationData ||
+
+        getSavedLocation();
+
+
+    if (!location) {
+
+
+        setLocationText(
+
+            "Localisation non définie",
+
+            "Tu peux modifier ton choix."
+
+        );
+
+
+        return;
+
+    }
+
+
+    if (
+        location.permission ===
+        "granted"
+    ) {
+
+
+        const type =
+
+            location.accuracyChoice ===
+            "exact"
+
+                ?
+
+                "Position exacte autorisée"
+
+                :
+
+                "Position approximative autorisée";
+
+
+        const accuracy =
+
+            location.accuracyMeters
+
+                ?
+
+                Math.round(
+                    location.accuracyMeters
+                )
+
+                :
+
+                null;
+
+
+        setLocationText(
+
+            type,
+
+
+            accuracy
+
+                ?
+
+                "Précision : environ " +
+                accuracy +
+                " mètres"
+
+                :
+
+                "Localisation autorisée."
+
+        );
+
+    }
+
+
+    else if (
+        location.permission ===
+        "denied"
+    ) {
+
+
+        setLocationText(
+
+            "Localisation refusée",
+
+            "Vous pouvez modifier cette autorisation."
+
+        );
+
+    }
+
+
+    else {
+
+
+        setLocationText(
+
+            "Localisation non autorisée",
+
+            "Aucune position n'a été utilisée."
+
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   TEXTE GPS
+===================================================== */
+
+function setLocationText(
+    title,
+    description
+) {
+
+
+    document
+        .getElementById(
+            "locationStatus"
+        )
+        .textContent =
+        title;
+
+
+    document
+        .getElementById(
+            "locationDetails"
+        )
+        .textContent =
+        description;
+
+}
+
+
+/* =====================================================
+   MODIFIER GPS
+===================================================== */
+
+document
+    .getElementById(
+        "changeLocationBtn"
+    )
+    .addEventListener(
+        "click",
+        () => {
+
+            showLocationScreen();
+
+        }
+    );
+
+
+/* =====================================================
+   DECONNEXION
+===================================================== */
+
+document
+    .getElementById(
+        "logoutBtn"
+    )
+    .addEventListener(
+        "click",
+        () => {
+
+
+            localStorage.removeItem(
+                STORAGE_KEY
+            );
+
+
+            sessionStorage.removeItem(
+                STORAGE_KEY
+            );
+
+
+            localStorage.removeItem(
+                LOCATION_KEY
+            );
+
+
+            loginForm.reset();
+
+
+            selectedRole =
+                "seller";
+
+
+            roleInput.value =
+                "seller";
+
+
+            roleButtons.forEach(
+                (button) => {
+
+                    button.classList.toggle(
+
+                        "active",
+
+                        button.dataset.role ===
+                        "seller"
+
+                    );
+
+                }
+            );
+
+
+            sellerFields.classList.remove(
+                "hidden-screen"
+            );
+
+
+            registrationInput.required =
+                true;
+
+
+            password.type =
+                "password";
+
+
+            showScreen(
+                authScreen
+            );
+
+
+            message.textContent =
+                "Vous êtes déconnecté.";
+
+
+            message.className =
+                "message success";
+
+        }
+    );
+
+
+/* =====================================================
+   RECUPERER UTILISATEUR
+===================================================== */
+
+function getSavedUser() {
+
+
+    const persistent =
+        localStorage.getItem(
+            STORAGE_KEY
+        );
+
+
+    const temporary =
+        sessionStorage.getItem(
+            STORAGE_KEY
+        );
+
+
+    const data =
+        persistent ||
+        temporary;
+
+
+    if (!data) {
+
+        return null;
+
+    }
+
+
+    return JSON.parse(
+        data
+    );
+
+}
+
+
+/* =====================================================
+   RECUPERER GPS
+===================================================== */
+
+function getSavedLocation() {
+
+
+    const data =
+        localStorage.getItem(
+            LOCATION_KEY
+        );
+
+
+    if (!data) {
+
+        return null;
+
+    }
+
+
+    return JSON.parse(
+        data
+    );
+
+}
+
+
+/* =====================================================
+   AU DEMARRAGE
+===================================================== */
+
+window.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+
+        const user =
+            getSavedUser();
+
+
+        if (user) {
+
+
+            updateDashboard();
+
+
+            showScreen(
+                dashboardScreen
+            );
+
+
+        } else {
+
+
+            showScreen(
+                authScreen
+            );
+
+        }
+
+    }
+);
+
+</script>
+
+
+</body>
+
+</html>

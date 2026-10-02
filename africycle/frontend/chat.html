@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="assets/Africycle_logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <title>Messages - Africycle</title>
+</head>
+<body>
+  <header class="topbar">
+    <a href="index.html" class="topbar-brand">
+      <img src="assets/Africycle_logo.jpg" alt="">
+      <span>Africycle</span>
+    </a>
+    <nav class="topbar-nav" aria-label="Main">
+      <a id="backLink" href="index.html" class="btn btn-quiet">Back to dashboard</a>
+      <button id="logoutBtn" class="btn btn-quiet" type="button">Log out</button>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <h1 class="page-heading">Messages</h1>
+    <p class="page-intro">Agree on pickup details with collectors and buyers.</p>
+
+    <p id="pageMsg" class="msg" role="status" hidden></p>
+
+    <div class="chat-layout">
+      <section class="panel" aria-label="Conversations">
+        <div class="conversation-list" id="conversationList">
+          <p class="panel-hint">Loading...</p>
+        </div>
+      </section>
+
+      <section class="panel thread-panel" aria-labelledby="threadTitle">
+        <h2 id="threadTitle">Choose a conversation</h2>
+        <div class="thread" id="thread" aria-live="polite"></div>
+        <form id="chatForm" class="chat-form" hidden>
+          <input type="text" id="chatInput" aria-label="Message" maxlength="1000" placeholder="Write a message" autocomplete="off">
+          <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/chat.js"></script>
+</body>
+</html>

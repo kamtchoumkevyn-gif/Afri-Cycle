@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="assets/Africycle_logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <title>Log in - Africycle</title>
+</head>
+<body class="auth-body">
+  <main class="auth-card">
+    <img src="assets/Africycle_logo.jpg" alt="Africycle logo" class="auth-logo">
+    <h1 class="auth-title">Welcome back</h1>
+    <p class="auth-subtitle">Log in with your phone number</p>
+
+    <form id="loginForm" class="auth-form" novalidate>
+      <label for="phoneNumber">Phone number</label>
+      <input type="tel" id="phoneNumber" autocomplete="tel" placeholder="6XXXXXXXX" required>
+
+      <label for="role">I am logging in as</label>
+      <select id="role" required>
+        <option value="" disabled selected>Choose your role</option>
+        <option value="seller">Seller</option>
+        <option value="buyer">Buyer</option>
+        <option value="admin">Admin</option>
+      </select>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="rememberMe">
+        Stay logged in on this device
+      </label>
+
+      <button type="submit" id="submitBtn" class="btn btn-primary btn-block">
+        <span id="btnText">Log in</span>
+        <span id="btnSpinner" class="spinner" hidden></span>
+      </button>
+
+      <p id="formMsg" class="msg" role="alert" hidden></p>
+    </form>
+
+    <p class="auth-switch">New to Africycle? <a href="register.html">Create an account</a></p>
+  </main>
+
+  <div class="wave" aria-hidden="true">
+    <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
+      <path d="M0,70 C240,130 480,10 720,60 C960,110 1200,30 1440,70 L1440,160 L0,160 Z" fill="#bcd8f2"/>
+      <path d="M0,105 C260,60 520,150 780,110 C1040,70 1260,130 1440,100 L1440,160 L0,160 Z" fill="#1565c0"/>
+    </svg>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

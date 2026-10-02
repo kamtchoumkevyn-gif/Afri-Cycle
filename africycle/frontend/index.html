@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="assets/Africycle_logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/auth.css">
+  <title>Africycle</title>
+</head>
+<body class="auth-body">
+  <main class="auth-card landing-card">
+    <img src="assets/Africycle_logo.jpg" alt="Africycle logo" class="auth-logo">
+    <h1 class="landing-wordmark">AFRICYCLE</h1>
+    <p class="landing-pitch">Find the buyer paying the best price for your scrap, water, or organic waste, close to where you are.</p>
+
+    <div class="landing-actions">
+      <a href="login.html" class="btn btn-primary btn-block">Log in</a>
+      <a href="register.html" class="btn btn-secondary btn-block">Create an account</a>
+    </div>
+  </main>
+
+  <div class="wave" aria-hidden="true">
+    <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
+      <path d="M0,70 C240,130 480,10 720,60 C960,110 1200,30 1440,70 L1440,160 L0,160 Z" fill="#bcd8f2"/>
+      <path d="M0,105 C260,60 520,150 780,110 C1040,70 1260,130 1440,100 L1440,160 L0,160 Z" fill="#1565c0"/>
+    </svg>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    // Already logged in: go straight to the right dashboard
+    const existingUser = currentUser();
+    if (existingUser) {
+      window.location.replace(dashboardFor(existingUser.role));
+    }
+  </script>
+</body>
+</html>

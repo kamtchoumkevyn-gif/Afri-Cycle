@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="assets/Africycle_logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <title>Seller - Africycle</title>
+</head>
+<body>
+  <header class="topbar">
+    <a href="seller-dashboard.html" class="topbar-brand">
+      <img src="assets/Africycle_logo.jpg" alt="">
+      <span>Africycle</span>
+    </a>
+    <nav class="topbar-nav" aria-label="Main">
+      <a id="switchLink" href="buyer-dashboard.html" class="btn btn-quiet" hidden>Buyer view</a>
+      <a href="chat.html" class="btn btn-quiet">Messages</a>
+      <button id="logoutBtn" class="btn btn-quiet" type="button">Log out</button>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <h1 class="page-heading" id="greeting">Sell your materials</h1>
+    <p class="page-intro">Pick what you are carrying, then find the buyers near you who pay the most.</p>
+
+    <p id="pageMsg" class="msg" role="status" hidden></p>
+
+    <section class="panel" aria-labelledby="findHeading">
+      <h2 id="findHeading">Find a buyer</h2>
+      <p class="panel-hint">We use your current location once to measure the distance to each buyer.</p>
+      <div class="form-row">
+        <div>
+          <label for="materialSelect">Material</label>
+          <select id="materialSelect">
+            <option value="" disabled selected>Choose a material</option>
+          </select>
+        </div>
+        <div>
+          <label for="radiusSelect">Search within</label>
+          <select id="radiusSelect">
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+            <option value="25" selected>25 km</option>
+            <option value="50">50 km</option>
+          </select>
+        </div>
+        <button id="findBuyersBtn" class="btn btn-primary" type="button">Find buyers</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table" aria-live="polite">
+          <thead>
+            <tr><th>Buyer</th><th>Price per kg</th><th>Distance</th><th>Hours</th><th></th></tr>
+          </thead>
+          <tbody id="buyersBody">
+            <tr><td colspan="5" class="empty-row">Choose a material and tap Find buyers.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="tripsHeading">
+      <h2 id="tripsHeading">Your deliveries</h2>
+      <p class="panel-hint" id="sharingHint">Your location is shared with the buyer only while a delivery is active.</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Buyer</th><th>Material</th><th>Status</th><th>Sent</th><th></th></tr>
+          </thead>
+          <tbody id="deliveriesBody">
+            <tr><td colspan="5" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="buyerModal" class="modal-overlay" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalName">
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">&times;</button>
+      <h3 id="modalName"></h3>
+      <p class="modal-meta" id="modalMeta"></p>
+      <ul class="price-list" id="modalPrices"></ul>
+      <div class="modal-actions">
+        <button id="modalNotifyBtn" class="btn btn-primary btn-block" type="button">Tell this buyer I'm coming</button>
+        <a id="modalCallLink" class="btn btn-secondary btn-block" href="#">Call buyer</a>
+        <a id="modalChatLink" class="btn btn-quiet btn-block" href="#">Send a message</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/seller-dashboard.js"></script>
+</body>
+</html>

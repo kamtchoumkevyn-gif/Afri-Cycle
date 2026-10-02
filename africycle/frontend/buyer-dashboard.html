@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="assets/Africycle_logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <title>Buyer - Africycle</title>
+</head>
+<body>
+  <header class="topbar">
+    <a href="buyer-dashboard.html" class="topbar-brand">
+      <img src="assets/Africycle_logo.jpg" alt="">
+      <span>Africycle</span>
+    </a>
+    <nav class="topbar-nav" aria-label="Main">
+      <a id="switchLink" href="seller-dashboard.html" class="btn btn-quiet" hidden>Seller view</a>
+      <a href="chat.html" class="btn btn-quiet">Messages</a>
+      <button id="logoutBtn" class="btn btn-quiet" type="button">Log out</button>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <h1 class="page-heading">Buy materials</h1>
+    <p class="page-intro">Set your location and prices so collectors nearby can find you.</p>
+
+    <p id="pageMsg" class="msg" role="status" hidden></p>
+
+    <section class="panel" aria-labelledby="locationHeading">
+      <h2 id="locationHeading">Your buying point</h2>
+      <p class="panel-hint" id="locationStatus">Collectors only see you once your location is saved.</p>
+      <div class="form-row">
+        <div>
+          <label for="hoursInput">Working hours</label>
+          <input type="text" id="hoursInput" placeholder="e.g. Mon-Sat, 7am-6pm">
+        </div>
+        <button id="saveLocationBtn" class="btn btn-primary" type="button">Save my current location</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="pricesHeading">
+      <h2 id="pricesHeading">Your prices</h2>
+      <p class="panel-hint">Collectors see the highest prices first.</p>
+      <form id="priceForm" class="form-row">
+        <div>
+          <label for="priceMaterialSelect">Material</label>
+          <select id="priceMaterialSelect" required>
+            <option value="" disabled selected>Choose a material</option>
+          </select>
+        </div>
+        <div>
+          <label for="priceInput">Price per kg (FCFA)</label>
+          <input type="number" id="priceInput" min="1" step="1" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Save price</button>
+      </form>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Material</th><th>Price per kg</th></tr></thead>
+          <tbody id="pricesBody">
+            <tr><td colspan="2" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="incomingHeading">
+      <h2 id="incomingHeading">Collectors on their way</h2>
+      <p class="panel-hint">This list refreshes on its own every 20 seconds.</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Collector</th><th>Material</th><th>Status</th><th>Received</th><th></th></tr>
+          </thead>
+          <tbody id="incomingBody">
+            <tr><td colspan="5" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="logHeading">
+      <h2 id="logHeading">Record a purchase</h2>
+      <p class="panel-hint">Payment stays in cash. This record is your proof of a fair, traceable purchase.</p>
+      <form id="transactionForm" class="form-row">
+        <div>
+          <label for="sellerSelect">Collector</label>
+          <select id="sellerSelect" required>
+            <option value="" disabled selected>Choose a collector</option>
+          </select>
+        </div>
+        <div>
+          <label for="txMaterialSelect">Material</label>
+          <select id="txMaterialSelect" required>
+            <option value="" disabled selected>Choose a material</option>
+          </select>
+        </div>
+        <div>
+          <label for="weightInput">Weight (kg)</label>
+          <input type="number" id="weightInput" min="0.1" step="0.1" required>
+        </div>
+        <div>
+          <label for="txPriceInput">Price per kg (FCFA)</label>
+          <input type="number" id="txPriceInput" min="1" step="1" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Record purchase</button>
+      </form>
+      <p class="panel-hint" id="totalPreview"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="historyHeading">
+      <h2 id="historyHeading">Purchase history</h2>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Collector</th><th>Material</th><th>Weight</th><th>Total</th><th>Date</th></tr>
+          </thead>
+          <tbody id="historyBody">
+            <tr><td colspan="5" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/buyer-dashboard.js"></script>
+</body>
+</html>

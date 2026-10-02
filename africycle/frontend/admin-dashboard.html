@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="assets/Africycle_logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <title>Admin - Africycle</title>
+</head>
+<body>
+  <header class="topbar">
+    <a href="admin-dashboard.html" class="topbar-brand">
+      <img src="assets/Africycle_logo.jpg" alt="">
+      <span>Africycle</span>
+    </a>
+    <nav class="topbar-nav" aria-label="Main">
+
+      <button id="logoutBtn" class="btn btn-quiet" type="button">Log out</button>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <h1 class="page-heading">Platform overview</h1>
+    <p class="page-intro">Watch activity and review accounts that look suspicious.</p>
+
+    <p id="pageMsg" class="msg" role="status" hidden></p>
+
+    <section class="stats" aria-label="User counts">
+      <div class="stat"><span class="stat-value" id="statTotal">-</span><span class="stat-label">Users</span></div>
+      <div class="stat"><span class="stat-value" id="statSellers">-</span><span class="stat-label">Sellers</span></div>
+      <div class="stat"><span class="stat-value" id="statBuyers">-</span><span class="stat-label">Buyers</span></div>
+      <div class="stat"><span class="stat-value" id="statToday">-</span><span class="stat-label">Purchases today</span></div>
+    </section>
+
+    <section class="panel" aria-labelledby="activityHeading">
+      <h2 id="activityHeading">Last 7 days</h2>
+      <p class="panel-hint" id="activitySummary">Loading...</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Most traded material</th><th>Purchases</th></tr></thead>
+          <tbody id="topMaterialsBody">
+            <tr><td colspan="2" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="usersHeading">
+      <h2 id="usersHeading">Accounts</h2>
+      <label class="checkbox-label">
+        <input type="checkbox" id="flaggedOnly">
+        Show flagged accounts only
+      </label>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Name</th><th>Phone</th><th>Role</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="usersBody">
+            <tr><td colspan="5" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/admin-dashboard.js"></script>
+</body>
+</html>

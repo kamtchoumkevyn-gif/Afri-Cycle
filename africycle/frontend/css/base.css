@@ -1,0 +1,204 @@
+/* Africycle base styles: shared by every page */
+
+:root {
+  --navy: #12355b;
+  --green: #2e7d32;
+  --green-dark: #1f5f23;
+  --green-tint: #e8f3e9;
+  --blue: #1565c0;
+  --blue-tint: #e6f0fb;
+  --ink: #1d2a24;
+  --muted: #5b6a63;
+  --line: #d9e1dc;
+  --surface: #ffffff;
+  --page: #f3f7f6;
+  --danger: #b3261e;
+  --danger-tint: #fbeaea;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --font-display: "Archivo", "Segoe UI", Roboto, Arial, sans-serif;
+  --font-body: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  background-color: var(--page);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  color: var(--navy);
+  line-height: 1.2;
+}
+
+a {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---- Form controls ---- */
+
+label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 14px 0 6px;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 16px; /* 16px stops iOS from zooming on focus */
+  color: var(--ink);
+  background-color: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+input:focus,
+select:focus {
+  border-color: var(--green);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--green-tint);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
+/* ---- Buttons ---- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 700;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--green);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: var(--green-dark);
+}
+
+.btn-secondary {
+  background-color: var(--surface);
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.btn-quiet {
+  background: none;
+  color: var(--blue);
+  min-height: 36px;
+  padding: 4px 8px;
+}
+
+.btn-danger {
+  background: none;
+  color: var(--danger);
+  border-color: var(--danger);
+  min-height: 38px;
+  padding: 6px 14px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Messages ---- */
+
+.msg {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  margin: 14px 0;
+}
+
+.msg-error {
+  background-color: var(--danger-tint);
+  color: var(--danger);
+}
+
+.msg-success {
+  background-color: var(--green-tint);
+  color: var(--green-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2s; }
+}
+
+/* The logo file has an off-white background; this blends it into white surfaces */
+.auth-logo,
+.topbar-brand img {
+  mix-blend-mode: multiply;
+}

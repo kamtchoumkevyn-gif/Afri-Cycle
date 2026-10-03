@@ -1,9 +1,11 @@
 from flask import Blueprint, request, jsonify
 import jwt
+import re
 from datetime import datetime, timedelta
 from config import Config
 from extensions import limiter
 from models.user import create_user, find_user_by_phone, verify_login
+
 
 auth_bp = Blueprint("auth_bp", __name__)
 
@@ -18,6 +20,19 @@ def register():
 
     if not all([name, phone_number, password, role]):
         return jsonify({"message": "name, phoneNumber, password, and role are required"}), 400
+       phone_number = str(phone_number).strip().replace(" ", "")
+
+    if phone_number.startswith("+237"):
+        phone_number = phone_number[4:]
+    elif phone_number.startswith("237") and len(phone_number) == 12:
+        phone_number = phone_number[3:]
+
+    if not re.fullmatch(r"[26]\d{8}", phone_number):
+        return jsonify({"message": "Enter a valid Cameroon phone number, e.g. 6XXXXXXXX"}), 400
+
+    if role not in ("seller", "buyer", "both", "admin"):
+        ...
+     
 
     if role not in ("seller", "buyer", "both", "admin"):
         return jsonify({"message": "role must be seller, buyer, both, or admin"}), 400

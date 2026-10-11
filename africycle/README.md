@@ -128,26 +128,16 @@ To browse or edit the data, use the **Tables** page in the Neon console. Passwor
 
 PythonAnywhere keeps files between restarts, so the SQLite database stays and no Neon is needed. Updates are not automatic.
 
-1. Sign up for a free Beginner account. Your username becomes the address: `username.pythonanywhere.com`.
-2. Open a **Bash** console and run these lines, putting your admin number(s) on the last one:
+1. Sign up for a free Beginner account at eu.pythonanywhere.com (servers in Europe, closer to Cameroon). Your username becomes the address: `username.eu.pythonanywhere.com`.
+2. On the **Web** tab: **Add a new web app** → **Manual configuration** → **Python 3.13**.
+3. Open a **Bash** console and run this, with the admin phone number(s) at the end:
    ```
-   git clone https://github.com/kamtchoumkevyn-gif/Afri-Cycle.git
-   mkvirtualenv --python=/usr/bin/python3.13 africycle
-   pip install -r Afri-Cycle/africycle/backend/requirements.txt
-   echo "JWT_SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')" > Afri-Cycle/africycle/.env
-   echo "ADMIN_PHONE_NUMBERS=6XXXXXXXX" >> Afri-Cycle/africycle/.env
+   git clone https://github.com/kamtchoumkevyn-gif/Afri-Cycle.git && bash Afri-Cycle/africycle/deploy/pythonanywhere.sh 6XXXXXXXX
    ```
-3. On the **Web** tab: **Add a new web app** → **Manual configuration** → **Python 3.13**. Under **Virtualenv**, enter `africycle`. Turn on **Force HTTPS**.
-4. Open the **WSGI configuration file** linked on the Web tab, replace everything in it with the lines below, save, and click **Reload**:
-   ```python
-   import os, sys
-   path = os.path.expanduser("~/Afri-Cycle/africycle/backend")
-   if path not in sys.path:
-       sys.path.insert(0, path)
-   from app import app as application
-   ```
+   `deploy/pythonanywhere.sh` installs the packages, writes `.env` with a new secret key, checks that the app starts, and points the web app at it.
+4. Press **Reload** on the Web tab and open the address the script prints.
 
-To update after changes reach GitHub, run `cd ~/Afri-Cycle && git pull` in a Bash console, then click **Reload**. Free web apps stop after a month unless you click the button on the Web tab that keeps them running. To see the data, download `Afri-Cycle/africycle/backend/database/africycle.db` from the **Files** tab and open it with DB Browser for SQLite.
+To update after changes reach GitHub, run `bash ~/Afri-Cycle/africycle/deploy/pythonanywhere.sh`, then press **Reload**. Free web apps stop after a month unless you click the button on the Web tab that keeps them running. To see the data, download `Afri-Cycle/africycle/backend/database/africycle.db` from the **Files** tab and open it with DB Browser for SQLite.
 
 ## Team workflow
 

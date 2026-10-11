@@ -1,9 +1,25 @@
+import math
+
 from flask import Blueprint, request, jsonify
 from auth_utils import get_user_from_token
 from database.db import get_connection
 from models.notification import get_notification_by_id, update_location, update_status
 
 notification_bp = Blueprint("notification_bp", __name__)
+
+
+def to_number(value, low, high):
+    """Returns value as a float if it's a real number from low to high, else None.
+    Rejects text, true/false, NaN and Infinity (Python's JSON parser accepts the last two)."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number) or not low <= number <= high:
+        return None
+    return number
 
 LIST_QUERY = """
     SELECT n.*, s.name AS sellerName, b.name AS buyerName, m.name AS materialName
@@ -78,6 +94,13 @@ def update_notification_location(notification_id):
     longitude = data.get("longitude")
     if latitude is None or longitude is None:
         return jsonify({"message": "latitude and longitude are required"}), 400
+
+    # Only real coordinates get stored: the buyer dashboard puts these values into
+    # a link's HTML, so unchecked text here would let a seller inject a script.
+    latitude = to_number(latitude, -90, 90)
+    longitude = to_number(longitude, -180, 180)
+    if latitude is None or longitude is None:
+        return jsonify({"message": "latitude must be a number from -90 to 90 and longitude from -180 to 180"}), 400
 
     update_location(notification_id, latitude, longitude)
     return jsonify({"message": "Location updated"}), 200

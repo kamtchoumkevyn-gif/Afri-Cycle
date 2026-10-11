@@ -10,6 +10,16 @@ from models.user import create_user, find_user_by_phone, verify_login
 auth_bp = Blueprint("auth_bp", __name__)
 
 
+def normalize_phone(phone_number):
+    """Turns '+237 6XX XX XX XX' or '2376XXXXXXXX' into the 9-digit form '6XXXXXXXX'."""
+    phone_number = str(phone_number).strip().replace(" ", "")
+    if phone_number.startswith("+237"):
+        phone_number = phone_number[4:]
+    elif phone_number.startswith("237") and len(phone_number) == 12:
+        phone_number = phone_number[3:]
+    return phone_number
+
+
 @auth_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json() or {}
@@ -21,13 +31,7 @@ def register():
     if not all([name, phone_number, password, role]):
         return jsonify({"message": "name, phoneNumber, password, and role are required"}), 400
 
-    phone_number = str(phone_number).strip().replace(" ", "")
-
-    if phone_number.startswith("+237"):
-        phone_number = phone_number[4:]
-    elif phone_number.startswith("237") and len(phone_number) == 12:
-        phone_number = phone_number[3:]
-
+    phone_number = normalize_phone(phone_number)
     if not re.fullmatch(r"[26]\d{8}", phone_number):
         return jsonify({"message": "Enter a valid Cameroon phone number, e.g. 6XXXXXXXX"}), 400
 
@@ -37,7 +41,8 @@ def register():
     if len(password) < 6:
         return jsonify({"message": "Password must be at least 6 characters"}), 400
 
-    if role == "admin" and phone_number not in Config.ADMIN_PHONE_NUMBERS:
+    admin_numbers = {normalize_phone(number) for number in Config.ADMIN_PHONE_NUMBERS}
+    if role == "admin" and phone_number not in admin_numbers:
         return jsonify({"message": "This phone number is not authorized to register as admin"}), 403
 
     if find_user_by_phone(phone_number):
@@ -57,7 +62,12 @@ def login():
     if not phone_number or not password:
         return jsonify({"message": "phoneNumber and password are required"}), 400
 
-    user = verify_login(phone_number, password)
+    # New accounts are saved as 9 digits; accounts created before that rule keep
+    # the format they were typed in, so fall back to the number exactly as typed.
+    normalized = normalize_phone(phone_number)
+    user = verify_login(normalized, password)
+    if not user and normalized != phone_number:
+        user = verify_login(phone_number, password)
     if not user:
         return jsonify({"message": "Invalid phone number or password"}), 401
 

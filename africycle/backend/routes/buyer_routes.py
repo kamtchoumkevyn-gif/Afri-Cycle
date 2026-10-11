@@ -1,3 +1,5 @@
+import math
+
 from flask import Blueprint, request, jsonify
 from auth_utils import get_user_from_token
 from models.buyer_price import set_price as set_price_model
@@ -9,6 +11,23 @@ from models.buyer_profile import (
 from database.db import get_connection
 
 buyer_bp = Blueprint("buyer_bp", __name__)
+
+MAX_PRICE_PER_KG = 1_000_000
+MAX_WEIGHT_KG = 1_000_000
+
+
+def to_number(value, low, high):
+    """Returns value as a float if it's a real number from low to high, else None.
+    Rejects text, true/false, NaN and Infinity (Python's JSON parser accepts the last two)."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(number) or not low <= number <= high:
+        return None
+    return number
 
 
 @buyer_bp.route("/buyer/set-price", methods=["POST"])
@@ -24,13 +43,9 @@ def set_price():
     if not material_category_id or price_per_kg is None:
         return jsonify({"message": "materialCategoryId and pricePerKg are required"}), 400
 
-    # Validate price is non-negative and reasonable
-    try:
-        price_per_kg = float(price_per_kg)
-        if price_per_kg < 0 or price_per_kg > 1000000:
-            return jsonify({"message": "pricePerKg must be between 0 and 1000000"}), 400
-    except (ValueError, TypeError):
-        return jsonify({"message": "pricePerKg must be a valid number"}), 400
+    price_per_kg = to_number(price_per_kg, 0, MAX_PRICE_PER_KG)
+    if price_per_kg is None:
+        return jsonify({"message": "pricePerKg must be a number from 0 to 1,000,000"}), 400
 
     set_price_model(payload["userId"], material_category_id, price_per_kg)
     return jsonify({"message": "Price updated successfully"}), 200
@@ -84,16 +99,10 @@ def save_profile():
     if latitude is None or longitude is None:
         return jsonify({"message": "latitude and longitude are required"}), 400
 
-    # Validate geographic coordinates
-    try:
-        latitude = float(latitude)
-        longitude = float(longitude)
-        if not (-90 <= latitude <= 90):
-            return jsonify({"message": "latitude must be between -90 and 90"}), 400
-        if not (-180 <= longitude <= 180):
-            return jsonify({"message": "longitude must be between -180 and 180"}), 400
-    except (ValueError, TypeError):
-        return jsonify({"message": "latitude and longitude must be valid numbers"}), 400
+    latitude = to_number(latitude, -90, 90)
+    longitude = to_number(longitude, -180, 180)
+    if latitude is None or longitude is None:
+        return jsonify({"message": "latitude must be a number from -90 to 90 and longitude from -180 to 180"}), 400
 
     user_id = payload["userId"]
     if get_buyer_profile_by_user_id(user_id):
@@ -122,16 +131,10 @@ def log_transaction():
     if not all([seller_id, material_category_id, weight_kg, price_per_kg]):
         return jsonify({"message": "sellerId, materialCategoryId, weightKg, and pricePerKg are required"}), 400
 
-    # Validate numeric fields
-    try:
-        weight_kg = float(weight_kg)
-        price_per_kg = float(price_per_kg)
-        if weight_kg <= 0 or weight_kg > 1000000:
-            return jsonify({"message": "weightKg must be between 0 and 1000000"}), 400
-        if price_per_kg < 0 or price_per_kg > 1000000:
-            return jsonify({"message": "pricePerKg must be between 0 and 1000000"}), 400
-    except (ValueError, TypeError):
-        return jsonify({"message": "weightKg and pricePerKg must be valid numbers"}), 400
+    weight_kg = to_number(weight_kg, 0, MAX_WEIGHT_KG)
+    price_per_kg = to_number(price_per_kg, 0, MAX_PRICE_PER_KG)
+    if not weight_kg or price_per_kg is None:
+        return jsonify({"message": "weightKg must be a number above 0 and pricePerKg from 0 to 1,000,000"}), 400
 
     transaction_id = create_transaction(
         seller_id, payload["userId"], material_category_id,

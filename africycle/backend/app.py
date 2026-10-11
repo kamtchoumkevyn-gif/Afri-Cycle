@@ -1,8 +1,6 @@
 import os
 from flask import Flask, send_from_directory, jsonify
 from flask_cors import CORS
-from werkzeug.security import safe_str_cmp
-from pathlib import Path
 
 from config import Config
 from extensions import limiter
@@ -22,27 +20,11 @@ FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fr
 app = Flask(__name__, static_folder=None)
 app.config.from_object(Config)
 
-# Restrict CORS to allowed origins only
-allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5000").split(",")
-CORS(app, resources={
-    r"/*": {
-        "origins": allowed_origins,
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
-    }
-})
+# Open CORS is safe here: logins use Bearer tokens (not cookies), and in production
+# the frontend is served by this same app. It also keeps local testing working when
+# the HTML files are opened straight from disk (file://).
+CORS(app)
 limiter.init_app(app)
-
-# Security headers middleware
-@app.after_request
-def add_security_headers(response):
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
-    return response
 
 for blueprint in (auth_bp, buyer_bp, seller_bp, notification_bp, admin_bp, chat_bp, material_bp):
     app.register_blueprint(blueprint)
@@ -50,6 +32,34 @@ for blueprint in (auth_bp, buyer_bp, seller_bp, notification_bp, admin_bp, chat_
 # Create tables and starter categories on startup (safe to run repeatedly)
 init_db()
 seed_default_categories()
+
+# Content-Security-Policy: browsers only run scripts served by this site, so an
+# injected <script> or onerror="..." can't run. Google Fonts is the only outside
+# source the pages use. The sha256 value allows the small inline <script> at the
+# bottom of index.html; if you edit that script, the browser console prints the
+# new hash to paste here. Adding a CDN library (e.g. a map)? Add its domain here.
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self' 'sha256-WIQm8E+nKtoHRkpBpRcJ+6e8TN00KPKyhiQH/kvOHQA='",
+    "style-src 'self' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 
 @app.route("/health")
@@ -62,23 +72,11 @@ def serve_index():
     return send_from_directory(FRONTEND_DIR, "index.html")
 
 
+# send_from_directory refuses any path that leads outside FRONTEND_DIR
+# (e.g. /../backend/.env gets a 404), so this can't leak backend files.
 @app.route("/<path:filename>")
 def serve_frontend(filename):
-    # Prevent directory traversal attacks
-    if ".." in filename or filename.startswith("/"):
-        return jsonify({"message": "Invalid file path"}), 400
-
-    # Only serve static files (HTML, CSS, JS, images, etc.)
-    allowed_extensions = {".html", ".css", ".js", ".json", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2"}
-    file_ext = Path(filename).suffix.lower()
-
-    if file_ext not in allowed_extensions:
-        return jsonify({"message": "File type not allowed"}), 403
-
-    try:
-        return send_from_directory(FRONTEND_DIR, filename)
-    except FileNotFoundError:
-        return jsonify({"message": "File not found"}), 404
+    return send_from_directory(FRONTEND_DIR, filename)
 
 
 if __name__ == "__main__":

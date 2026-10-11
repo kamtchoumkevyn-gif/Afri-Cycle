@@ -20,7 +20,8 @@ def register():
 
     if not all([name, phone_number, password, role]):
         return jsonify({"message": "name, phoneNumber, password, and role are required"}), 400
-       phone_number = str(phone_number).strip().replace(" ", "")
+
+    phone_number = str(phone_number).strip().replace(" ", "")
 
     if phone_number.startswith("+237"):
         phone_number = phone_number[4:]
@@ -29,10 +30,6 @@ def register():
 
     if not re.fullmatch(r"[26]\d{8}", phone_number):
         return jsonify({"message": "Enter a valid Cameroon phone number, e.g. 6XXXXXXXX"}), 400
-
-    if role not in ("seller", "buyer", "both", "admin"):
-        ...
-     
 
     if role not in ("seller", "buyer", "both", "admin"):
         return jsonify({"message": "role must be seller, buyer, both, or admin"}), 400

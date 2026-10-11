@@ -24,6 +24,14 @@ def set_price():
     if not material_category_id or price_per_kg is None:
         return jsonify({"message": "materialCategoryId and pricePerKg are required"}), 400
 
+    # Validate price is non-negative and reasonable
+    try:
+        price_per_kg = float(price_per_kg)
+        if price_per_kg < 0 or price_per_kg > 1000000:
+            return jsonify({"message": "pricePerKg must be between 0 and 1000000"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"message": "pricePerKg must be a valid number"}), 400
+
     set_price_model(payload["userId"], material_category_id, price_per_kg)
     return jsonify({"message": "Price updated successfully"}), 200
 
@@ -76,6 +84,17 @@ def save_profile():
     if latitude is None or longitude is None:
         return jsonify({"message": "latitude and longitude are required"}), 400
 
+    # Validate geographic coordinates
+    try:
+        latitude = float(latitude)
+        longitude = float(longitude)
+        if not (-90 <= latitude <= 90):
+            return jsonify({"message": "latitude must be between -90 and 90"}), 400
+        if not (-180 <= longitude <= 180):
+            return jsonify({"message": "longitude must be between -180 and 180"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"message": "latitude and longitude must be valid numbers"}), 400
+
     user_id = payload["userId"]
     if get_buyer_profile_by_user_id(user_id):
         update_buyer_location(user_id, latitude, longitude)
@@ -102,6 +121,17 @@ def log_transaction():
 
     if not all([seller_id, material_category_id, weight_kg, price_per_kg]):
         return jsonify({"message": "sellerId, materialCategoryId, weightKg, and pricePerKg are required"}), 400
+
+    # Validate numeric fields
+    try:
+        weight_kg = float(weight_kg)
+        price_per_kg = float(price_per_kg)
+        if weight_kg <= 0 or weight_kg > 1000000:
+            return jsonify({"message": "weightKg must be between 0 and 1000000"}), 400
+        if price_per_kg < 0 or price_per_kg > 1000000:
+            return jsonify({"message": "pricePerKg must be between 0 and 1000000"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"message": "weightKg and pricePerKg must be valid numbers"}), 400
 
     transaction_id = create_transaction(
         seller_id, payload["userId"], material_category_id,

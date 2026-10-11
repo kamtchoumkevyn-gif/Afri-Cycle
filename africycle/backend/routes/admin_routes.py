@@ -63,7 +63,7 @@ def activity_stats():
         SELECT m.name AS materialName, COUNT(*) AS count
         FROM transactions t
         LEFT JOIN material_category m ON m.id = t.materialCategoryId
-        GROUP BY t.materialCategoryId
+        GROUP BY t.materialCategoryId, m.name
         ORDER BY count DESC
         LIMIT 5
         """

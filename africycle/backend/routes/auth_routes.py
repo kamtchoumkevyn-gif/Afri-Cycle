@@ -64,10 +64,12 @@ def login():
 
     # New accounts are saved as 9 digits; accounts created before that rule keep
     # the format they were typed in, so fall back to the number exactly as typed.
-    normalized = normalize_phone(phone_number)
+    # str(): a number sent as JSON must be compared as text (Postgres won't mix types).
+    as_typed = str(phone_number).strip()
+    normalized = normalize_phone(as_typed)
     user = verify_login(normalized, password)
-    if not user and normalized != phone_number:
-        user = verify_login(phone_number, password)
+    if not user and normalized != as_typed:
+        user = verify_login(as_typed, password)
     if not user:
         return jsonify({"message": "Invalid phone number or password"}), 401
 

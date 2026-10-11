@@ -4,7 +4,7 @@ Recycling our environment, saving our future.
 
 Africycle connects scrap collectors (ferrailleurs) in Cameroon with the buyers near them who pay the best price per kilo, and also covers bulk water and organic waste trading. Payment stays in cash; the app keeps a digital record of every purchase as proof of a fair, traceable trade.
 
-Stack: HTML, CSS, and JavaScript on the frontend; Flask (Python) and SQLite on the backend; JWT, bcrypt, and rate limiting for security; pytest for tests.
+Stack: HTML, CSS, and JavaScript on the frontend; Flask (Python) on the backend, with SQLite on your computer and Postgres (Neon) in production; JWT, bcrypt, and rate limiting for security; pytest for tests.
 
 ## Run it on your computer (Windows)
 
@@ -21,6 +21,8 @@ Open `.env` and set two values:
 
 - `JWT_SECRET_KEY`: generate one with `python -c "import secrets; print(secrets.token_hex(32))"`
 - `ADMIN_PHONE_NUMBERS`: the phone number(s) allowed to register as admin, separated by commas
+
+Leave `DATABASE_URL` empty to keep your data in a local SQLite file.
 
 Start the app:
 
@@ -40,7 +42,7 @@ cd backend
 pytest -v
 ```
 
-Tests use a temporary database, so they never touch your real data.
+Tests use a temporary database, so they never touch your real data. To run the same tests against a throwaway Postgres database, set `TEST_DATABASE_URL` to its address first; tests wipe that database, so never point it at the real one.
 
 ## Try the full flow
 
@@ -62,7 +64,7 @@ africycle/
     config.py          secret key, admin phone list, token lifetime
     extensions.py      rate limiter
     auth_utils.py      reads the logged-in user from the JWT
-    database/db.py     SQLite connection and all 7 tables
+    database/db.py     SQLite or Postgres connection and all 7 tables
     models/            one file per table: database functions only
     routes/            API endpoints grouped by feature
     tests/             pytest suite (conftest.py sets up a fresh test DB)
@@ -110,9 +112,17 @@ Create a Web Service from the GitHub repo with:
 - Root directory: `backend`
 - Build command: `pip install -r requirements.txt`
 - Start command: `gunicorn app:app`
-- Environment variables: `JWT_SECRET_KEY` and `ADMIN_PHONE_NUMBERS`
+- Environment variables: `JWT_SECRET_KEY`, `ADMIN_PHONE_NUMBERS`, and `DATABASE_URL`
 
-Render's free disk resets on each deploy, so the SQLite data is for demos only.
+### Keep data between deploys (free)
+
+Render's free plan wipes local files, including a SQLite database, whenever the app redeploys, restarts, or sleeps after 15 idle minutes. So in production the data lives in a free Neon Postgres database:
+
+1. Create a free account at neon.tech and a project, choosing the region closest to your Render region.
+2. Copy the connection string it shows (keep "Connection pooling" on).
+3. In Render, open the service's **Environment**, add `DATABASE_URL` with that string, and save. Render redeploys and the app creates its tables on Neon.
+
+To browse or edit the data, use the **Tables** page in the Neon console. Passwords appear as bcrypt hashes, by design. To switch back to SQLite, delete `DATABASE_URL` in Render.
 
 ## Team workflow
 

@@ -63,7 +63,8 @@ def delete_category(category_id):
 
 
 def seed_default_categories():
-    """Populates starter categories if the table is empty, so dropdowns have real data."""
+    """Populates starter categories if the table is empty, so dropdowns have real data.
+    ON CONFLICT DO NOTHING keeps this safe when several server processes start at once."""
     existing = get_all_categories()
     if existing:
         return
@@ -73,5 +74,13 @@ def seed_default_categories():
         ("Water Bidon", None),
         ("Organic Waste", None),
     ]
+    conn = get_connection()
+    cursor = conn.cursor()
     for name, photo in defaults:
-        create_material_category(name, photo)
+        cursor.execute(
+            "INSERT INTO material_category (name, referencePhotoUrl) VALUES (?, ?) "
+            "ON CONFLICT (name) DO NOTHING",
+            (name, photo)
+        )
+    conn.commit()
+    conn.close()

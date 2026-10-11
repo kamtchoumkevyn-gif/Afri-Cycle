@@ -124,6 +124,31 @@ Render's free plan wipes local files, including a SQLite database, whenever the 
 
 To browse or edit the data, use the **Tables** page in the Neon console. Passwords appear as bcrypt hashes, by design. To switch back to SQLite, delete `DATABASE_URL` in Render.
 
+## Deploy on PythonAnywhere (free, keeps data)
+
+PythonAnywhere keeps files between restarts, so the SQLite database stays and no Neon is needed. Updates are not automatic.
+
+1. Sign up for a free Beginner account. Your username becomes the address: `username.pythonanywhere.com`.
+2. Open a **Bash** console and run these lines, putting your admin number(s) on the last one:
+   ```
+   git clone https://github.com/kamtchoumkevyn-gif/Afri-Cycle.git
+   mkvirtualenv --python=/usr/bin/python3.13 africycle
+   pip install -r Afri-Cycle/africycle/backend/requirements.txt
+   echo "JWT_SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')" > Afri-Cycle/africycle/.env
+   echo "ADMIN_PHONE_NUMBERS=6XXXXXXXX" >> Afri-Cycle/africycle/.env
+   ```
+3. On the **Web** tab: **Add a new web app** → **Manual configuration** → **Python 3.13**. Under **Virtualenv**, enter `africycle`. Turn on **Force HTTPS**.
+4. Open the **WSGI configuration file** linked on the Web tab, replace everything in it with the lines below, save, and click **Reload**:
+   ```python
+   import os, sys
+   path = os.path.expanduser("~/Afri-Cycle/africycle/backend")
+   if path not in sys.path:
+       sys.path.insert(0, path)
+   from app import app as application
+   ```
+
+To update after changes reach GitHub, run `cd ~/Afri-Cycle && git pull` in a Bash console, then click **Reload**. Free web apps stop after a month unless you click the button on the Web tab that keeps them running. To see the data, download `Afri-Cycle/africycle/backend/database/africycle.db` from the **Files** tab and open it with DB Browser for SQLite.
+
 ## Team workflow
 
 Work on your own branch, run `pytest` before pushing, and open a Pull Request into `master`. Never commit `.env`.

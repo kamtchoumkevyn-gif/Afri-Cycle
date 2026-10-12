@@ -1,6 +1,5 @@
 """Maps, material photos (tap to say "I'm coming"), and guardian-supervised child accounts."""
 import base64
-import sqlite3
 
 import database.db as db
 from helpers import auth_header, new_buyer_with_profile, new_category, new_user
@@ -281,23 +280,35 @@ def test_me_reports_guardian_status_and_children(client):
 
 # ---- Upgrading an existing database ----
 
-def test_init_db_adds_new_columns_to_an_existing_database(tmp_path, monkeypatch):
-    old_db = tmp_path / "old.db"
-    conn = sqlite3.connect(old_db)
-    conn.execute("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, phoneNumber TEXT UNIQUE NOT NULL, "
-                 "passwordHash TEXT NOT NULL, name TEXT NOT NULL, role TEXT NOT NULL, "
-                 "isFlagged INTEGER DEFAULT 0, flagReason TEXT)")
-    conn.execute("INSERT INTO users (phoneNumber, passwordHash, name, role) VALUES ('677000001', 'x', 'Old', 'seller')")
+def test_init_db_upgrades_a_database_made_before_these_features(tmp_path, monkeypatch):
+    # Rebuild the tables as earlier releases made them (the live Neon database
+    # looks like this): no material_photos table and none of ADDED_COLUMNS.
+    # Runs on SQLite, or on Postgres when TEST_DATABASE_URL is set.
+    if not db.using_postgres():
+        monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "old.db"))
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    for table in reversed(db.TABLES):
+        cursor.execute(f"DROP TABLE IF EXISTS {table}")
+    for statement in db.SCHEMA[:-1]:
+        cursor.execute(statement)
+    cursor.execute("INSERT INTO users (phoneNumber, passwordHash, name, role) "
+                   "VALUES ('677000001', 'x', 'Old', 'seller')")
     conn.commit()
     conn.close()
 
-    monkeypatch.setattr(db, "DB_PATH", str(old_db))
     db.init_db()
     db.init_db()  # running twice must be harmless
 
-    conn = sqlite3.connect(old_db)
-    columns = {row[1] for row in conn.execute("PRAGMA table_info(users)")}
-    assert {"isMinor", "guardianPhone", "guardianStatus", "guardianId"} <= columns
-    assert conn.execute("SELECT isMinor FROM users").fetchone()[0] == 0  # old accounts are adults
-    assert "locationUpdatedAt" in {row[1] for row in conn.execute("PRAGMA table_info(notifications)")}
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    for table, columns in db.ADDED_COLUMNS.items():
+        assert {name for name, _ in columns} <= db._column_names(cursor, table)
+    cursor.execute("SELECT name, isMinor, guardianStatus FROM users")
+    old_user = cursor.fetchone()
+    assert old_user["name"] == "Old"
+    assert old_user["isMinor"] == 0  # existing accounts are adults
+    assert old_user["guardianStatus"] is None
+    cursor.execute("SELECT COUNT(*) AS photos FROM material_photos")
+    assert cursor.fetchone()["photos"] == 0
     conn.close()

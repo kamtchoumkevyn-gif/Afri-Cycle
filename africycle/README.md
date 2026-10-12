@@ -130,10 +130,14 @@ All routes except `/register`, `/login`, and `/health` need the header `Authoriz
 
 Create a Web Service from the GitHub repo with:
 
-- Root directory: `backend`
+- Branch: `master`
+- Root directory: `africycle/backend` (Render counts from the top of the repository)
 - Build command: `pip install -r requirements.txt`
 - Start command: `gunicorn app:app`
+- Auto-Deploy: On Commit, so every push to `master` goes live
 - Environment variables: `JWT_SECRET_KEY`, `ADMIN_PHONE_NUMBERS`, and `DATABASE_URL`
+
+After a deploy, open `/health` on the site: `{"status": "ok", "database": "postgres"}` means the new version is live and connected to Neon. If the site keeps showing an older version, open the service's **Events** in Render: a failed deploy leaves the previous version running, and its log ends with the reason.
 
 ### Keep data between deploys (free)
 

@@ -21,6 +21,18 @@ def test_database_url_accepts_the_formats_neon_offers(monkeypatch):
     assert database_url() == ""
 
 
+def test_database_url_without_an_address_says_what_to_paste(monkeypatch):
+    # Neon's "Parameters only" view, pasted by mistake: fail clearly instead of
+    # with a driver error, since the message shows up in Render's deploy log
+    monkeypatch.setenv("DATABASE_URL", "PGHOST='ep-cool-1-pooler.eu-central-1.aws.neon.tech'\nPGPASSWORD='pw'")
+    try:
+        database_url()
+    except RuntimeError as error:
+        assert "postgresql://" in str(error)
+    else:
+        raise AssertionError("expected a RuntimeError explaining what to paste")
+
+
 # ---- /health checks the database ----
 
 def test_health_reports_which_database_answered(client):

@@ -145,8 +145,18 @@ def database_url():
     (DATABASE_URL='postgresql://...') pasted by mistake.
     """
     value = os.environ.get("DATABASE_URL", "").strip()
+    if not value:
+        return ""
     match = re.search(r"postgres(?:ql)?://[^\s'\"]+", value)
-    return match.group(0) if match else value
+    if not match:
+        # Fail with a message that says what to fix; it appears in Render's deploy log
+        raise RuntimeError(
+            "DATABASE_URL is set but has no postgresql:// address in it. In Neon, open "
+            "Connect, pick 'Connection string', copy the line that starts with "
+            "postgresql://, and paste that as DATABASE_URL in Render's Environment. "
+            "To use SQLite instead, delete DATABASE_URL."
+        )
+    return match.group(0)
 
 
 def using_postgres():

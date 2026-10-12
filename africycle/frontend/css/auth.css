@@ -1,12 +1,31 @@
-/* Landing, login, and register screens */
+/* Landing, login, register and offline screens */
 
 .auth-body {
   display: flex;
+  flex-wrap: wrap; /* a browser notice (old browser, JavaScript off) goes above the card */
   align-items: center;
+  align-content: center;
   justify-content: center;
   padding: 24px 16px 140px;
   position: relative;
   overflow-x: hidden;
+}
+
+.auth-body > .compat-notice,
+.auth-body > noscript {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 100%;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* iPhones with a notch, held sideways */
+@supports (padding: max(0px)) {
+  .auth-body {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
 }
 
 /* The ocean wave from the logo, anchored to the bottom of the screen */
@@ -35,6 +54,7 @@
   background-color: var(--surface);
   border-radius: var(--radius-md);
   border-top: 5px solid var(--green);
+  padding: 28px;
   padding: clamp(24px, 6vw, 36px);
   box-shadow: 0 12px 32px rgba(18, 53, 91, 0.10);
 }
@@ -84,6 +104,7 @@
 }
 
 .landing-wordmark {
+  font-size: 38px;
   font-size: clamp(34px, 9vw, 44px);
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -97,8 +118,17 @@
 
 .landing-actions {
   display: grid;
+  grid-gap: 12px;
   gap: 12px;
   margin-top: 28px;
+}
+
+.install-box {
+  margin-top: 16px;
+}
+
+.install-box .field-hint {
+  margin-top: 4px;
 }
 
 @media (max-height: 600px) {
@@ -110,9 +140,7 @@
 
 /* Guardian details shown when a child registers */
 .guardian-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  margin-top: 6px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -122,10 +150,6 @@
   padding: 0 6px;
   font-weight: 700;
   color: var(--navy);
-}
-
-.guardian-fields[hidden] {
-  display: none;
 }
 
 .field-hint {

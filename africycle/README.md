@@ -64,6 +64,19 @@ People under 18 can sell scrap with a parent or guardian watching over the accou
 3. The guardian registers with the phone number the child typed, choosing **Supervise my child's account**, and logs in to approve or decline. A guardian who already has a buyer or seller account with that number finds the same page under **My children**.
 4. After approval, the guardian sees the child's trips on a map, their deliveries and sales, and can read their conversations. Buyers see an **Under 18** badge, and both sides of a chat are told the guardian can read it.
 
+## Phones, tablets and computers
+
+Every page adapts from a 320 px phone to a large desktop screen, upright or sideways, and works by touch, mouse or keyboard.
+
+- **Browsers:** Chrome, Samsung Internet, Opera, Firefox and Edge on Android and computers, and Safari on iPhone and iPad, including phones several years old. A browser too old to run the app shows a notice saying to update it. So does Opera Mini's Extreme data saving, which can't run apps like this; its High or Off setting works.
+- **Install it like an app:** on Android, tap **Install Africycle as an app** on the first page (or *Install app* in the browser menu). On iPhone, tap Share, then **Add to Home Screen**. It then opens full screen from its own icon.
+- **Weak connections:** after the first visit, pages, styles, scripts, fonts and the map library are kept on the phone (`frontend/sw.js`), so the app opens quickly even when the network is slow. The server also compresses what it sends (Leaflet: 147 KB down to 42 KB). Buyers, prices, messages and locations always come live from the server. When an answer takes more than a few seconds (a weak signal, or the free server waking up), a notice says so instead of the page seeming frozen.
+- **No connection:** the app's pages still open and say what couldn't load; an address that was never visited shows a "You're offline" page.
+- **Updates:** the server gives `sw.js` a fingerprint of every file in `frontend/`. Each deploy changes it, so phones fetch the new version on their next visit, and any page left open offers **Reload**.
+- **Location:** the app asks for GPS first and falls back to the quicker network position when GPS is slow, such as indoors. If location is refused or switched off, it says how to fix that. Browsers only share location over HTTPS (or on `localhost`), so test location features on the deployed site.
+
+To check layouts while developing, use the device toolbar in Chrome's developer tools (Ctrl+Shift+M). To turn the offline copy off for everyone, follow the note at the top of `frontend/sw.js`.
+
 ## Project structure
 
 ```
@@ -81,14 +94,18 @@ africycle/
   frontend/
     index.html, login.html, register.html
     seller-dashboard.html, buyer-dashboard.html, guardian-dashboard.html
-    admin-dashboard.html, chat.html
+    admin-dashboard.html, chat.html, offline.html
+    manifest.webmanifest  app name, colours and icons for installing
+    sw.js              keeps the app's files on the phone (the server fills in its file list)
     css/               base.css (shared), auth.css, dashboard.css
-    js/                api.js and auth.js load first on every page; map.js for the maps
+    js/                shared scripts (see below), one script per page, map.js for the maps
+    fonts/             Archivo ExtraBold for headings (SIL Open Font License)
+    icons/             app icons and favicon
     vendor/leaflet/    the map library, served from the site itself
     assets/            Africycle_logo.jpg
 ```
 
-Every page loads `js/api.js`, then `js/auth.js`, then its own script. Each shared name is declared once, in one file. Declaring the same `const` in two scripts on one page breaks the second script, and forms then reload the page instead of submitting.
+Every page loads `js/probe.js` and `js/compat.js` (the old-browser check), then `js/api.js` and `js/auth.js`, then its own script, and `js/pwa.js` last. Each shared name is declared once, in one file. Declaring the same `const` in two scripts on one page breaks the second script, and forms then reload the page instead of submitting. Keep `js/compat.js` in old-style JavaScript (no `=>`, `const` or template strings) so that old browsers can run it; if the page scripts start using newer syntax than `js/probe.js` contains, add it there.
 
 ## API reference
 

@@ -64,41 +64,41 @@
     }
   }
 
-  saveLocationBtn.addEventListener("click", () => {
-    if (!navigator.geolocation) {
-      showMessage(pageMsg, "This browser can't share location. Try another browser or device.", "error");
-      return;
-    }
+  saveLocationBtn.addEventListener("click", async () => {
     saveLocationBtn.disabled = true;
     locationStatus.textContent = "Finding your location...";
 
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      try {
-        const response = await authFetch("/buyer/profile", {
-          method: "POST",
-          body: JSON.stringify({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            workingHours: hoursInput.value.trim()
-          })
-        });
-        const data = await readJson(response);
-        if (!response.ok) {
-          showMessage(pageMsg, data.message || "Location not saved.", "error");
-        } else {
-          showMessage(pageMsg, "Buying point saved.", "success");
-          loadProfile();
-        }
-      } catch (err) {
-        serverError();
-      } finally {
-        saveLocationBtn.disabled = false;
-      }
-    }, () => {
-      locationStatus.textContent = "Location is off.";
-      showMessage(pageMsg, "Allow location access in your browser, then tap Save again.", "error");
+    let position;
+    try {
+      position = await AfriMap.locate();
+    } catch (err) {
+      locationStatus.textContent = "We couldn't find your position.";
+      showMessage(pageMsg, AfriMap.locationErrorMessage(err), "error");
       saveLocationBtn.disabled = false;
-    }, { enableHighAccuracy: true, timeout: 15000 });
+      return;
+    }
+
+    try {
+      const response = await authFetch("/buyer/profile", {
+        method: "POST",
+        body: JSON.stringify({
+          latitude: position[0],
+          longitude: position[1],
+          workingHours: hoursInput.value.trim()
+        })
+      });
+      const data = await readJson(response);
+      if (!response.ok) {
+        showMessage(pageMsg, data.message || "Location not saved.", "error");
+      } else {
+        showMessage(pageMsg, "Buying point saved.", "success");
+        loadProfile();
+      }
+    } catch (err) {
+      serverError();
+    } finally {
+      saveLocationBtn.disabled = false;
+    }
   });
 
   // ---- Prices and material photos ----
@@ -188,7 +188,7 @@
     try {
       photo = await shrinkPhoto(file);
     } catch (err) {
-      showMessage(pageMsg, "That file couldn't be read as a photo. Try another one.", "error");
+      showMessage(pageMsg, "That file couldn't be read as a photo. Choose a JPG or PNG photo, or take a new one with the camera.", "error");
       return;
     }
     try {
@@ -469,12 +469,17 @@
   }
 
   checkAccount();
-  loadMaterials();
+  loadMaterials().catch(serverError);
   loadPrices();
   loadHistory();
   // The buying point is needed before the map draws collectors' distances
-  loadProfile().finally(async () => {
+  (async () => {
+    try {
+      await loadProfile();
+    } catch (err) {
+      // No buying point yet, or no connection: the list still loads; distances appear later
+    }
     await loadIncoming();
     scheduleIncoming();
-  });
+  })();
 })();

@@ -2,23 +2,59 @@
 
 const TOKEN_KEY = "africycle_token";
 
+// localStorage can be missing or blocked: private browsing on older iPhones, the built-in
+// browsers of some apps, or storage turned off. Then the token lives in a cookie instead,
+// so logging in still works. (The server never reads this cookie; requests send the token
+// in the Authorization header as usual.)
+function usableStorage(kind) {
+  try {
+    const store = window[kind];
+    store.setItem("africycle_probe", "1");
+    store.removeItem("africycle_probe");
+    return store;
+  } catch (err) {
+    return null;
+  }
+}
+
+function cookieStorage(keepForSeconds) {
+  return {
+    getItem(key) {
+      const match = document.cookie.match(new RegExp(`(?:^|; )${key}=([^;]*)`));
+      return match ? decodeURIComponent(match[1]) : null;
+    },
+    setItem(key, value) {
+      const lifetime = keepForSeconds ? `; max-age=${keepForSeconds}` : "";
+      const secure = window.location.protocol === "https:" ? "; secure" : "";
+      document.cookie = `${key}=${encodeURIComponent(value)}; path=/; samesite=strict${lifetime}${secure}`;
+    },
+    removeItem(key) {
+      document.cookie = `${key}=; path=/; max-age=0`;
+    }
+  };
+}
+
+const keptStore = usableStorage("localStorage") || cookieStorage(24 * 60 * 60);
+const sessionStore = usableStorage("sessionStorage") || cookieStorage(0);
+
 function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
+  return keptStore.getItem(TOKEN_KEY) || sessionStore.getItem(TOKEN_KEY);
 }
 
 function saveToken(token, remember) {
   clearToken();
-  (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
+  (remember ? keptStore : sessionStore).setItem(TOKEN_KEY, token);
 }
 
 function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
-  sessionStorage.removeItem(TOKEN_KEY);
+  keptStore.removeItem(TOKEN_KEY);
+  sessionStore.removeItem(TOKEN_KEY);
 }
 
 function decodeToken(token) {
   try {
-    const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    let base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    base64 += "===".slice((base64.length + 3) % 4); // some browsers need the padding back
     return JSON.parse(atob(base64));
   } catch (err) {
     return null;

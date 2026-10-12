@@ -1,22 +1,35 @@
-/* Shared dashboard layout: admin, buyer, seller, chat */
+/* Shared dashboard layout: admin, buyer, seller, guardian, chat.
+   Spacing between items in a row uses margins rather than flex "gap", which older
+   iPhones (iOS 14.4 and earlier) ignore. */
 
 .topbar {
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px clamp(16px, 4vw, 32px);
+  padding: 10px 12px;
+  padding: 10px var(--gutter);
   background-color: var(--surface);
   border-bottom: 3px solid var(--green);
 }
 
+/* iPhones with a notch, held sideways: keep the bar's contents clear of it */
+@supports (padding: max(0px)) {
+  .topbar {
+    padding-left: max(var(--gutter), env(safe-area-inset-left));
+    padding-right: max(var(--gutter), env(safe-area-inset-right));
+  }
+}
+
 .topbar-brand {
   display: flex;
+  flex: none;
   align-items: center;
-  gap: 10px;
+  min-width: 44px;
+  min-height: 44px;
   text-decoration: none;
 }
 
@@ -27,6 +40,7 @@
 }
 
 .topbar-brand span {
+  margin-left: 10px;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 19px;
@@ -36,18 +50,56 @@
 .topbar-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin: -2px -2px -2px 10px;
+}
+
+.topbar-nav > * {
+  margin: 2px;
+}
+
+/* Small phones: the logo alone names the app, which keeps the menu on one line */
+@media (max-width: 380px) {
+  .topbar-brand span {
+    display: none;
+  }
+
+  .topbar-brand img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .topbar-nav .btn-quiet {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}
+
+/* Phones held sideways have little height: let the bar scroll away with the page */
+@media (max-height: 500px) {
+  .topbar {
+    position: static;
+  }
 }
 
 .dashboard-main {
   max-width: 1040px;
   margin: 0 auto;
-  padding: 20px clamp(12px, 4vw, 32px) 48px;
+  padding: 20px 12px 48px;
+  padding: 20px var(--gutter) 48px;
+}
+
+@supports (padding: max(0px)) {
+  .dashboard-main {
+    padding-left: max(var(--gutter), env(safe-area-inset-left));
+    padding-right: max(var(--gutter), env(safe-area-inset-right));
+    padding-bottom: max(48px, calc(env(safe-area-inset-bottom) + 24px));
+  }
 }
 
 .page-heading {
+  font-size: 24px;
   font-size: clamp(22px, 5vw, 28px);
   font-weight: 800;
   margin-bottom: 4px;
@@ -62,6 +114,7 @@
   background-color: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
+  padding: 20px;
   padding: clamp(16px, 4vw, 24px);
   margin-bottom: 20px;
 }
@@ -80,6 +133,7 @@
 .form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-gap: 12px;
   gap: 12px;
   align-items: end;
 }
@@ -93,6 +147,7 @@
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-gap: 1px;
   gap: 1px;
   background-color: var(--line);
   border: 1px solid var(--line);
@@ -123,6 +178,7 @@
 
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   margin-top: 16px;
 }
 
@@ -145,6 +201,8 @@
   padding: 12px 10px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .data-table .empty-row {
@@ -155,8 +213,12 @@
 
 .row-actions {
   display: flex;
-  gap: 4px;
   flex-wrap: wrap;
+  margin: -2px;
+}
+
+.row-actions > * {
+  margin: 2px;
 }
 
 @media (max-width: 640px) {
@@ -175,19 +237,25 @@
   .data-table td {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
+    align-items: flex-start;
+    text-align: right;
     border: none;
     padding: 6px 0;
   }
 
   .data-table td::before {
     content: attr(data-label);
+    flex: none;
+    max-width: 45%;
+    margin-right: 12px;
+    text-align: left;
     font-weight: 600;
     color: var(--muted);
   }
 
   .data-table td.empty-row {
     display: block;
+    text-align: center;
   }
 
   .data-table td.empty-row::before {
@@ -220,7 +288,10 @@
 
 .modal-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 50;
   display: flex;
   align-items: center;
@@ -234,18 +305,26 @@
   width: 100%;
   max-width: 400px;
   max-height: 90vh;
+  max-height: 90dvh; /* the visible height, between the phone browser's toolbars */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background-color: var(--surface);
   border-radius: var(--radius-md);
   padding: 24px;
 }
 
+@media (max-width: 360px) {
+  .modal-overlay { padding: 10px; }
+  .modal-box { padding: 20px 16px; }
+}
+
 .modal-close {
   position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 40px;
-  height: 40px;
+  top: 6px;
+  right: 6px;
+  width: 44px;
+  height: 44px;
   font-size: 26px;
   line-height: 1;
   background: none;
@@ -256,7 +335,7 @@
 
 .modal-box h3 {
   font-size: 20px;
-  padding-right: 32px;
+  padding-right: 36px;
 }
 
 .modal-meta {
@@ -276,8 +355,14 @@
   border-bottom: 1px solid var(--line);
 }
 
+.price-list li strong {
+  margin-left: 12px;
+  white-space: nowrap;
+}
+
 .modal-actions {
   display: grid;
+  grid-gap: 10px;
   gap: 10px;
 }
 
@@ -286,6 +371,7 @@
 .chat-layout {
   display: grid;
   grid-template-columns: 260px 1fr;
+  grid-gap: 16px;
   gap: 16px;
   min-height: 60vh;
 }
@@ -293,17 +379,23 @@
 .conversation-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+}
+
+.conversation-list > * + * {
+  margin-top: 4px;
 }
 
 .conversation-item {
+  min-height: 44px;
   text-align: left;
   font: inherit;
-  padding: 12px 14px;
+  color: var(--ink);
+  padding: 10px 14px;
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .conversation-item:hover {
@@ -319,17 +411,22 @@
 .thread-panel {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .thread {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   min-height: 300px;
   max-height: 60vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 4px 2px 12px;
+}
+
+.thread > * + * {
+  margin-top: 8px;
 }
 
 .bubble {
@@ -337,6 +434,8 @@
   padding: 8px 12px;
   border-radius: 14px;
   font-size: 15px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   overflow-wrap: anywhere;
 }
 
@@ -363,9 +462,17 @@
 
 .chat-form {
   display: flex;
-  gap: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-form > * + * {
+  margin-left: 8px;
 }
 
 @media (max-width: 720px) {
@@ -378,9 +485,16 @@
     flex-direction: row;
     align-items: flex-start;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .conversation-list > * + * {
+    margin-top: 0;
+    margin-left: 4px;
   }
 
   .conversation-item {
+    flex: none;
     white-space: nowrap;
   }
 }
@@ -391,6 +505,7 @@
   position: relative;
   z-index: 0; /* keeps Leaflet's own layers below the top bar and pop-ups */
   height: 340px;
+  height: clamp(220px, 50vh, 440px); /* never more than half the screen, so the page still scrolls */
   margin: 14px 0 8px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -437,6 +552,9 @@
   position: absolute;
   top: -3px;
   left: 22px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   padding: 1px 8px;
   white-space: nowrap;
   font-size: 13px;
@@ -456,17 +574,46 @@
 .leaflet-popup-content {
   font-family: var(--font-body);
   font-size: 14px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .leaflet-popup-content .row-actions {
   justify-content: flex-start;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .leaflet-popup-content .btn {
   min-height: 38px;
   padding: 6px 12px;
   font-size: 14px;
+}
+
+/* Bigger map buttons for fingers */
+@media (pointer: coarse) {
+  .leaflet-touch .leaflet-bar a {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+  }
+
+  .leaflet-container a.leaflet-popup-close-button {
+    width: 40px;
+    height: 40px;
+    font: 24px/40px Tahoma, Verdana, sans-serif;
+  }
+
+  .leaflet-popup-content {
+    margin: 12px 14px;
+  }
+
+  .leaflet-popup-content .popup-title {
+    padding-right: 26px; /* room for the bigger close button */
+  }
+
+  .leaflet-popup-content .btn {
+    min-height: 44px;
+  }
 }
 
 /* ---- Material photos ---- */
@@ -485,12 +632,24 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  margin: -4px;
+}
+
+.photo-cell > * {
+  margin: 4px;
+}
+
+@media (min-width: 641px) {
+  .photo-cell {
+    justify-content: flex-start;
+  }
 }
 
 .photo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  grid-gap: 10px;
   gap: 10px;
   margin: 8px 0 16px;
 }
@@ -498,7 +657,6 @@
 .photo-tap {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   padding: 6px;
   font: inherit;
   text-align: left;
@@ -507,6 +665,7 @@
   background-color: var(--surface);
   border: 2px solid var(--line);
   border-radius: var(--radius-md);
+  touch-action: manipulation;
 }
 
 .photo-tap:hover,
@@ -516,13 +675,21 @@
 
 .photo-tap img {
   width: 100%;
-  aspect-ratio: 1;
+  height: 110px;
   object-fit: cover;
   background-color: var(--page);
   border-radius: var(--radius-sm);
 }
 
+@supports (aspect-ratio: 1 / 1) {
+  .photo-tap img {
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+}
+
 .photo-tap span {
+  margin-top: 6px;
   font-size: 13px;
   font-weight: 600;
 }

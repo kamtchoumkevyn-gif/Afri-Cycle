@@ -3,16 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <link rel="icon" href="assets/Africycle_logo.jpg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <meta name="theme-color" content="#2e7d32">
+  <meta name="color-scheme" content="light">
+  <meta name="apple-mobile-web-app-title" content="Africycle">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <title>Buyer - Africycle</title>
 </head>
 <body>
+  <noscript><p class="msg msg-error noscript-notice">Africycle needs JavaScript. Turn it on in your browser's settings, then reload this page.</p></noscript>
   <header class="topbar">
     <a href="buyer-dashboard.html" class="topbar-brand">
       <img src="assets/Africycle_logo.jpg" alt="">
@@ -56,7 +59,7 @@
         </div>
         <div>
           <label for="priceInput">Price per kg (FCFA)</label>
-          <input type="number" id="priceInput" min="1" step="1" required>
+          <input type="number" id="priceInput" inputmode="numeric" min="1" step="1" required>
         </div>
         <button type="submit" class="btn btn-primary">Save price</button>
       </form>
@@ -106,11 +109,11 @@
         </div>
         <div>
           <label for="weightInput">Weight (kg)</label>
-          <input type="number" id="weightInput" min="0.1" step="0.1" required>
+          <input type="number" id="weightInput" inputmode="decimal" min="0.1" step="0.1" required>
         </div>
         <div>
           <label for="txPriceInput">Price per kg (FCFA)</label>
-          <input type="number" id="txPriceInput" min="1" step="1" required>
+          <input type="number" id="txPriceInput" inputmode="numeric" min="1" step="1" required>
         </div>
         <button type="submit" class="btn btn-primary">Record purchase</button>
       </form>
@@ -132,10 +135,13 @@
     </section>
   </main>
 
+  <script src="js/probe.js"></script>
+  <script src="js/compat.js"></script>
   <script src="vendor/leaflet/leaflet.js"></script>
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/map.js"></script>
   <script src="js/buyer-dashboard.js"></script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

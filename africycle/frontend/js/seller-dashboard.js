@@ -75,17 +75,7 @@
   // [lat, lng]. Reuses the live position when the page is already following you.
   function getPosition() {
     if (myPosition && Date.now() - myPositionAt < 15000) return Promise.resolve(myPosition);
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("unsupported"));
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (position) => resolve([position.coords.latitude, position.coords.longitude]),
-        reject,
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-      );
-    });
+    return AfriMap.locate();
   }
 
   findBtn.addEventListener("click", async () => {
@@ -104,8 +94,8 @@
     try {
       position = await getPosition();
     } catch (err) {
-      buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">Location is off.</td></tr>`;
-      showMessage(pageMsg, "Allow location access in your browser so we can show the buyers around you.", "error");
+      buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">We couldn't find your position.</td></tr>`;
+      showMessage(pageMsg, AfriMap.locationErrorMessage(err), "error");
       findBtn.disabled = false;
       return;
     }
@@ -440,7 +430,9 @@
   });
 
   checkAccount();
-  loadMaterials();
+  loadMaterials().catch(() => {
+    showMessage(pageMsg, "Can't reach the server. Check your connection, then reload the page.", "error");
+  });
   loadDeliveries();
   setInterval(shareLocation, LOCATION_PING_MS);
   setInterval(loadDeliveries, 30000);

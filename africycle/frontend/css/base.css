@@ -1,5 +1,26 @@
 /* Africycle base styles: shared by every page */
 
+/* Archivo ExtraBold for headings, served from this site (fonts/, SIL Open Font License), so
+   no outside request can hold up the page. Browsers download only the file whose letters a
+   page uses: -latin covers English and French; -latin-ext adds letters such as ŋ, ɓ and ɗ. */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../fonts/archivo-extrabold-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("../fonts/archivo-extrabold-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
   --navy: #12355b;
   --green: #2e7d32;
@@ -16,8 +37,22 @@
   --danger-tint: #fbeaea;
   --radius-sm: 6px;
   --radius-md: 10px;
+  --gutter: 12px; /* space at the screen's left and right edges */
   --font-display: "Archivo", "Segoe UI", Roboto, Arial, sans-serif;
   --font-body: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+
+@media (min-width: 360px) {
+  :root { --gutter: 16px; }
+}
+
+@media (min-width: 600px) {
+  :root { --gutter: 24px; }
+}
+
+@media (min-width: 900px) {
+  :root { --gutter: 32px; }
 }
 
 *,
@@ -30,6 +65,9 @@
 
 html {
   height: 100%;
+  /* Stops iPhones from enlarging text when the phone is turned sideways */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -40,6 +78,7 @@ body {
   background-color: var(--page);
   min-height: 100vh;
   min-height: 100dvh;
+  -webkit-tap-highlight-color: rgba(46, 125, 50, 0.15);
 }
 
 h1, h2, h3 {
@@ -83,6 +122,12 @@ select {
   border-radius: var(--radius-sm);
 }
 
+/* Same look on iPhones, which otherwise add an inner shadow to text boxes */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 input:focus,
 select:focus {
   border-color: var(--green);
@@ -90,18 +135,21 @@ select:focus {
   box-shadow: 0 0 0 3px var(--green-tint);
 }
 
+/* The whole line is the tap target, not just the small box */
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 10px;
+  min-height: 44px;
   font-weight: 400;
   color: var(--muted);
   cursor: pointer;
 }
 
 .checkbox-label input {
+  flex: none;
   width: 18px;
   height: 18px;
+  margin-right: 10px;
   accent-color: var(--green);
 }
 
@@ -111,15 +159,16 @@ select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   min-height: 46px;
   padding: 10px 18px;
   font: inherit;
   font-weight: 700;
+  text-align: center;
   border: 2px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
   text-decoration: none;
+  touch-action: manipulation; /* no double-tap zoom delay on older phones */
 }
 
 .btn-primary {
@@ -127,7 +176,8 @@ select:focus {
   color: #ffffff;
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+.btn-primary:active {
   background-color: var(--green-dark);
 }
 
@@ -159,6 +209,20 @@ select:focus {
 
 .btn-block {
   width: 100%;
+}
+
+/* Touch screens: a tap leaves no stuck hover colour, and every button is big enough for a finger */
+@media (hover: none) {
+  .btn-primary:hover {
+    background-color: var(--green);
+  }
+}
+
+@media (pointer: coarse) {
+  .btn-quiet,
+  .btn-danger {
+    min-height: 44px;
+  }
 }
 
 .spinner {
@@ -193,17 +257,63 @@ select:focus {
   color: var(--green-dark);
 }
 
+.msg-info {
+  color: var(--navy);
+  background-color: var(--blue-tint);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation-duration: 2s; }
+}
+
+/* A bar at the bottom of the screen: slow connection, or a new version of the app */
+.notice-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #ffffff;
+  background-color: var(--navy);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.notice-bar .btn {
+  flex: none;
+  min-height: 40px;
+  margin-left: 12px;
+  color: #ffffff;
+  border-color: #ffffff;
+  background: none;
+}
+
+/* Shown by js/compat.js when a browser can't run the app. Plain colours on purpose:
+   the old browsers that see this may not understand var(). */
+.compat-notice {
+  padding: 14px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #b3261e;
+  background-color: #fbeaea;
+  border-bottom: 3px solid #b3261e;
+}
+
+.noscript-notice {
+  margin: 0;
+  border-radius: 0;
 }
 
 /* The logo file has an off-white background; this blends it into white surfaces */
 .auth-logo,
 .topbar-brand img {
   mix-blend-mode: multiply;
-}
-
-.msg-info {
-  color: var(--navy);
-  background-color: var(--blue-tint);
 }

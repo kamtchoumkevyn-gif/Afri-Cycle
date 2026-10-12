@@ -45,9 +45,18 @@ def test_security_headers_on_pages_and_api(client):
         assert "max-age=" in headers["Strict-Transport-Security"]
 
 
-def test_csp_allows_google_fonts_used_by_every_page():
-    assert "https://fonts.googleapis.com" in CONTENT_SECURITY_POLICY
-    assert "https://fonts.gstatic.com" in CONTENT_SECURITY_POLICY
+def test_pages_load_nothing_from_other_sites():
+    # Fonts, styles, scripts and the map library are all served by this app, so a slow
+    # or blocked outside server can't hold a page up. (Only map tiles come from
+    # OpenStreetMap, and only as images.)
+    for name in os.listdir(FRONTEND_DIR):
+        if not name.endswith(".html"):
+            continue
+        with open(os.path.join(FRONTEND_DIR, name), encoding="utf-8") as f:
+            html = f.read()
+        assert not re.search(r'<(?:link|script)[^>]+(?:href|src)="(?:https?:)?//', html), name
+    assert "googleapis" not in CONTENT_SECURITY_POLICY
+    assert "style-src 'self';" in CONTENT_SECURITY_POLICY
 
 
 def test_csp_allows_every_inline_script_in_the_frontend():

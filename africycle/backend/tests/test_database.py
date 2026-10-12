@@ -1,6 +1,6 @@
 import os
 
-from database.db import SCHEMA, TABLES, PostgresCursor, to_postgres, using_postgres
+from database.db import SCHEMA, TABLES, PostgresCursor, database_url, to_postgres, using_postgres
 
 
 # ---- Safety ----
@@ -8,6 +8,36 @@ from database.db import SCHEMA, TABLES, PostgresCursor, to_postgres, using_postg
 def test_tests_never_use_the_real_database():
     # conftest blanks DATABASE_URL unless TEST_DATABASE_URL points at a throwaway database
     assert using_postgres() == bool(os.environ.get("TEST_DATABASE_URL"))
+
+
+# ---- DATABASE_URL as pasted from Neon ----
+
+def test_database_url_accepts_the_formats_neon_offers(monkeypatch):
+    url = "postgresql://neondb_owner:pw@ep-cool-1-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+    for pasted in (url, f"  {url}\n", f"psql '{url}'", f"DATABASE_URL='{url}'", f'"{url}"'):
+        monkeypatch.setenv("DATABASE_URL", pasted)
+        assert database_url() == url, pasted
+    monkeypatch.setenv("DATABASE_URL", "   ")
+    assert database_url() == ""
+
+
+# ---- /health checks the database ----
+
+def test_health_reports_which_database_answered(client):
+    data = client.get("/health").get_json()
+    assert data == {"status": "ok", "database": "postgres" if using_postgres() else "sqlite"}
+
+
+def test_health_fails_when_the_database_is_unreachable(client, monkeypatch):
+    import app as app_module
+
+    def unreachable():
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(app_module, "get_connection", unreachable)
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert response.get_json()["status"] == "error"
 
 
 # ---- SQL translation for Postgres ----

@@ -4,7 +4,7 @@ from flask_cors import CORS
 
 from config import Config
 from extensions import limiter
-from database.db import init_db
+from database.db import init_db, get_connection, using_postgres
 from models.material_category import seed_default_categories
 
 from routes.auth_routes import auth_bp
@@ -64,7 +64,16 @@ def add_security_headers(response):
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok"}), 200
+    """Also checks the database, so a broken connection shows up as an error."""
+    database = "postgres" if using_postgres() else "sqlite"
+    try:
+        conn = get_connection()
+        conn.cursor().execute("SELECT 1")
+        conn.close()
+    except Exception:
+        app.logger.exception("Health check: database unreachable")
+        return jsonify({"status": "error", "database": database}), 503
+    return jsonify({"status": "ok", "database": database}), 200
 
 
 @app.route("/")

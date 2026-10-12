@@ -107,8 +107,15 @@ TABLES = [re.search(r"EXISTS (\w+)", statement).group(1) for statement in SCHEMA
 
 
 def database_url():
-    """The Postgres URL from the environment, or "" when the SQLite file should be used."""
-    return os.environ.get("DATABASE_URL", "").strip()
+    """The Postgres URL from the environment, or "" when the SQLite file should be used.
+
+    Neon's Connect box offers the address in several forms; this also accepts
+    the psql command (psql 'postgresql://...') or a .env line
+    (DATABASE_URL='postgresql://...') pasted by mistake.
+    """
+    value = os.environ.get("DATABASE_URL", "").strip()
+    match = re.search(r"postgres(?:ql)?://[^\s'\"]+", value)
+    return match.group(0) if match else value
 
 
 def using_postgres():

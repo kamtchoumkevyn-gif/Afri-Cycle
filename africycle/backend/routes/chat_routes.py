@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from auth_utils import get_user_from_token
+from auth_utils import get_user_from_token, guardian_block
 from database.db import get_connection
 from models.chat import send_message, get_conversation, get_conversations_for_user
 
@@ -33,7 +33,7 @@ def messages(other_user_id):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM users WHERE id = ?", (other_user_id,))
+    cursor.execute("SELECT name, isMinor FROM users WHERE id = ?", (other_user_id,))
     other = cursor.fetchone()
     conn.close()
 
@@ -41,7 +41,9 @@ def messages(other_user_id):
         return jsonify({"message": "User not found"}), 404
 
     thread = get_conversation(payload["userId"], other_user_id)
-    return jsonify({"otherUserName": other["name"], "messages": thread}), 200
+    # Under-18 sellers' guardians can read their conversations; the page says so
+    return jsonify({"otherUserName": other["name"], "otherIsMinor": bool(other["isMinor"]),
+                    "messages": thread}), 200
 
 
 @chat_bp.route("/chat/send", methods=["POST"])
@@ -62,6 +64,10 @@ def send():
 
     if receiver_id == payload["userId"]:
         return jsonify({"message": "You cannot message yourself"}), 400
+
+    blocked = guardian_block(payload["userId"])
+    if blocked:
+        return blocked
 
     conn = get_connection()
     cursor = conn.cursor()

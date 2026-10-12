@@ -101,9 +101,40 @@ SCHEMA = [
         FOREIGN KEY (receiverId) REFERENCES users(id)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS material_photos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        buyerId INTEGER NOT NULL,
+        materialCategoryId INTEGER NOT NULL,
+        mimeType TEXT NOT NULL,
+        imageData TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        UNIQUE (buyerId, materialCategoryId),
+        FOREIGN KEY (buyerId) REFERENCES users(id),
+        FOREIGN KEY (materialCategoryId) REFERENCES material_category(id)
+    )
+    """,
 ]
 
 TABLES = [re.search(r"EXISTS (\w+)", statement).group(1) for statement in SCHEMA]
+
+# Columns added after the first release. CREATE TABLE IF NOT EXISTS never changes
+# a table that already exists (like the live one on Neon), so init_db adds any of
+# these that are missing.
+ADDED_COLUMNS = {
+    "users": [
+        ("isMinor", "INTEGER DEFAULT 0"),
+        ("guardianName", "TEXT"),
+        ("guardianPhone", "TEXT"),
+        ("guardianRelation", "TEXT"),
+        ("guardianStatus", "TEXT"),      # pending, approved or declined; empty for adults
+        ("guardianId", "INTEGER"),       # the guardian account that approved the child
+        ("guardianApprovedAt", "TEXT"),
+    ],
+    "notifications": [
+        ("locationUpdatedAt", "TEXT"),
+    ],
+}
 
 
 def database_url():
@@ -139,8 +170,25 @@ def init_db():
         cursor.execute(f"SELECT pg_advisory_xact_lock({_INIT_LOCK_ID})")
     for statement in SCHEMA:
         cursor.execute(statement)
+    for table, columns in ADDED_COLUMNS.items():
+        existing = _column_names(cursor, table)
+        for name, definition in columns:
+            if name not in existing:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
     conn.commit()
     conn.close()
+
+
+def _column_names(cursor, table):
+    if using_postgres():
+        cursor.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = current_schema() AND table_name = ?",
+            (table,)
+        )
+        return {row["column_name"] for row in cursor.fetchall()}
+    cursor.execute(f"PRAGMA table_info({table})")
+    return {row["name"] for row in cursor.fetchall()}
 
 
 def reset_db():

@@ -4,7 +4,7 @@ Recycling our environment, saving our future.
 
 Africycle connects scrap collectors (ferrailleurs) in Cameroon with the buyers near them who pay the best price per kilo, and also covers bulk water and organic waste trading. Payment stays in cash; the app keeps a digital record of every purchase as proof of a fair, traceable trade.
 
-Stack: HTML, CSS, and JavaScript on the frontend; Flask (Python) on the backend, with SQLite on your computer and Postgres (Neon) in production; JWT, bcrypt, and rate limiting for security; pytest for tests.
+Stack: HTML, CSS, and JavaScript on the frontend, with Leaflet and OpenStreetMap for the live maps; Flask (Python) on the backend, with SQLite on your computer and Postgres (Neon) in production; JWT, bcrypt, and rate limiting for security; pytest for tests.
 
 ## Run it on your computer (Windows)
 
@@ -46,13 +46,23 @@ Tests use a temporary database, so they never touch your real data. To run the s
 
 ## Try the full flow
 
-1. Register a **buyer**, log in, tap **Save my current location**, and set a price for Scrap Iron.
-2. Log out. Register a **seller**, log in, choose Scrap Iron, and tap **Find buyers**.
-3. Tap **I'm coming** on a buyer, then **Mark in transit**. The buyer now sees the seller's live location.
-4. When the seller marks **arrived**, the buyer can mark the delivery **completed** and record the purchase.
-5. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS` to see stats and flag accounts.
+1. Register a **buyer**, log in, tap **Save my current location**, set a price for Scrap Iron, and tap **Add photo** in the Photo column to upload a reference picture of the scrap you buy.
+2. Log out. Register a **seller**, log in, choose Scrap Iron, and tap **Find buyers**. The map shows you and every buyer, with the best price in orange; tap a buyer for their details and photos.
+3. Tap the buyer's **photo** (or **I'm coming**). The buyer is told at once that you are on your way, and your phone shares its location while the trip is in transit.
+4. On the buyer's dashboard, **Collectors on their way** shows a map with the seller moving towards their pin.
+5. When the seller marks **arrived**, the buyer can mark the delivery **completed** and record the purchase.
+6. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS` to see stats and flag accounts.
 
 Location only works on `localhost` or over HTTPS, which browsers require.
+
+### Children and guardians
+
+People under 18 can sell scrap with a parent or guardian watching over the account:
+
+1. On **Create account**, tick **I am under 18**, and fill in the parent or guardian's name, phone number, and relationship. Child accounts are seller accounts.
+2. The child can log in, but can't search for buyers, notify them, or send messages until their guardian approves.
+3. The guardian registers with the phone number the child typed, choosing **Supervise my child's account**, and logs in to approve or decline. A guardian who already has a buyer or seller account with that number finds the same page under **My children**.
+4. After approval, the guardian sees the child's trips on a map, their deliveries and sales, and can read their conversations. Buyers see an **Under 18** badge, and both sides of a chat are told the guardian can read it.
 
 ## Project structure
 
@@ -64,15 +74,17 @@ africycle/
     config.py          secret key, admin phone list, token lifetime
     extensions.py      rate limiter
     auth_utils.py      reads the logged-in user from the JWT
-    database/db.py     SQLite or Postgres connection and all 7 tables
+    database/db.py     SQLite or Postgres connection and all 8 tables
     models/            one file per table: database functions only
     routes/            API endpoints grouped by feature
     tests/             pytest suite (conftest.py sets up a fresh test DB)
   frontend/
     index.html, login.html, register.html
-    seller-dashboard.html, buyer-dashboard.html, admin-dashboard.html, chat.html
+    seller-dashboard.html, buyer-dashboard.html, guardian-dashboard.html
+    admin-dashboard.html, chat.html
     css/               base.css (shared), auth.css, dashboard.css
-    js/                api.js and auth.js load first on every page
+    js/                api.js and auth.js load first on every page; map.js for the maps
+    vendor/leaflet/    the map library, served from the site itself
     assets/            Africycle_logo.jpg
 ```
 
@@ -80,28 +92,37 @@ Every page loads `js/api.js`, then `js/auth.js`, then its own script. Each share
 
 ## API reference
 
-All routes except `/register` and `/login` need the header `Authorization: Bearer <token>`.
+All routes except `/register`, `/login`, and `/health` need the header `Authorization: Bearer <token>`.
 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
-| POST | /register | anyone | Create an account (name, phoneNumber, password, role) |
+| POST | /register | anyone | Create an account (name, phoneNumber, password, role: seller, buyer, both, guardian, or admin). Under 18: add `isMinor: true`, guardianName, guardianPhone, guardianRelation |
 | POST | /login | anyone | Get a token (phoneNumber, password, optional role) |
+| GET | /me | logged in | Own account, guardian status, and number of supervised children |
+| GET | /health | anyone | `status` and which `database` is in use |
 | GET | /material-categories | logged in | List materials for dropdowns |
 | GET, POST | /buyer/profile | buyer | Read or save location and working hours |
-| GET | /buyer/prices | buyer | List own prices |
+| GET | /buyer/prices | buyer | List own prices, with photoId |
 | POST | /buyer/set-price | buyer | Create or update a price per kg |
+| POST | /buyer/material-photo | buyer | Upload a reference photo for a priced material (materialCategoryId, image as a data URL, 400 KB max) |
+| DELETE | /buyer/material-photo/<materialId> | buyer | Remove that photo |
+| GET | /photos/<id> | logged in | The photo itself |
 | POST | /buyer/log-transaction | buyer | Record a cash purchase |
 | GET | /buyer/transaction-history | buyer | List own purchases |
-| GET | /seller/nearby-buyers | seller | Buyers within a radius, highest price first |
-| GET | /seller/buyer-profile/<id> | seller | A buyer's hours and prices |
+| GET | /seller/nearby-buyers | seller | Buyers within a radius, highest price first, with their coordinates |
+| GET | /seller/buyer-profile/<id> | seller | A buyer's hours, prices, and photos |
 | GET | /seller/contact-buyer/<id> | seller | A buyer's phone number |
-| POST | /seller/notify-buyer | seller | Tell a buyer you are on your way |
+| POST | /seller/notify-buyer | seller | Tell a buyer you are coming (buyerId, materialCategoryId; `onTheWay: true` starts the trip in transit) |
 | GET | /notifications | buyer or seller | Deliveries you sent or received |
 | PATCH | /notifications/<id>/location | sending seller | Update live location |
 | PATCH | /notifications/<id>/status | either party | pending, in transit, arrived, completed |
 | GET | /chat/conversations | logged in | People you have messaged |
 | GET | /chat/messages/<userId> | logged in | Messages with one person |
 | POST | /chat/send | logged in | Send a message |
+| GET | /guardian/children | guardian named by the child | Children waiting for approval and children supervised |
+| POST | /guardian/children/<id>/approve, /guardian/children/<id>/decline | guardian named by the child | Let the child trade, or not |
+| GET | /guardian/children/<id>/activity | the child's guardian | The child's deliveries, sales, and conversations |
+| GET | /guardian/children/<id>/messages/<userId> | the child's guardian | One of the child's conversations, read only |
 | GET | /admin/stats, /admin/activity-stats, /admin/users, /admin/flagged-accounts | admin | Platform overview |
 | POST | /admin/flag-account/<id>, /admin/unflag-account/<id> | admin | Account review |
 

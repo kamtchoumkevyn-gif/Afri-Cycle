@@ -50,6 +50,35 @@ function formatDate(isoString) {
   return new Date(value).toLocaleString();
 }
 
+// Material photos need the login token, so they're fetched here and shown via blob: URLs.
+// Mark images with data-photo-id, then call loadPhotos(container).
+const photoCache = new Map();
+
+function loadPhotos(container) {
+  container.querySelectorAll("img[data-photo-id]").forEach((img) => {
+    const id = img.dataset.photoId;
+    if (!photoCache.has(id)) {
+      photoCache.set(id, authFetch(`/photos/${id}`)
+        .then((response) => (response.ok ? response.blob() : null))
+        .then((blob) => (blob ? URL.createObjectURL(blob) : null))
+        .catch(() => null));
+    }
+    photoCache.get(id).then((url) => {
+      if (url) img.src = url;
+    });
+  });
+}
+
+// The logged-in account's details, including a child's guardian approval status
+async function loadMe() {
+  try {
+    const response = await authFetch("/me");
+    return response.ok ? await readJson(response) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
 function statusPill(status) {
   const cssClass = `status-${String(status).replace(/\s+/g, "-")}`;
   return `<span class="status ${cssClass}">${escapeHtml(status)}</span>`;

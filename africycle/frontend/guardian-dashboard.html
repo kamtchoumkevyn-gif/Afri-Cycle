@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="assets/Africycle_logo.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <title>Guardian - Africycle</title>
+</head>
+<body>
+  <header class="topbar">
+    <a href="guardian-dashboard.html" class="topbar-brand">
+      <img src="assets/Africycle_logo.jpg" alt="">
+      <span>Africycle</span>
+    </a>
+    <nav class="topbar-nav" aria-label="Main">
+      <a id="ownDashboardLink" href="index.html" class="btn btn-quiet" hidden>My dashboard</a>
+      <button id="logoutBtn" class="btn btn-quiet" type="button">Log out</button>
+    </nav>
+  </header>
+
+  <main class="dashboard-main">
+    <h1 class="page-heading">Your children</h1>
+    <p class="page-intro">Approve your child's Africycle account, then follow their deliveries, sales and messages.</p>
+
+    <p id="pageMsg" class="msg" role="status" hidden></p>
+
+    <section class="panel" aria-labelledby="pendingHeading">
+      <h2 id="pendingHeading">Waiting for your approval</h2>
+      <p class="panel-hint">Children who registered with your phone number. Approve only a child you are responsible for.</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Name</th><th>Phone</th><th>You are their</th><th></th></tr>
+          </thead>
+          <tbody id="pendingBody">
+            <tr><td colspan="4" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="childrenHeading">
+      <h2 id="childrenHeading">Children you supervise</h2>
+      <p class="panel-hint" id="noChildren">When you approve a child, their activity appears here.</p>
+      <div class="form-row" id="childPicker" hidden>
+        <div>
+          <label for="childSelect">Child</label>
+          <select id="childSelect"></select>
+        </div>
+      </div>
+
+      <div id="childView" hidden>
+        <h3>On a delivery now</h3>
+        <p class="map-status" id="tripStatus" aria-live="polite"></p>
+        <div id="childMap" class="map-box" role="region" aria-label="Map of your child's delivery" hidden></div>
+
+        <h3>Deliveries</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Buyer</th><th>Material</th><th>Status</th><th>Started</th></tr>
+            </thead>
+            <tbody id="deliveriesBody"></tbody>
+          </table>
+        </div>
+
+        <h3>Sales</h3>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr><th>Buyer</th><th>Material</th><th>Weight</th><th>Total</th><th>Date</th></tr>
+            </thead>
+            <tbody id="salesBody"></tbody>
+          </table>
+        </div>
+
+        <h3>Messages</h3>
+        <p class="panel-hint">You can read your child's conversations. Only your child can reply.</p>
+        <div class="chat-layout">
+          <div class="conversation-list" id="conversationList"></div>
+          <div class="thread thread-readonly" id="thread" aria-live="polite">
+            <p class="panel-hint">Choose a conversation.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/guardian-dashboard.js"></script>
+</body>
+</html>

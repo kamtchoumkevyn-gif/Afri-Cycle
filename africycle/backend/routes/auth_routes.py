@@ -4,10 +4,16 @@ import re
 from datetime import datetime, timedelta
 from config import Config
 from extensions import limiter
-from models.user import create_user, find_user_by_phone, verify_login
+from auth_utils import get_user_from_token
+from database.db import get_connection
+from models.user import create_user, find_user_by_phone, get_user_by_id, verify_login
 
 
 auth_bp = Blueprint("auth_bp", __name__)
+
+ROLES = ("seller", "buyer", "both", "admin", "guardian")
+GUARDIAN_RELATIONS = ("mother", "father", "grandparent", "aunt or uncle", "older sibling", "other guardian")
+CAMEROON_PHONE = re.compile(r"[26]\d{8}")
 
 
 def normalize_phone(phone_number):
@@ -31,15 +37,39 @@ def register():
     if not all([name, phone_number, password, role]):
         return jsonify({"message": "name, phoneNumber, password, and role are required"}), 400
 
+    name = str(name).strip()
+    if len(name) > 100:
+        return jsonify({"message": "Name is too long (max 100 characters)"}), 400
+
     phone_number = normalize_phone(phone_number)
-    if not re.fullmatch(r"[26]\d{8}", phone_number):
+    if not CAMEROON_PHONE.fullmatch(phone_number):
         return jsonify({"message": "Enter a valid Cameroon phone number, e.g. 6XXXXXXXX"}), 400
 
-    if role not in ("seller", "buyer", "both", "admin"):
-        return jsonify({"message": "role must be seller, buyer, both, or admin"}), 400
+    if role not in ROLES:
+        return jsonify({"message": "role must be seller, buyer, both, guardian, or admin"}), 400
 
     if len(password) < 6:
         return jsonify({"message": "Password must be at least 6 characters"}), 400
+
+    # Under-18s sell under a guardian's supervision: the guardian approves the
+    # account (logging in with this phone number) before the child can trade.
+    guardian = None
+    if data.get("isMinor") is True:
+        if role != "seller":
+            return jsonify({"message": "Accounts for under-18s can only be seller accounts"}), 400
+        guardian = {
+            "name": str(data.get("guardianName") or "").strip(),
+            "phone": normalize_phone(data.get("guardianPhone") or ""),
+            "relation": str(data.get("guardianRelation") or "").strip().lower(),
+        }
+        if not guardian["name"] or len(guardian["name"]) > 100:
+            return jsonify({"message": "Enter your guardian's full name"}), 400
+        if not CAMEROON_PHONE.fullmatch(guardian["phone"]):
+            return jsonify({"message": "Enter your guardian's Cameroon phone number, e.g. 6XXXXXXXX"}), 400
+        if guardian["phone"] == phone_number:
+            return jsonify({"message": "Your guardian's phone number must be different from yours"}), 400
+        if guardian["relation"] not in GUARDIAN_RELATIONS:
+            return jsonify({"message": "Choose how your guardian is related to you"}), 400
 
     admin_numbers = {normalize_phone(number) for number in Config.ADMIN_PHONE_NUMBERS}
     if role == "admin" and phone_number not in admin_numbers:
@@ -48,8 +78,45 @@ def register():
     if find_user_by_phone(phone_number):
         return jsonify({"message": "An account with this phone number already exists"}), 400
 
-    user_id = create_user(phone_number, password, name, role)
-    return jsonify({"message": "Account created", "userId": user_id}), 201
+    user_id = create_user(phone_number, password, name, role, guardian=guardian)
+    message = ("Account created. Your guardian must approve it before you can sell."
+               if guardian else "Account created")
+    return jsonify({"message": message, "userId": user_id}), 201
+
+
+@auth_bp.route("/me", methods=["GET"])
+def me():
+    """The logged-in account, its guardian approval status, and how many children it supervises."""
+    payload = get_user_from_token()
+    user = get_user_by_id(payload["userId"]) if payload else None
+    if not user:
+        return jsonify({"message": "Unauthorized"}), 401
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT COUNT(*) AS count FROM users
+        WHERE isMinor = 1
+          AND ((guardianStatus = 'pending' AND guardianPhone = ?)
+               OR (guardianStatus = 'approved' AND guardianId = ?))
+        """,
+        (normalize_phone(user["phoneNumber"]), user["id"])
+    )
+    children = cursor.fetchone()["count"]
+    conn.close()
+
+    return jsonify({
+        "userId": user["id"],
+        "name": user["name"],
+        "role": user["role"],
+        "phoneNumber": user["phoneNumber"],
+        "isMinor": bool(user.get("isMinor")),
+        "guardianStatus": user.get("guardianStatus"),
+        "guardianName": user.get("guardianName"),
+        "guardianPhone": user.get("guardianPhone"),
+        "childrenCount": children,
+    }), 200
 
 
 @auth_bp.route("/login", methods=["POST"])

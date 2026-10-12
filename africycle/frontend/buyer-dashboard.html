@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <title>Buyer - Africycle</title>
@@ -19,6 +20,7 @@
     </a>
     <nav class="topbar-nav" aria-label="Main">
       <a id="switchLink" href="seller-dashboard.html" class="btn btn-quiet" hidden>Seller view</a>
+      <a id="childrenLink" href="guardian-dashboard.html" class="btn btn-quiet" hidden>My children</a>
       <a href="chat.html" class="btn btn-quiet">Messages</a>
       <button id="logoutBtn" class="btn btn-quiet" type="button">Log out</button>
     </nav>
@@ -44,7 +46,7 @@
 
     <section class="panel" aria-labelledby="pricesHeading">
       <h2 id="pricesHeading">Your prices</h2>
-      <p class="panel-hint">Collectors see the highest prices first.</p>
+      <p class="panel-hint">Collectors see the highest prices first. Add a photo of each material you buy: collectors tap it to tell you they're coming with it.</p>
       <form id="priceForm" class="form-row">
         <div>
           <label for="priceMaterialSelect">Material</label>
@@ -60,17 +62,20 @@
       </form>
       <div class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>Material</th><th>Price per kg</th></tr></thead>
+          <thead><tr><th>Material</th><th>Price per kg</th><th>Photo</th></tr></thead>
           <tbody id="pricesBody">
-            <tr><td colspan="2" class="empty-row">Loading...</td></tr>
+            <tr><td colspan="3" class="empty-row">Loading...</td></tr>
           </tbody>
         </table>
       </div>
+      <input type="file" id="photoInput" accept="image/*" hidden>
     </section>
 
     <section class="panel" aria-labelledby="incomingHeading">
       <h2 id="incomingHeading">Collectors on their way</h2>
-      <p class="panel-hint">This list refreshes on its own every 20 seconds.</p>
+      <p class="panel-hint">This list refreshes on its own. While a collector is on the way, the map shows where they are, updated every 10 seconds.</p>
+      <div id="buyerMap" class="map-box" role="region" aria-label="Map of collectors coming to you" hidden></div>
+      <p id="buyerMapStatus" class="map-status" aria-live="polite" hidden></p>
       <div class="table-wrap">
         <table class="data-table">
           <thead>
@@ -127,8 +132,10 @@
     </section>
   </main>
 
+  <script src="vendor/leaflet/leaflet.js"></script>
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/map.js"></script>
   <script src="js/buyer-dashboard.js"></script>
 </body>
 </html>

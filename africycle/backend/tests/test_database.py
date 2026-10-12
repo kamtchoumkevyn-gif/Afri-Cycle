@@ -84,7 +84,7 @@ def test_schema_uses_postgres_types():
 
 def test_tables_are_listed_in_creation_order():
     assert TABLES == ["users", "material_category", "buyer_profile", "buyer_prices",
-                      "transactions", "notifications", "chat_messages"]
+                      "transactions", "notifications", "chat_messages", "material_photos"]
 
 
 # ---- lastrowid emulation ----

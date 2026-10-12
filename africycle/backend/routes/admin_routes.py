@@ -87,7 +87,8 @@ def list_users():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id AS userId, name, phoneNumber, role, isFlagged, flagReason FROM users ORDER BY id DESC"
+        "SELECT id AS userId, name, phoneNumber, role, isFlagged, flagReason, isMinor, guardianStatus "
+        "FROM users ORDER BY id DESC"
     )
     users = [dict(row) for row in cursor.fetchall()]
     conn.close()

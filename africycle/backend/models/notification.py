@@ -4,7 +4,9 @@ from database.db import get_connection
 VALID_STATUSES = ["pending", "in transit", "arrived", "completed"]
 
 
-def create_notification(seller_id, buyer_id, material_category_id):
+def create_notification(seller_id, buyer_id, material_category_id, status="pending"):
+    if status not in VALID_STATUSES:
+        raise ValueError(f"Invalid status: {status}. Must be one of {VALID_STATUSES}")
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -13,12 +15,30 @@ def create_notification(seller_id, buyer_id, material_category_id):
             (sellerId, buyerId, materialCategoryId, status, createdAt)
         VALUES (?, ?, ?, ?, ?)
         """,
-        (seller_id, buyer_id, material_category_id, "pending", datetime.utcnow().isoformat())
+        (seller_id, buyer_id, material_category_id, status, datetime.utcnow().isoformat())
     )
     conn.commit()
     notification_id = cursor.lastrowid
     conn.close()
     return notification_id
+
+
+def find_active_notification(seller_id, buyer_id, material_category_id):
+    """The seller's unfinished trip to this buyer with this material, if any."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT * FROM notifications
+        WHERE sellerId = ? AND buyerId = ? AND materialCategoryId = ?
+          AND status IN ('pending', 'in transit')
+        ORDER BY id DESC
+        """,
+        (seller_id, buyer_id, material_category_id)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 def get_notification_by_id(notification_id):
@@ -58,8 +78,8 @@ def update_location(notification_id, latitude, longitude):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE notifications SET sellerLatitude = ?, sellerLongitude = ? WHERE id = ?",
-        (latitude, longitude, notification_id)
+        "UPDATE notifications SET sellerLatitude = ?, sellerLongitude = ?, locationUpdatedAt = ? WHERE id = ?",
+        (latitude, longitude, datetime.utcnow().isoformat(), notification_id)
     )
     conn.commit()
     updated = cursor.rowcount > 0

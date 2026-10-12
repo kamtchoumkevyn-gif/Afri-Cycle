@@ -22,7 +22,31 @@
       <input type="text" id="name" autocomplete="name" required>
 
       <label for="phoneNumber">Phone number</label>
-      <input type="tel" id="phoneNumber" pattern="[0-9]" autocomplete="tel" placeholder="6XXXXXXXX" required>
+      <input type="tel" id="phoneNumber" inputmode="numeric" pattern="[26][0-9]{8}" autocomplete="tel" placeholder="6XXXXXXXX" required>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="isMinor">
+        I am under 18
+      </label>
+
+      <fieldset id="guardianFields" class="guardian-fields" hidden>
+        <legend>Your parent or guardian</legend>
+        <p class="field-hint">They create their own Africycle account with this phone number and approve yours before you can sell. They can see your deliveries, sales and messages.</p>
+        <label for="guardianName">Guardian's full name</label>
+        <input type="text" id="guardianName" autocomplete="off" maxlength="100">
+        <label for="guardianPhone">Guardian's phone number</label>
+        <input type="tel" id="guardianPhone" inputmode="numeric" autocomplete="off" placeholder="6XXXXXXXX">
+        <label for="guardianRelation">This person is my</label>
+        <select id="guardianRelation">
+          <option value="" disabled selected>Choose</option>
+          <option value="mother">Mother</option>
+          <option value="father">Father</option>
+          <option value="grandparent">Grandparent</option>
+          <option value="aunt or uncle">Aunt or uncle</option>
+          <option value="older sibling">Older brother or sister</option>
+          <option value="other guardian">Other guardian</option>
+        </select>
+      </fieldset>
 
       <label for="role">I want to</label>
       <select id="role" required>
@@ -30,8 +54,10 @@
         <option value="seller">Sell materials (collector)</option>
         <option value="buyer">Buy materials</option>
         <option value="both">Both buy and sell</option>
+        <option value="guardian">Supervise my child's account (parent or guardian)</option>
         <option value="admin">Manage the platform (admin)</option>
       </select>
+      <p id="roleHint" class="field-hint" hidden>Accounts for under-18s are for selling only.</p>
 
       <label for="password">Password</label>
       <input type="password" id="password" autocomplete="new-password" minlength="6" required>

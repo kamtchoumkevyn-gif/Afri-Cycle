@@ -107,3 +107,28 @@
   .wave { height: 90px; }
   .auth-body { padding-bottom: 90px; }
 }
+
+/* Guardian details shown when a child registers */
+.guardian-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.guardian-fields legend {
+  padding: 0 6px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.guardian-fields[hidden] {
+  display: none;
+}
+
+.field-hint {
+  font-size: 14px;
+  color: var(--muted);
+}

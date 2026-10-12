@@ -1,8 +1,12 @@
+import base64
+import binascii
 import math
+import re
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, Response, request, jsonify
 from auth_utils import get_user_from_token
-from models.buyer_price import set_price as set_price_model
+from models.buyer_price import get_price_for_buyer_and_category, set_price as set_price_model
+from models.material_photo import delete_photo, get_photo, save_photo
 from models.transaction import create_transaction
 from models.buyer_profile import (
     create_buyer_profile, get_buyer_profile_by_user_id,
@@ -14,6 +18,30 @@ buyer_bp = Blueprint("buyer_bp", __name__)
 
 MAX_PRICE_PER_KG = 1_000_000
 MAX_WEIGHT_KG = 1_000_000
+MAX_PHOTO_BYTES = 400_000  # the page shrinks photos to well under this before upload
+PHOTO_DATA_URL = re.compile(r"data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\s]+)")
+
+
+def decode_photo(data_url):
+    """(mime_type, raw_bytes) for a real JPEG/PNG/WebP data URL, else (None, error message)."""
+    match = PHOTO_DATA_URL.fullmatch(data_url or "") if isinstance(data_url, str) else None
+    if not match:
+        return None, "photo must be a JPEG, PNG or WebP image"
+    mime_type, encoded = match.groups()
+    try:
+        raw = base64.b64decode(re.sub(r"\s", "", encoded), validate=True)
+    except (binascii.Error, ValueError):
+        return None, "photo data is damaged"
+    if len(raw) > MAX_PHOTO_BYTES:
+        return None, "photo is too large (max 400 KB)"
+    looks_right = {
+        "image/jpeg": raw[:3] == b"\xff\xd8\xff",
+        "image/png": raw[:8] == b"\x89PNG\r\n\x1a\n",
+        "image/webp": raw[:4] == b"RIFF" and raw[8:12] == b"WEBP",
+    }[mime_type]
+    if not looks_right:
+        return None, "photo content doesn't match its type"
+    return mime_type, raw
 
 
 def to_number(value, low, high):
@@ -61,9 +89,11 @@ def list_prices():
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT p.*, m.name AS materialName
+        SELECT p.*, m.name AS materialName, ph.id AS photoId
         FROM buyer_prices p
         LEFT JOIN material_category m ON m.id = p.materialCategoryId
+        LEFT JOIN material_photos ph
+               ON ph.buyerId = p.buyerId AND ph.materialCategoryId = p.materialCategoryId
         WHERE p.buyerId = ?
         ORDER BY m.name
         """,
@@ -72,6 +102,53 @@ def list_prices():
     prices = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return jsonify({"prices": prices}), 200
+
+
+@buyer_bp.route("/buyer/material-photo", methods=["POST"])
+def upload_material_photo():
+    """Saves the buyer's reference photo for a material they set a price for.
+    Sellers tap this photo to tell the buyer they're coming with that material."""
+    payload = get_user_from_token()
+    if not payload or payload.get("role") not in ("buyer", "both"):
+        return jsonify({"message": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    material_category_id = data.get("materialCategoryId")
+    if not material_category_id:
+        return jsonify({"message": "materialCategoryId and photo are required"}), 400
+    if not get_price_for_buyer_and_category(payload["userId"], material_category_id):
+        return jsonify({"message": "Set your price for this material first"}), 400
+
+    mime_type, raw = decode_photo(data.get("photo"))
+    if mime_type is None:
+        return jsonify({"message": raw}), 400
+
+    photo_id = save_photo(payload["userId"], material_category_id, mime_type,
+                          base64.b64encode(raw).decode("ascii"))
+    return jsonify({"message": "Photo saved", "photoId": photo_id}), 201
+
+
+@buyer_bp.route("/buyer/material-photo/<int:material_category_id>", methods=["DELETE"])
+def remove_material_photo(material_category_id):
+    payload = get_user_from_token()
+    if not payload or payload.get("role") not in ("buyer", "both"):
+        return jsonify({"message": "Unauthorized"}), 401
+    if not delete_photo(payload["userId"], material_category_id):
+        return jsonify({"message": "No photo for this material"}), 404
+    return jsonify({"message": "Photo removed"}), 200
+
+
+@buyer_bp.route("/photos/<int:photo_id>", methods=["GET"])
+def material_photo(photo_id):
+    """Any logged-in user can view a material photo (pages fetch it with their token)."""
+    if not get_user_from_token():
+        return jsonify({"message": "Unauthorized"}), 401
+    photo = get_photo(photo_id)
+    if not photo:
+        return jsonify({"message": "Photo not found"}), 404
+    response = Response(base64.b64decode(photo["imageData"]), mimetype=photo["mimeType"])
+    response.headers["Cache-Control"] = "private, max-age=86400"  # a new photo gets a new id
+    return response
 
 
 @buyer_bp.route("/buyer/profile", methods=["GET"])

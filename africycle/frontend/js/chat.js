@@ -55,6 +55,25 @@
     await loadThread();
   }
 
+  // Conversations with an under-18 seller can be read by their guardian; say so to both sides
+  let iAmMinor = false;
+  let lastThreadData = null;
+  loadMe().then((me) => {
+    iAmMinor = Boolean(me && me.isMinor);
+    if (lastThreadData) showSupervisionNotice(lastThreadData);
+  });
+
+  function showSupervisionNotice(data) {
+    lastThreadData = data;
+    const notice = document.getElementById("minorNotice");
+    if (iAmMinor) {
+      notice.textContent = "Your parent or guardian can read your conversations.";
+    } else if (data.otherIsMinor) {
+      notice.textContent = `${data.otherUserName} is under 18. Their parent or guardian can read this conversation.`;
+    }
+    notice.hidden = !(iAmMinor || data.otherIsMinor);
+  }
+
   async function loadThread() {
     if (!activeUserId) return;
     try {
@@ -65,6 +84,7 @@
         return;
       }
       threadTitle.textContent = data.otherUserName;
+      showSupervisionNotice(data);
       const messages = data.messages || [];
       if (messages.length === lastRenderedCount) return; // nothing new
       lastRenderedCount = messages.length;

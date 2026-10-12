@@ -371,14 +371,181 @@
 @media (max-width: 720px) {
   .chat-layout {
     grid-template-columns: 1fr;
+    align-content: start;
   }
 
   .conversation-list {
     flex-direction: row;
+    align-items: flex-start;
     overflow-x: auto;
   }
 
   .conversation-item {
     white-space: nowrap;
   }
+}
+
+/* ---- Maps (Leaflet) ---- */
+
+.map-box {
+  position: relative;
+  z-index: 0; /* keeps Leaflet's own layers below the top bar and pop-ups */
+  height: 340px;
+  margin: 14px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background-color: #e8ece9;
+}
+
+.map-status {
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.map-pin-dot {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.map-pin-me .map-pin-dot,
+.map-pin-seller .map-pin-dot { background-color: var(--blue); }
+.map-pin-buyer .map-pin-dot,
+.map-pin-home .map-pin-dot { background-color: var(--green); }
+.map-pin-best .map-pin-dot { background-color: #f9a825; }
+
+.map-pin-me .map-pin-dot,
+.map-pin-seller .map-pin-dot {
+  animation: pin-pulse 2s ease-out infinite;
+}
+
+@keyframes pin-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(21, 101, 192, 0.5); }
+  100% { box-shadow: 0 0 0 14px rgba(21, 101, 192, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin-me .map-pin-dot,
+  .map-pin-seller .map-pin-dot { animation: none; }
+}
+
+.map-pin-label {
+  position: absolute;
+  top: -3px;
+  left: 22px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  background-color: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.popup-title {
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.leaflet-popup-content {
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.leaflet-popup-content .row-actions {
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+
+.leaflet-popup-content .btn {
+  min-height: 38px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+/* ---- Material photos ---- */
+
+.thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  vertical-align: middle;
+  background-color: var(--page);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.photo-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.photo-tap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  background-color: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.photo-tap:hover,
+.photo-tap:focus-visible {
+  border-color: var(--green);
+}
+
+.photo-tap img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background-color: var(--page);
+  border-radius: var(--radius-sm);
+}
+
+.photo-tap span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---- Children and guardians ---- */
+
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: middle;
+  color: #a74800;
+  background-color: #fff3e0;
+  border-radius: 10px;
+}
+
+.panel h3 {
+  margin: 20px 0 8px;
+  font-size: 17px;
+}
+
+.thread-readonly {
+  max-height: 320px;
 }

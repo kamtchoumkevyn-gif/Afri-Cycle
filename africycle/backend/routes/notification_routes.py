@@ -22,7 +22,8 @@ def to_number(value, low, high):
     return number
 
 LIST_QUERY = """
-    SELECT n.*, s.name AS sellerName, b.name AS buyerName, m.name AS materialName
+    SELECT n.*, s.name AS sellerName, b.name AS buyerName, m.name AS materialName,
+           s.isMinor AS sellerIsMinor
     FROM notifications n
     JOIN users s ON s.id = n.sellerId
     JOIN users b ON b.id = n.buyerId

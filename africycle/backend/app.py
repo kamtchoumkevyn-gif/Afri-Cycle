@@ -14,11 +14,14 @@ from routes.notification_routes import notification_bp
 from routes.admin_routes import admin_bp
 from routes.chat_routes import chat_bp
 from routes.material_routes import material_bp
+from routes.guardian_routes import guardian_bp
 
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 
 app = Flask(__name__, static_folder=None)
 app.config.from_object(Config)
+# Requests over 1 MB are refused (413). Photos are shrunk to well under this first.
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
 
 # Open CORS is safe here: logins use Bearer tokens (not cookies), and in production
 # the frontend is served by this same app. It also keeps local testing working when
@@ -26,7 +29,8 @@ app.config.from_object(Config)
 CORS(app)
 limiter.init_app(app)
 
-for blueprint in (auth_bp, buyer_bp, seller_bp, notification_bp, admin_bp, chat_bp, material_bp):
+for blueprint in (auth_bp, buyer_bp, seller_bp, notification_bp, admin_bp, chat_bp,
+                  material_bp, guardian_bp):
     app.register_blueprint(blueprint)
 
 # Create tables and starter categories on startup (safe to run repeatedly)
@@ -34,16 +38,18 @@ init_db()
 seed_default_categories()
 
 # Content-Security-Policy: browsers only run scripts served by this site, so an
-# injected <script> or onerror="..." can't run. Google Fonts is the only outside
-# source the pages use. The sha256 value allows the small inline <script> at the
-# bottom of index.html; if you edit that script, the browser console prints the
-# new hash to paste here. Adding a CDN library (e.g. a map)? Add its domain here.
+# injected <script> or onerror="..." can't run. Outside sources the pages use:
+# Google Fonts, and OpenStreetMap's map tiles (Leaflet itself is served from
+# frontend/vendor). blob: lets pages show material photos fetched with the login
+# token. The sha256 value allows the small inline <script> at the bottom of
+# index.html; if you edit that script, the browser console prints the new hash to
+# paste here. Adding another outside library? Add its domain here.
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
     "script-src 'self' 'sha256-WIQm8E+nKtoHRkpBpRcJ+6e8TN00KPKyhiQH/kvOHQA='",
     "style-src 'self' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data:",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org",
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

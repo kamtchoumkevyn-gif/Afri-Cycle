@@ -52,6 +52,7 @@ function requireAuth(allowedRoles = []) {
 function dashboardFor(role) {
   if (role === "admin") return "admin-dashboard.html";
   if (role === "buyer") return "buyer-dashboard.html";
+  if (role === "guardian") return "guardian-dashboard.html";
   return "seller-dashboard.html"; // seller and "both"
 }
 

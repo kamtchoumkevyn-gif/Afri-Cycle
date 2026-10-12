@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&display=swap">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <title>Seller - Africycle</title>
@@ -19,6 +20,7 @@
     </a>
     <nav class="topbar-nav" aria-label="Main">
       <a id="switchLink" href="buyer-dashboard.html" class="btn btn-quiet" hidden>Buyer view</a>
+      <a id="childrenLink" href="guardian-dashboard.html" class="btn btn-quiet" hidden>My children</a>
       <a href="chat.html" class="btn btn-quiet">Messages</a>
       <button id="logoutBtn" class="btn btn-quiet" type="button">Log out</button>
     </nav>
@@ -28,11 +30,12 @@
     <h1 class="page-heading" id="greeting">Sell your materials</h1>
     <p class="page-intro">Pick what you are carrying, then find the buyers near you who pay the most.</p>
 
+    <p id="guardianBanner" class="msg msg-info" role="status" hidden></p>
     <p id="pageMsg" class="msg" role="status" hidden></p>
 
     <section class="panel" aria-labelledby="findHeading">
       <h2 id="findHeading">Find a buyer</h2>
-      <p class="panel-hint">We use your current location once to measure the distance to each buyer.</p>
+      <p class="panel-hint">We use your location to show the buyers around you on the map. Your position updates as you move.</p>
       <div class="form-row">
         <div>
           <label for="materialSelect">Material</label>
@@ -51,6 +54,9 @@
         </div>
         <button id="findBuyersBtn" class="btn btn-primary" type="button">Find buyers</button>
       </div>
+
+      <div id="sellerMap" class="map-box" role="region" aria-label="Map of buyers near you" hidden></div>
+      <p id="mapStatus" class="map-status" aria-live="polite" hidden></p>
 
       <div class="table-wrap">
         <table class="data-table" aria-live="polite">
@@ -86,6 +92,8 @@
       <h3 id="modalName"></h3>
       <p class="modal-meta" id="modalMeta"></p>
       <ul class="price-list" id="modalPrices"></ul>
+      <p class="panel-hint" id="modalPhotosHint" hidden>Tap a photo to tell this buyer you're coming with that material. Your live location is then shared with them until you arrive.</p>
+      <div class="photo-grid" id="modalPhotos"></div>
       <div class="modal-actions">
         <button id="modalNotifyBtn" class="btn btn-primary btn-block" type="button">Tell this buyer I'm coming</button>
         <a id="modalCallLink" class="btn btn-secondary btn-block" href="#">Call buyer</a>
@@ -94,8 +102,10 @@
     </div>
   </div>
 
+  <script src="vendor/leaflet/leaflet.js"></script>
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/map.js"></script>
   <script src="js/seller-dashboard.js"></script>
 </body>
 </html>

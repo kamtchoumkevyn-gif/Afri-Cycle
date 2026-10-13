@@ -12,6 +12,7 @@ so the rest of the app doesn't need to know which database is in use.
 import os
 import re
 import sqlite3
+from datetime import datetime
 
 # Tests set AFRICYCLE_DB_PATH to a temporary file so they never touch real data
 DB_PATH = os.environ.get(
@@ -216,8 +217,22 @@ def init_db():
                 cursor.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
                 for statement in fill:
                     cursor.execute(statement)
+    _upgrade_data(cursor)
     conn.commit()
     conn.close()
+
+
+def _upgrade_data(cursor):
+    """Runs each change to saved data (database/upgrades.py) that hasn't run yet."""
+    from database.upgrades import UPGRADES  # uses the app's own modules, so loaded here
+    for name, upgrade in UPGRADES:
+        key = f"upgrade:{name}"
+        cursor.execute("SELECT id FROM app_settings WHERE name = ?", (key,))
+        if cursor.fetchone():
+            continue
+        upgrade(cursor)
+        cursor.execute("INSERT INTO app_settings (name, value) VALUES (?, ?)",
+                       (key, datetime.utcnow().isoformat()))
 
 
 def _column_names(cursor, table):
@@ -332,5 +347,7 @@ class PostgresConnection:
 
 
 if __name__ == "__main__":
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # backend/
     init_db()
     print("Database initialized successfully.")

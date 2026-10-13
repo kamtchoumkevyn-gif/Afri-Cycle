@@ -177,7 +177,7 @@ def login(client, phone):
 
 
 def test_register_rejects_invalid_phone_numbers(client):
-    for bad in ("-677000001", "12345", "677000001000", "abcdefghi", "577000001"):
+    for bad in ("12345", "677000001000", "abcdefghi", "577000001", "600000099", "+234 803 123 4567"):
         assert register(client, bad).status_code == 400, bad
 
 

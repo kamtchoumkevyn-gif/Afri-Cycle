@@ -11,7 +11,7 @@ from auth_utils import get_user_from_token
 from database.db import get_connection
 from models.chat import get_conversation, get_conversations_for_user
 from models.user import get_user_by_id
-from routes.auth_routes import normalize_phone
+import phones
 
 guardian_bp = Blueprint("guardian_bp", __name__)
 
@@ -33,7 +33,7 @@ def child_for(guardian, child_id, status):
     if not child or not child.get("isMinor") or child.get("guardianStatus") != status:
         return None
     if status == "pending":
-        allowed = child.get("guardianPhone") == normalize_phone(guardian["phoneNumber"])
+        allowed = child.get("guardianPhone") == phones.stored_form(guardian["phoneNumber"])
     else:
         allowed = child.get("guardianId") == guardian["id"]
     return child if allowed else None
@@ -51,7 +51,7 @@ def list_children():
         f"""SELECT {CHILD_FIELDS} FROM users
             WHERE isMinor = 1 AND guardianStatus = 'pending' AND guardianPhone = ?
             ORDER BY id DESC""",
-        (normalize_phone(guardian["phoneNumber"]),)
+        (phones.stored_form(guardian["phoneNumber"]),)
     )
     pending = [dict(row) for row in cursor.fetchall()]
     cursor.execute(

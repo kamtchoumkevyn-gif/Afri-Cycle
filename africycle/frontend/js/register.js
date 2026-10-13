@@ -10,6 +10,13 @@
   const guardianFields = document.getElementById("guardianFields");
   const roleSelect = document.getElementById("role");
   const roleHint = document.getElementById("roleHint");
+  const phoneCountry = document.getElementById("phoneCountry");
+  const guardianCountry = document.getElementById("guardianCountry");
+
+  // Any of the 11 Central African countries; the guardian's starts as the same one
+  AfriPhone.setUp(phoneCountry, document.getElementById("phoneNumber"), document.getElementById("phoneCode"));
+  AfriPhone.setUp(guardianCountry, document.getElementById("guardianPhone"), document.getElementById("guardianCode"),
+    { follow: phoneCountry });
 
   function setLoading(isLoading) {
     submitBtn.disabled = isLoading;
@@ -50,11 +57,12 @@
       return;
     }
 
-    const body = { name, phoneNumber, password, role };
+    const body = { name, phoneNumber, country: phoneCountry.value, password, role };
     if (isMinor) {
       body.isMinor = true;
       body.guardianName = document.getElementById("guardianName").value.trim();
       body.guardianPhone = document.getElementById("guardianPhone").value.trim();
+      body.guardianCountry = guardianCountry.value;
       body.guardianRelation = document.getElementById("guardianRelation").value;
       if (!body.guardianName || !body.guardianPhone || !body.guardianRelation) {
         showMessage(formMsg, "Fill in your guardian's name, phone number and how they are related to you.", "error");

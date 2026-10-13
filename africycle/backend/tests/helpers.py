@@ -1,5 +1,6 @@
 import jwt
 from datetime import datetime, timedelta
+import phones
 from config import Config
 from models.user import create_user
 from models.material_category import create_material_category
@@ -21,7 +22,8 @@ def auth_header(user_id, role):
 
 
 def new_user(phone, role, name="Test User"):
-    return create_user(phone, "password123", name, role)
+    """Saved like a sign-up saves it: "677000001" becomes +237677000001."""
+    return create_user(phones.stored_form(phone), "password123", name, role)
 
 
 def new_category(name="Scrap Iron"):

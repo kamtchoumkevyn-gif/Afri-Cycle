@@ -1,29 +1,19 @@
 from flask import Blueprint, request, jsonify
 import jwt
-import re
 from datetime import datetime, timedelta
+import phones
 from config import Config
 from extensions import limiter
 from auth_utils import get_user_from_token
 from database.db import get_connection
-from models.user import create_user, find_user_by_phone, get_user_by_id, verify_login
+from models.user import (check_password, create_user, find_user_by_phone, find_users_by_phones,
+                         get_user_by_id)
 
 
 auth_bp = Blueprint("auth_bp", __name__)
 
 ROLES = ("seller", "buyer", "both", "admin", "guardian")
 GUARDIAN_RELATIONS = ("mother", "father", "grandparent", "aunt or uncle", "older sibling", "other guardian")
-CAMEROON_PHONE = re.compile(r"[26]\d{8}")
-
-
-def normalize_phone(phone_number):
-    """Turns '+237 6XX XX XX XX' or '2376XXXXXXXX' into the 9-digit form '6XXXXXXXX'."""
-    phone_number = str(phone_number).strip().replace(" ", "")
-    if phone_number.startswith("+237"):
-        phone_number = phone_number[4:]
-    elif phone_number.startswith("237") and len(phone_number) == 12:
-        phone_number = phone_number[3:]
-    return phone_number
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -41,9 +31,13 @@ def register():
     if len(name) > 100:
         return jsonify({"message": "Name is too long (max 100 characters)"}), 400
 
-    phone_number = normalize_phone(phone_number)
-    if not CAMEROON_PHONE.fullmatch(phone_number):
-        return jsonify({"message": "Enter a valid Cameroon phone number, e.g. 6XXXXXXXX"}), 400
+    # Any of the 11 Central African countries; "country" is the one chosen on the page
+    # (Cameroon if none was sent). Saved in international form, e.g. +237677123456.
+    try:
+        country = phones.country_code(data.get("country"))
+        phone_number = phones.normalize(phone_number, country)
+    except phones.PhoneError as error:
+        return jsonify({"message": str(error)}), 400
 
     if role not in ROLES:
         return jsonify({"message": "role must be seller, buyer, both, guardian, or admin"}), 400
@@ -59,19 +53,22 @@ def register():
             return jsonify({"message": "Accounts for under-18s can only be seller accounts"}), 400
         guardian = {
             "name": str(data.get("guardianName") or "").strip(),
-            "phone": normalize_phone(data.get("guardianPhone") or ""),
             "relation": str(data.get("guardianRelation") or "").strip().lower(),
         }
         if not guardian["name"] or len(guardian["name"]) > 100:
             return jsonify({"message": "Enter your guardian's full name"}), 400
-        if not CAMEROON_PHONE.fullmatch(guardian["phone"]):
-            return jsonify({"message": "Enter your guardian's Cameroon phone number, e.g. 6XXXXXXXX"}), 400
+        # The guardian may live in another country of the region than the child
+        try:
+            guardian["phone"] = phones.normalize(data.get("guardianPhone"),
+                                                 data.get("guardianCountry") or country, whose="your guardian's")
+        except phones.PhoneError as error:
+            return jsonify({"message": str(error)}), 400
         if guardian["phone"] == phone_number:
             return jsonify({"message": "Your guardian's phone number must be different from yours"}), 400
         if guardian["relation"] not in GUARDIAN_RELATIONS:
             return jsonify({"message": "Choose how your guardian is related to you"}), 400
 
-    admin_numbers = {normalize_phone(number) for number in Config.ADMIN_PHONE_NUMBERS}
+    admin_numbers = {phones.stored_form(number) for number in Config.ADMIN_PHONE_NUMBERS}
     if role == "admin" and phone_number not in admin_numbers:
         return jsonify({"message": "This phone number is not authorized to register as admin"}), 403
 
@@ -101,7 +98,7 @@ def me():
           AND ((guardianStatus = 'pending' AND guardianPhone = ?)
                OR (guardianStatus = 'approved' AND guardianId = ?))
         """,
-        (normalize_phone(user["phoneNumber"]), user["id"])
+        (phones.stored_form(user["phoneNumber"]), user["id"])
     )
     children = cursor.fetchone()["count"]
     conn.close()
@@ -129,14 +126,12 @@ def login():
     if not phone_number or not password:
         return jsonify({"message": "phoneNumber and password are required"}), 400
 
-    # New accounts are saved as 9 digits; accounts created before that rule keep
-    # the format they were typed in, so fall back to the number exactly as typed.
-    # str(): a number sent as JSON must be compared as text (Postgres won't mix types).
-    as_typed = str(phone_number).strip()
-    normalized = normalize_phone(as_typed)
-    user = verify_login(normalized, password)
-    if not user and normalized != as_typed:
-        user = verify_login(as_typed, password)
+    # The number as saved for the country chosen on the page, then for any other country
+    # it fits (in case the wrong one was chosen), then exactly as typed (some accounts
+    # from before numbers were tidied up). str(): a number sent as JSON is compared as text.
+    candidates = find_users_by_phones(phones.lookup_forms(str(phone_number), data.get("country")))
+    user = next((account for account in candidates
+                 if check_password(str(password), account["passwordHash"])), None)
     if not user:
         return jsonify({"message": "Invalid phone number or password"}), 401
 

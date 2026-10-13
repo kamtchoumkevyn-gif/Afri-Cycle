@@ -296,6 +296,10 @@ def test_init_db_upgrades_a_database_made_before_these_features(tmp_path, monkey
                    "VALUES ('677000001', 'x', 'Old', 'seller')")
     cursor.execute("INSERT INTO users (phoneNumber, passwordHash, name, role) "
                    "VALUES ('677000002', 'x', 'Old buyer', 'buyer')")
+    # The very first accounts kept numbers exactly as typed
+    for phone in ("+237 677 000 003", "677000004", "+237677000004", "not a number"):
+        cursor.execute("INSERT INTO users (phoneNumber, passwordHash, name, role) VALUES (?, 'x', 'Older', 'seller')",
+                       (phone,))
     cursor.execute("INSERT INTO chat_messages (senderId, receiverId, messageText, createdAt) "
                    "VALUES (2, 1, 'Sent before read receipts existed', '2026-10-01T09:00:00')")
     conn.commit()
@@ -305,17 +309,27 @@ def test_init_db_upgrades_a_database_made_before_these_features(tmp_path, monkey
     db.init_db()  # running twice must be harmless
 
     conn = db.get_connection()
-    cursor = conn.cursor()
-    for table, columns in db.ADDED_COLUMNS.items():
-        assert {column[0] for column in columns} <= db._column_names(cursor, table)
-    cursor.execute("SELECT name, isMinor, guardianStatus FROM users")
-    old_user = cursor.fetchone()
-    assert old_user["name"] == "Old"
-    assert old_user["isMinor"] == 0  # existing accounts are adults
-    assert old_user["guardianStatus"] is None
-    cursor.execute("SELECT readAt FROM chat_messages")
-    assert cursor.fetchone()["readAt"] == "2026-10-01T09:00:00"  # old messages don't show up as unread
-    for table in db.TABLES[db.FIRST_RELEASE_TABLE_COUNT:]:  # photos, notifications, settings
-        cursor.execute(f"SELECT COUNT(*) AS n FROM {table}")
-        assert cursor.fetchone()["n"] == 0, table
-    conn.close()
+    try:  # on Postgres, a connection left open would block the next test's tables reset
+        cursor = conn.cursor()
+        for table, columns in db.ADDED_COLUMNS.items():
+            assert {column[0] for column in columns} <= db._column_names(cursor, table)
+        cursor.execute("SELECT name, isMinor, guardianStatus FROM users WHERE id = 1")
+        old_user = cursor.fetchone()
+        assert old_user["name"] == "Old"
+        assert old_user["isMinor"] == 0  # existing accounts are adults
+        assert old_user["guardianStatus"] is None
+        cursor.execute("SELECT readAt FROM chat_messages")
+        assert cursor.fetchone()["readAt"] == "2026-10-01T09:00:00"  # old messages don't show up as unread
+        # Phone numbers in international form, as the app now saves every number; one whose
+        # new form another account already has, or that isn't a number, stays as it was
+        cursor.execute("SELECT phoneNumber FROM users ORDER BY id")
+        assert [row["phoneNumber"] for row in cursor.fetchall()] == [
+            "+237677000001", "+237677000002", "+237677000003", "677000004", "+237677000004", "not a number"]
+        cursor.execute("SELECT name FROM app_settings")
+        assert [row["name"] for row in cursor.fetchall()] == ["upgrade:international-phone-numbers"]  # done once
+        for table in db.TABLES[db.FIRST_RELEASE_TABLE_COUNT:]:  # photos, notifications, settings
+            if table != "app_settings":
+                cursor.execute(f"SELECT COUNT(*) AS n FROM {table}")
+                assert cursor.fetchone()["n"] == 0, table
+    finally:
+        conn.close()

@@ -6,12 +6,15 @@
   const btnText = document.getElementById("btnText");
   const btnSpinner = document.getElementById("btnSpinner");
   const formMsg = document.getElementById("formMsg");
+  const phoneCountry = document.getElementById("phoneCountry");
 
   const existingUser = currentUser();
   if (existingUser) {
     window.location.replace(dashboardFor(existingUser.role));
     return;
   }
+
+  AfriPhone.setUp(phoneCountry, document.getElementById("phoneNumber"), document.getElementById("phoneCode"));
 
   function setLoading(isLoading) {
     submitBtn.disabled = isLoading;
@@ -37,7 +40,7 @@
     try {
       const response = await apiFetch("/login", {
         method: "POST",
-        body: JSON.stringify({ phoneNumber, password, role })
+        body: JSON.stringify({ phoneNumber, country: phoneCountry.value, password, role })
       });
       const data = await readJson(response);
 

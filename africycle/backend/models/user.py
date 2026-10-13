@@ -55,6 +55,21 @@ def find_user_by_phone(phone_number):
     return dict(row) if row else None
 
 
+def find_users_by_phones(phone_numbers):
+    """The accounts saved under any of these numbers, in the order the numbers are given
+    (one query, however many numbers)."""
+    phone_numbers = list(phone_numbers)
+    if not phone_numbers:
+        return []
+    conn = get_connection()
+    cursor = conn.cursor()
+    placeholders = ", ".join("?" for _ in phone_numbers)
+    cursor.execute(f"SELECT * FROM users WHERE phoneNumber IN ({placeholders})", tuple(phone_numbers))
+    found = {row["phoneNumber"]: dict(row) for row in cursor.fetchall()}
+    conn.close()
+    return [found[number] for number in phone_numbers if number in found]
+
+
 def verify_login(phone_number, password):
     user = find_user_by_phone(phone_number)
     if not user:

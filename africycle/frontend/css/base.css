@@ -135,6 +135,34 @@ select:focus {
   box-shadow: 0 0 0 3px var(--green-tint);
 }
 
+/* A phone number box with the chosen country's calling code in front: [+237| 6 71 23 45 67] */
+.phone-input {
+  display: flex;
+  align-items: stretch;
+}
+
+.phone-code {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-weight: 700;
+  color: var(--navy);
+  background-color: var(--page);
+  border: 1.5px solid var(--line);
+  border-right: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  white-space: nowrap;
+}
+
+.phone-input input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.phone-code:not([hidden]) + input {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
 /* The whole line is the tap target, not just the small box */
 .checkbox-label {
   display: flex;

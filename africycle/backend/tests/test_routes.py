@@ -156,7 +156,7 @@ def test_buyer_profile_view_and_contact(client):
     assert client.get("/seller/buyer-profile/9999", headers=headers).status_code == 404
 
     contact = client.get(f"/seller/contact-buyer/{buyer}", headers=headers).get_json()
-    assert contact["phoneNumber"] == "677000002"
+    assert contact["phoneNumber"] == "+237677000002"
 
 
 def test_notify_buyer(client):

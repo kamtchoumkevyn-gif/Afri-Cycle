@@ -85,7 +85,7 @@
       findBtn.disabled = true;
       guardianBanner.textContent = me.guardianStatus === "declined"
         ? "Your guardian declined this account, so it can't be used to sell."
-        : `Your guardian ${me.guardianName} (${me.guardianPhone}) needs to approve your account before you can sell. Ask them to log in to Africycle with that phone number.`;
+        : `Your guardian ${me.guardianName} (${AfriPhone.format(me.guardianPhone)}) needs to approve your account before you can sell. Ask them to log in to Africycle with that phone number.`;
     }
     guardianBanner.hidden = false;
   }
@@ -627,7 +627,7 @@
 
       const callLink = document.getElementById("modalCallLink");
       callLink.href = contact.phoneNumber ? `tel:${contact.phoneNumber}` : "#";
-      callLink.textContent = contact.phoneNumber ? `Call ${contact.phoneNumber}` : "Phone not available";
+      callLink.textContent = contact.phoneNumber ? `Call ${AfriPhone.format(contact.phoneNumber)}` : "Phone not available";
       document.getElementById("modalChatLink").href = `chat.html?with=${buyerId}`;
 
       modal.hidden = false;

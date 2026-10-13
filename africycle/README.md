@@ -2,7 +2,7 @@
 
 Recycling our environment, saving our future.
 
-Africycle connects scrap collectors (ferrailleurs) in Cameroon with the buyers near them who pay the best price per kilo, and also covers bulk water and organic waste trading. Payment stays in cash; the app keeps a digital record of every purchase as proof of a fair, traceable trade.
+Africycle connects scrap collectors (ferrailleurs) in Cameroon and the rest of Central Africa with the buyers near them who pay the best price per kilo, and also covers bulk water and organic waste trading. Payment stays in cash; the app keeps a digital record of every purchase as proof of a fair, traceable trade.
 
 Stack: HTML, CSS, and JavaScript on the frontend, with Leaflet and OpenStreetMap for the live maps; Flask (Python) on the backend, with SQLite on your computer and Postgres (Neon) in production; JWT, bcrypt, and rate limiting for security; pytest for tests.
 
@@ -20,7 +20,7 @@ copy .env.example .env
 Open `.env` and set two values:
 
 - `JWT_SECRET_KEY`: generate one with `python -c "import secrets; print(secrets.token_hex(32))"`
-- `ADMIN_PHONE_NUMBERS`: the phone number(s) allowed to register as admin, separated by commas
+- `ADMIN_PHONE_NUMBERS`: the phone number(s) allowed to register as admin, separated by commas. Cameroon numbers can be written without +237; numbers from other countries need their country code, e.g. `+24177123456`
 
 Leave `DATABASE_URL` empty to keep your data in a local SQLite file.
 
@@ -64,6 +64,17 @@ Road routes come from the free OSRM servers that FOSSGIS runs for OpenStreetMap 
 - **On the phone:** the dashboards offer **Turn on** notifications. After that, new messages pop up on the phone even when Africycle is closed, and buyers also hear when a seller is coming, is on the way, and has arrived. This works in Chrome, Samsung Internet, Firefox, Edge and Opera on Android and computers. On iPhone and iPad (iOS 16.4 or later) it only works in the app added to the Home Screen; Safari says so. Logging out turns notifications off on that phone.
 - **How it works:** standard Web Push, with no Firebase or other account. Each message is encrypted for the receiving phone (RFC 8291) and signed with the app's own key (VAPID, RFC 8292). The server makes that key once and keeps it in the database; to use your own, set `VAPID_PRIVATE_KEY`. The server only sends to the push services of Google, Mozilla, Apple and Microsoft, and forgets a phone when its push service says notifications were turned off there.
 
+### Phone numbers from all of Central Africa
+
+People sign up and log in with a phone number from any of the 11 countries of Central Africa (ECCAS): Cameroon, Angola, Burundi, the Central African Republic, Chad, Congo, DR Congo, Equatorial Guinea, Gabon, Rwanda, and São Tomé and Príncipe.
+
+- **Choosing the country:** the sign-up and log-in pages have a **Country** list (Cameroon to start with, then the last one chosen on that phone). The country's calling code shows in front of the number, with an example written the local way, e.g. 6 71 23 45 67 for Cameroon or 077 12 34 56 for Gabon. Typing a number that starts with a country code, such as +235, picks that country. A child's guardian can live in a different country from the child.
+- **Checking:** the server checks each number against Google's libphonenumber rules (the `phonenumbers` package, updated on PyPI as countries change their numbering). It accepts mobile and landline numbers only. When a number doesn't fit, it says what that country's numbers look like, and which country the number does fit, if any. Gabon's numbers from before 2019 (07 28 01 50 instead of 077 28 01 50) are saved in the current form.
+- **Saving:** numbers are saved in international form (+237677123456), so "677 12 34 56", "+237 6 77 12 34 56" and "00237677123456" are one and the same account. Pages show numbers grouped the local way: +237 6 77 12 34 56. Logging in also works when the wrong country is chosen.
+- **Existing accounts:** the first start after this update turns the Cameroon numbers already saved into +237 numbers (`database/upgrades.py`). Everyone logs in exactly as before.
+
+`frontend/js/phone.js` lists the same countries as `backend/phones.py`. After changing the list, or updating `phonenumbers`, run `python tools/phone_list.py` in `backend/` to refresh the pages' copy; a test fails until it matches.
+
 ### Children and guardians
 
 People under 18 can sell scrap with a parent or guardian watching over the account:
@@ -97,11 +108,14 @@ africycle/
     extensions.py      rate limiter
     auth_utils.py      reads the logged-in user from the JWT
     database/db.py     SQLite or Postgres connection and all 10 tables
+    database/upgrades.py  one-time changes to saved data (e.g. numbers to +237...)
     models/            one file per table: database functions only
     routes/            API endpoints grouped by feature
+    phones.py          phone numbers from the 11 Central African countries
     directions.py      road routes from OpenStreetMap's routing service
     webpush.py         phone notifications (Web Push encryption and signing)
     alerts.py          what the notifications say (new message, seller coming, arrived)
+    tools/phone_list.py   copies the country list to frontend/js/phone.js
     tests/             pytest suite (conftest.py sets up a fresh test DB)
   frontend/
     index.html, login.html, register.html
@@ -111,7 +125,8 @@ africycle/
     sw.js              keeps the app's files on the phone (the server fills in its file list)
     css/               base.css (shared), auth.css, dashboard.css
     js/                shared scripts (see below), one script per page, map.js for the maps,
-                       notify.js for unread counts, pop-ups and phone notifications
+                       notify.js for unread counts, pop-ups and phone notifications,
+                       phone.js for the country list and how numbers are shown
     fonts/             Archivo ExtraBold for headings (SIL Open Font License)
     icons/             app icons and favicon
     vendor/leaflet/    the map library, served from the site itself
@@ -122,12 +137,12 @@ Every page loads `js/probe.js` and `js/compat.js` (the old-browser check), then 
 
 ## API reference
 
-All routes except `/register`, `/login`, and `/health` need the header `Authorization: Bearer <token>`.
+All routes except `/register`, `/login`, and `/health` need the header `Authorization: Bearer <token>`. Phone numbers come back in international form, e.g. `+237677123456`.
 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
-| POST | /register | anyone | Create an account (name, phoneNumber, password, role: seller, buyer, both, guardian, or admin). Under 18: add `isMinor: true`, guardianName, guardianPhone, guardianRelation |
-| POST | /login | anyone | Get a token (phoneNumber, password, optional role) |
+| POST | /register | anyone | Create an account (name, phoneNumber, `country`, password, role: seller, buyer, both, guardian, or admin). `country` is an ISO code from the list (CM, AO, BI, CF, TD, CG, CD, GQ, GA, RW, ST), CM if left out. Under 18: add `isMinor: true`, guardianName, guardianPhone, `guardianCountry` (the child's if left out), guardianRelation |
+| POST | /login | anyone | Get a token (phoneNumber, optional `country`, password, optional role) |
 | GET | /me | logged in | Own account, guardian status, and number of supervised children |
 | GET | /health | anyone | `status` and which `database` is in use |
 | GET | /material-categories | logged in | List materials for dropdowns |

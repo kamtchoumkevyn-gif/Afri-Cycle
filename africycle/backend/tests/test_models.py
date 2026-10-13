@@ -39,7 +39,7 @@ def seller_buyer_category():
 
 def test_create_and_find_user():
     user_id = new_user("677000001", "seller")
-    user = find_user_by_phone("677000001")
+    user = find_user_by_phone("+237677000001")  # saved in international form
     assert user["id"] == user_id
     assert user["passwordHash"] != "password123"
 
@@ -50,8 +50,8 @@ def test_find_user_not_found():
 
 def test_verify_login_correct_and_wrong_password():
     new_user("677000001", "seller")
-    assert verify_login("677000001", "password123") is not None
-    assert verify_login("677000001", "wrong") is None
+    assert verify_login("+237677000001", "password123") is not None
+    assert verify_login("+237677000001", "wrong") is None
     assert verify_login("000", "password123") is None
 
 

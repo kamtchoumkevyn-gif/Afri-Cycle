@@ -86,7 +86,7 @@
       return `
         <tr>
           <td data-label="Name">${escapeHtml(u.name)}${u.isFlagged && u.flagReason ? `<br><small>${escapeHtml(u.flagReason)}</small>` : ""}</td>
-          <td data-label="Phone">${escapeHtml(u.phoneNumber)}</td>
+          <td data-label="Phone">${escapeHtml(AfriPhone.format(u.phoneNumber))}</td>
           <td data-label="Role">${escapeHtml(u.role)}${u.isMinor
             ? ` <span class="badge" title="Guardian approval">Under 18 &middot; ${escapeHtml(u.guardianStatus || "pending")}</span>`
             : ""}</td>

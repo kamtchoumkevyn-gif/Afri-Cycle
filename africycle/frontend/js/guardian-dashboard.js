@@ -60,7 +60,7 @@
       ? pending.map((c) => `
           <tr>
             <td data-label="Name">${escapeHtml(c.name)}</td>
-            <td data-label="Phone">${escapeHtml(c.phoneNumber)}</td>
+            <td data-label="Phone">${escapeHtml(AfriPhone.format(c.phoneNumber))}</td>
             <td data-label="You are their">${escapeHtml(c.guardianRelation || "")}</td>
             <td>
               <div class="row-actions">

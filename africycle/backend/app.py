@@ -20,6 +20,8 @@ from routes.admin_routes import admin_bp
 from routes.chat_routes import chat_bp
 from routes.material_routes import material_bp
 from routes.guardian_routes import guardian_bp
+from routes.directions_routes import directions_bp
+from routes.push_routes import push_bp
 
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 
@@ -40,7 +42,7 @@ CORS(app)
 limiter.init_app(app)
 
 for blueprint in (auth_bp, buyer_bp, seller_bp, notification_bp, admin_bp, chat_bp,
-                  material_bp, guardian_bp):
+                  material_bp, guardian_bp, directions_bp, push_bp):
     app.register_blueprint(blueprint)
 
 # Create tables and starter categories on startup (safe to run repeatedly)

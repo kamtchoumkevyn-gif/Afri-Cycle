@@ -47,3 +47,36 @@ self.addEventListener("fetch", (event) => {
         : Response.error())))
   );
 });
+
+// ---- Notifications sent by the server (see backend/webpush.py and backend/alerts.py) ----
+
+self.addEventListener("push", (event) => {
+  let message = {};
+  try {
+    message = event.data ? event.data.json() : {};
+  } catch (err) {
+    message = { body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(self.registration.showNotification(message.title || "Africycle", {
+    body: message.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/badge-96.png",
+    tag: message.tag || undefined,
+    renotify: Boolean(message.tag), // a newer message from the same person still buzzes
+    vibrate: [120, 60, 120],
+    data: { url: message.url || "/" }
+  }));
+});
+
+// Tapping a notification opens the right page, reusing an open Africycle window if any
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+    const same = windows.find((client) => client.url === url);
+    if (same) return same.focus();
+    const open = windows.find((client) => new URL(client.url).origin === self.location.origin && "navigate" in client);
+    if (open) return open.focus().then(() => open.navigate(url)).catch(() => self.clients.openWindow(url));
+    return self.clients.openWindow(url);
+  }));
+});

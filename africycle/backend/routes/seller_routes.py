@@ -1,5 +1,8 @@
-from flask import Blueprint, request, jsonify
 import math
+
+from flask import Blueprint, request, jsonify
+
+import alerts
 from auth_utils import get_user_from_token, guardian_block
 from database.db import get_connection
 from models.notification import create_notification, find_active_notification, update_status
@@ -164,6 +167,7 @@ def notify_buyer():
         if on_the_way and existing["status"] == "pending":
             update_status(existing["id"], "in transit")
             existing["status"] = "in transit"
+            alerts.trip_update(existing["id"], "in transit")
         return jsonify({"message": "Buyer already notified", "notificationId": existing["id"],
                         "status": existing["status"]}), 200
 
@@ -173,6 +177,7 @@ def notify_buyer():
         material_category_id=material_category_id,
         status=status
     )
+    alerts.trip_update(notification_id, status)  # a phone notification, if the buyer turned them on
     return jsonify({"message": "Buyer notified", "notificationId": notification_id,
                     "status": status}), 201
 

@@ -92,7 +92,27 @@ function dashboardFor(role) {
   return "seller-dashboard.html"; // seller and "both"
 }
 
-function logout() {
+// Stops this device from getting the account's phone notifications (see notify.js)
+async function forgetThisDevice() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  const registration = await navigator.serviceWorker.getRegistration();
+  const subscription = registration && await registration.pushManager.getSubscription();
+  if (!subscription) return;
+  try {
+    await authFetch("/push/subscribe", { method: "DELETE", body: JSON.stringify({ endpoint: subscription.endpoint }) });
+  } finally {
+    await subscription.unsubscribe();
+  }
+}
+
+async function logout() {
+  window.africycleLoggingOut = true; // notify.js won't sign this device up again from here on
+  try {
+    // At most 3 seconds: logging out matters more than tidying up
+    await Promise.race([forgetThisDevice(), new Promise((resolve) => setTimeout(resolve, 3000))]);
+  } catch (err) {
+    // Couldn't reach the server; the device is unsubscribed next time it's used
+  }
   clearToken();
   window.location.replace("login.html");
 }

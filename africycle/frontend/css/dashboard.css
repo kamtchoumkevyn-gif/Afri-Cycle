@@ -716,3 +716,180 @@
 .thread-readonly {
   max-height: 320px;
 }
+
+/* ---- Trip: the way to the buyer, shown until the seller arrives ---- */
+
+.trip-panel {
+  border-color: var(--blue);
+  border-width: 2px;
+}
+
+.trip-summary {
+  margin: 4px 0 10px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.trip-next {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #ffffff;
+  background-color: var(--blue);
+  border-radius: var(--radius-md);
+}
+
+.trip-next-distance {
+  flex: none;
+  margin-right: 12px;
+  padding-right: 12px;
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.trip-arrived .trip-next {
+  background-color: var(--green);
+}
+
+.trip-map {
+  margin-top: 10px;
+}
+
+.trip-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin: -4px -4px 6px;
+}
+
+.trip-toolbar > * {
+  margin: 4px;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 2px solid var(--green);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segmented button {
+  min-height: 40px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green);
+  background-color: var(--surface);
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.segmented button + button {
+  border-left: 2px solid var(--green);
+}
+
+.segmented button[aria-pressed="true"] {
+  color: #ffffff;
+  background-color: var(--green);
+}
+
+@media (pointer: coarse) {
+  .segmented button {
+    min-height: 44px;
+  }
+}
+
+.trip-actions {
+  margin-top: 4px;
+}
+
+.trip-steps {
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.trip-steps summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  color: var(--blue);
+  cursor: pointer;
+}
+
+.trip-steps ol {
+  margin: 4px 0 0 22px;
+}
+
+.trip-steps li {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.step-distance {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.map-credit {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---- Message alerts ---- */
+
+.count-badge {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  color: #ffffff;
+  background-color: var(--danger);
+  border-radius: 10px;
+}
+
+.conversation-item.unread {
+  font-weight: 800;
+}
+
+.notify-prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin: -6px 0 20px;
+  padding: 10px 14px;
+  color: var(--navy);
+  background-color: var(--blue-tint);
+  border-radius: var(--radius-md);
+}
+
+.notify-prompt p {
+  flex: 1 1 220px;
+  margin: 4px 8px 4px 0;
+  font-size: 14px;
+}
+
+.notify-prompt .row-actions {
+  flex: none;
+}
+
+.notice-bar .notice-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trip-panel .row-actions {
+  justify-content: flex-start;
+}

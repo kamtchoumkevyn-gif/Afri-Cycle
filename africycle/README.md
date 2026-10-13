@@ -48,12 +48,21 @@ Tests use a temporary database, so they never touch your real data. To run the s
 
 1. Register a **buyer**, log in, tap **Save my current location**, set a price for Scrap Iron, and tap **Add photo** in the Photo column to upload a reference picture of the scrap you buy.
 2. Log out. Register a **seller**, log in, choose Scrap Iron, and tap **Find buyers**. The map shows you and every buyer, with the best price in orange; tap a buyer for their details and photos.
-3. Tap the buyer's **photo** (or **I'm coming**). The buyer is told at once that you are on your way, and your phone shares its location while the trip is in transit.
-4. On the buyer's dashboard, **Collectors on their way** shows a map with the seller moving towards their pin.
-5. When the seller marks **arrived**, the buyer can mark the delivery **completed** and record the purchase.
-6. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS` to see stats and flag accounts.
+3. Tap **Route** on a buyer's pin to see the way there by road. Then tap the buyer's **photo** (or **I'm coming**). The buyer is told at once that you are on your way, and your phone shares its location while the trip is in transit.
+4. The seller's dashboard now shows **Your trip**: a map with the road route to the buyer, the next turn ("In 300 m, turn left onto Rue Joss"), and the distance and time left. It follows you as you move and works out a new way if you leave the route. Choose **On foot** or **Motorbike or car**. The trip map stays, even after a reload or closing the app, until you tap **I've arrived**; **Google Maps** opens the same destination there.
+5. On the buyer's dashboard, **Collectors on their way** shows a map with the seller moving towards their pin.
+6. When the seller marks **arrived**, the buyer can mark the delivery **completed** and record the purchase.
+7. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS` to see stats and flag accounts.
 
 Location only works on `localhost` or over HTTPS, which browsers require.
+
+Road routes come from the free OSRM servers that FOSSGIS runs for OpenStreetMap (`routing.openstreetmap.de`, also used by openstreetmap.org). Their rules: at most one request a second, an honest User-Agent, credit beside the route with a "Fix the map" link, and no heavy use. The app's server asks on the phones' behalf, so it can follow those rules: it waits its turn, remembers routes for 10 minutes, and limits each person to 30 routes a minute. If Africycle grows into heavy use, run your own OSRM server and set `ROUTING_URL` to it. When no route can be found, the trip map points a dashed line straight at the buyer and still guides by distance.
+
+### Messages and notifications
+
+- **In the app:** **Messages** shows how many messages are unread, the browser tab shows the count too, e.g. "(2) Seller - Africycle", and a new message pops up with **Open**. Each conversation in the list shows its own count, and opening it marks it read.
+- **On the phone:** the dashboards offer **Turn on** notifications. After that, new messages pop up on the phone even when Africycle is closed, and buyers also hear when a seller is coming, is on the way, and has arrived. This works in Chrome, Samsung Internet, Firefox, Edge and Opera on Android and computers. On iPhone and iPad (iOS 16.4 or later) it only works in the app added to the Home Screen; Safari says so. Logging out turns notifications off on that phone.
+- **How it works:** standard Web Push, with no Firebase or other account. Each message is encrypted for the receiving phone (RFC 8291) and signed with the app's own key (VAPID, RFC 8292). The server makes that key once and keeps it in the database; to use your own, set `VAPID_PRIVATE_KEY`. The server only sends to the push services of Google, Mozilla, Apple and Microsoft, and forgets a phone when its push service says notifications were turned off there.
 
 ### Children and guardians
 
@@ -87,9 +96,12 @@ africycle/
     config.py          secret key, admin phone list, token lifetime
     extensions.py      rate limiter
     auth_utils.py      reads the logged-in user from the JWT
-    database/db.py     SQLite or Postgres connection and all 8 tables
+    database/db.py     SQLite or Postgres connection and all 10 tables
     models/            one file per table: database functions only
     routes/            API endpoints grouped by feature
+    directions.py      road routes from OpenStreetMap's routing service
+    webpush.py         phone notifications (Web Push encryption and signing)
+    alerts.py          what the notifications say (new message, seller coming, arrived)
     tests/             pytest suite (conftest.py sets up a fresh test DB)
   frontend/
     index.html, login.html, register.html
@@ -98,7 +110,8 @@ africycle/
     manifest.webmanifest  app name, colours and icons for installing
     sw.js              keeps the app's files on the phone (the server fills in its file list)
     css/               base.css (shared), auth.css, dashboard.css
-    js/                shared scripts (see below), one script per page, map.js for the maps
+    js/                shared scripts (see below), one script per page, map.js for the maps,
+                       notify.js for unread counts, pop-ups and phone notifications
     fonts/             Archivo ExtraBold for headings (SIL Open Font License)
     icons/             app icons and favicon
     vendor/leaflet/    the map library, served from the site itself
@@ -130,12 +143,17 @@ All routes except `/register`, `/login`, and `/health` need the header `Authoriz
 | GET | /seller/buyer-profile/<id> | seller | A buyer's hours, prices, and photos |
 | GET | /seller/contact-buyer/<id> | seller | A buyer's phone number |
 | POST | /seller/notify-buyer | seller | Tell a buyer you are coming (buyerId, materialCategoryId; `onTheWay: true` starts the trip in transit) |
-| GET | /notifications | buyer or seller | Deliveries you sent or received |
+| GET | /notifications | buyer or seller | Deliveries you sent or received, with where the buyer is (buyerLatitude, buyerLongitude) |
 | PATCH | /notifications/<id>/location | sending seller | Update live location |
 | PATCH | /notifications/<id>/status | either party | pending, in transit, arrived, completed |
-| GET | /chat/conversations | logged in | People you have messaged |
-| GET | /chat/messages/<userId> | logged in | Messages with one person |
-| POST | /chat/send | logged in | Send a message |
+| GET | /directions?from=lat,lng&to=lat,lng&mode=foot | logged in | Road route (`mode`: foot or car, up to 300 km): distance in metres, duration in seconds, the line, and turn-by-turn steps. 30 a minute |
+| GET | /chat/conversations | logged in | People you have messaged, with unread counts |
+| GET | /chat/unread | logged in | Unread messages: total, per sender, and the newest one |
+| GET | /chat/messages/<userId> | logged in | Messages with one person; marks them read unless `?read=0` |
+| POST | /chat/send | logged in | Send a message (also notifies the receiver's phones) |
+| GET | /push/key | logged in | The app's public key, which browsers need to turn notifications on |
+| POST | /push/subscribe | logged in | Turn notifications on for this device (the browser's PushSubscription as JSON) |
+| DELETE | /push/subscribe | logged in | Turn them off for this device (`endpoint`) |
 | GET | /guardian/children | guardian named by the child | Children waiting for approval and children supervised |
 | POST | /guardian/children/<id>/approve, /guardian/children/<id>/decline | guardian named by the child | Let the child trade, or not |
 | GET | /guardian/children/<id>/activity | the child's guardian | The child's deliveries, sales, and conversations |
@@ -153,6 +171,9 @@ Create a Web Service from the GitHub repo with:
 - Start command: `gunicorn app:app`
 - Auto-Deploy: On Commit, so every push to `master` goes live
 - Environment variables: `JWT_SECRET_KEY`, `ADMIN_PHONE_NUMBERS`, and `DATABASE_URL`
+- Optional: `VAPID_PRIVATE_KEY` (your own notification signing key), `VAPID_SUBJECT` (a `mailto:` address or `https://` page where push services can reach you; the site's address by default), `ROUTING_URL` (your own OSRM server; the app fills in `{coords}`, and `{profile}` with foot or car, e.g. `https://example.org/routed-{profile}/route/v1/driving/{coords}`)
+
+Render may run several copies of the app at once (its `WEB_CONCURRENCY` setting). They share one database and one notification key, and take turns asking the routing service, so that's fine.
 
 After a deploy, open `/health` on the site: `{"status": "ok", "database": "postgres"}` means the new version is live and connected to Neon. If the site keeps showing an older version, open the service's **Events** in Render: a failed deploy leaves the previous version running, and its log ends with the reason.
 
@@ -178,6 +199,8 @@ PythonAnywhere keeps files between restarts, so the SQLite database stays and no
    ```
    `deploy/pythonanywhere.sh` installs the packages, writes `.env` with a new secret key, checks that the app starts, and points the web app at it.
 4. Press **Reload** on the Web tab and open the address the script prints.
+
+Free PythonAnywhere accounts can only reach websites on its allowlist. Phone notifications to Chrome, Samsung Internet, Edge and iPhones go through, but Firefox's push service and the routing service don't, so on PythonAnywhere the trip map shows a straight line instead of the road route. You can ask PythonAnywhere to add a public service to its allowlist.
 
 To update after changes reach GitHub, run `bash ~/Afri-Cycle/africycle/deploy/pythonanywhere.sh`, then press **Reload**. Free web apps stop after a month unless you click the button on the Web tab that keeps them running. To see the data, download `Afri-Cycle/africycle/backend/database/africycle.db` from the **Files** tab and open it with DB Browser for SQLite.
 

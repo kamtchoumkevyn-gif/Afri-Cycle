@@ -1,6 +1,8 @@
 import math
 
 from flask import Blueprint, request, jsonify
+
+import alerts
 from auth_utils import get_user_from_token
 from database.db import get_connection
 from models.notification import get_notification_by_id, update_location, update_status
@@ -21,13 +23,15 @@ def to_number(value, low, high):
         return None
     return number
 
+# buyerLatitude/buyerLongitude: where the seller is heading (the buyer's saved buying point)
 LIST_QUERY = """
     SELECT n.*, s.name AS sellerName, b.name AS buyerName, m.name AS materialName,
-           s.isMinor AS sellerIsMinor
+           s.isMinor AS sellerIsMinor, bp.latitude AS buyerLatitude, bp.longitude AS buyerLongitude
     FROM notifications n
     JOIN users s ON s.id = n.sellerId
     JOIN users b ON b.id = n.buyerId
     LEFT JOIN material_category m ON m.id = n.materialCategoryId
+    LEFT JOIN buyer_profile bp ON bp.userId = n.buyerId
     WHERE {where}
     ORDER BY n.createdAt DESC
 """
@@ -130,4 +134,6 @@ def update_notification_status(notification_id):
     except ValueError as e:
         return jsonify({"message": str(e)}), 400
 
+    if payload["userId"] == notification["sellerId"]:
+        alerts.trip_update(notification_id, new_status)  # tell the buyer: on the way, or arrived
     return jsonify({"message": "Status updated"}), 200

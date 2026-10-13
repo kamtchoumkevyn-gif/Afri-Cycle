@@ -24,7 +24,7 @@
     <nav class="topbar-nav" aria-label="Main">
       <a id="switchLink" href="buyer-dashboard.html" class="btn btn-quiet" hidden>Buyer view</a>
       <a id="childrenLink" href="guardian-dashboard.html" class="btn btn-quiet" hidden>My children</a>
-      <a href="chat.html" class="btn btn-quiet">Messages</a>
+      <a id="messagesLink" href="chat.html" class="btn btn-quiet">Messages</a>
       <button id="logoutBtn" class="btn btn-quiet" type="button">Log out</button>
     </nav>
   </header>
@@ -35,6 +35,36 @@
 
     <p id="guardianBanner" class="msg msg-info" role="status" hidden></p>
     <p id="pageMsg" class="msg" role="status" hidden></p>
+
+    <!-- Shown while a delivery is pending or in transit, even after a reload: the way to the buyer -->
+    <section class="panel trip-panel" id="tripPanel" aria-labelledby="tripHeading" hidden>
+      <h2 id="tripHeading">Your trip to <span id="tripBuyerName"></span></h2>
+      <p class="trip-summary" id="tripSummary" aria-live="polite">Finding your position...</p>
+      <div class="trip-next" id="tripNext" aria-live="polite" hidden>
+        <span class="trip-next-distance" id="tripNextDistance"></span>
+        <span class="trip-next-text" id="tripNextText"></span>
+      </div>
+      <div id="tripMap" class="map-box trip-map" role="region" aria-label="Map with the way to the buyer"></div>
+      <div class="trip-toolbar">
+        <div class="segmented" role="group" aria-label="How you are travelling">
+          <button type="button" data-mode="foot" aria-pressed="true">On foot</button>
+          <button type="button" data-mode="car" aria-pressed="false">Motorbike or car</button>
+        </div>
+        <button type="button" id="tripFollowBtn" class="btn btn-secondary" hidden>Follow me</button>
+      </div>
+      <div class="row-actions trip-actions">
+        <button id="tripStartBtn" class="btn btn-primary" type="button" hidden>I'm leaving now</button>
+        <button id="tripArrivedBtn" class="btn btn-primary" type="button" hidden>I've arrived</button>
+        <a id="tripCallLink" class="btn btn-secondary" href="#" hidden>Call</a>
+        <a id="tripChatLink" class="btn btn-quiet" href="#">Message</a>
+        <a id="tripMapsLink" class="btn btn-quiet" href="#" target="_blank" rel="noopener">Google Maps</a>
+      </div>
+      <details class="trip-steps" id="tripStepsBox" hidden>
+        <summary>All directions</summary>
+        <ol id="tripSteps"></ol>
+      </details>
+      <p class="map-credit" id="tripCredit" hidden></p>
+    </section>
 
     <section class="panel" aria-labelledby="findHeading">
       <h2 id="findHeading">Find a buyer</h2>
@@ -60,6 +90,7 @@
 
       <div id="sellerMap" class="map-box" role="region" aria-label="Map of buyers near you" hidden></div>
       <p id="mapStatus" class="map-status" aria-live="polite" hidden></p>
+      <p id="routeCredit" class="map-credit" hidden></p>
 
       <div class="table-wrap">
         <table class="data-table" aria-live="polite">
@@ -112,6 +143,7 @@
   <script src="js/auth.js"></script>
   <script src="js/map.js"></script>
   <script src="js/seller-dashboard.js"></script>
+  <script src="js/notify.js"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>

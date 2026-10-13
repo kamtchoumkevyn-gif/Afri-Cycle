@@ -28,11 +28,16 @@
         listEl.innerHTML = `<p class="panel-hint">No conversations yet. Open one from a buyer or delivery with "Message".</p>`;
         return;
       }
-      listEl.innerHTML = convos.map((c) => `
-        <button type="button" class="conversation-item ${c.otherUserId === activeUserId ? "active" : ""}"
+      listEl.innerHTML = convos.map((c) => {
+        // The open conversation is being read, so it never shows as unread
+        const unread = c.otherUserId === activeUserId ? 0 : c.unread || 0;
+        const badge = unread ? ` <span class="count-badge" aria-label="${unread} unread">${unread}</span>` : "";
+        return `
+        <button type="button" class="conversation-item ${c.otherUserId === activeUserId ? "active" : ""} ${unread ? "unread" : ""}"
                 data-id="${c.otherUserId}">
-          ${escapeHtml(c.otherUserName || "User")}
-        </button>`).join("");
+          ${escapeHtml(c.otherUserName || "User")}${badge}
+        </button>`;
+      }).join("");
     } catch (err) {
       showMessage(pageMsg, "Conversations could not be loaded.", "error");
     }
@@ -48,6 +53,7 @@
       lastRenderedCount = -1;
     }
     activeUserId = otherUserId;
+    if (typeof AfricycleAlerts !== "undefined" && AfricycleAlerts) AfricycleAlerts.viewing(otherUserId);
     chatForm.hidden = false;
     listEl.querySelectorAll(".conversation-item").forEach((btn) => {
       btn.classList.toggle("active", Number(btn.dataset.id) === otherUserId);
@@ -77,7 +83,8 @@
   async function loadThread() {
     if (!activeUserId) return;
     try {
-      const response = await authFetch(`/chat/messages/${activeUserId}`);
+      // While the page is in the background, fetching isn't reading: messages stay unread
+      const response = await authFetch(`/chat/messages/${activeUserId}${document.hidden ? "?read=0" : ""}`);
       const data = await readJson(response);
       if (!response.ok) {
         showMessage(pageMsg, data.message || "Messages could not be loaded.", "error");
@@ -138,4 +145,10 @@
     loadThread();
     loadConversations();
   }, POLL_MS);
+  // Back to the page: what's on screen is now read
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      loadThread().then(loadConversations);
+    }
+  });
 })();

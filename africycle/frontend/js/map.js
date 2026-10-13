@@ -42,13 +42,14 @@ const AfriMap = (function () {
     map.invalidateSize();
   }
 
-  // Extra room on the right, where the labels sit beside each dot
+  // Room on the left for the zoom buttons (so no pin hides under them), and on the right
+  // for the labels beside each dot
   function fit(map, points) {
     const valid = points.filter(Boolean);
     if (valid.length === 1) map.setView(valid[0], 15);
     if (valid.length > 1) {
       map.fitBounds(L.latLngBounds(valid), {
-        paddingTopLeft: [30, 30], paddingBottomRight: [120, 30], maxZoom: 16
+        paddingTopLeft: [56, 30], paddingBottomRight: [120, 30], maxZoom: 16
       });
     }
   }
@@ -117,5 +118,91 @@ const AfriMap = (function () {
     return "Finding your position took too long. Move near a window or outside, then try again.";
   }
 
-  return { create, pin, show, fit, distanceKm, formatDistance, timeAgo, directionsUrl, locate, locationErrorMessage };
+  // ---- Road directions (the server asks OpenStreetMap's routing service; see /directions) ----
+
+  async function fetchRoute(from, to, mode) {
+    const query = `from=${from[0]},${from[1]}&to=${to[0]},${to[1]}&mode=${mode}`;
+    const response = await authFetch(`/directions?${query}`);
+    const data = await readJson(response);
+    if (!response.ok) {
+      throw new Error(data.message || "Directions aren't available right now.");
+    }
+    return prepareRoute(data);
+  }
+
+  // Flat x/y in km around a point: accurate enough over the few km of a trip
+  function toKm(origin, point) {
+    const kmPerDegLng = 111.32 * Math.cos(origin[0] * Math.PI / 180);
+    return [(point[1] - origin[1]) * kmPerDegLng, (point[0] - origin[0]) * 110.574];
+  }
+
+  // Adds the distance from the start to every point of the line and every turn
+  function prepareRoute(route) {
+    const along = [0];
+    for (let i = 1; i < route.line.length; i++) {
+      along.push(along[i - 1] + distanceKm(route.line[i - 1], route.line[i]));
+    }
+    route.along = along;
+    route.totalKm = along[along.length - 1] || route.distance / 1000;
+    route.steps.forEach((step) => { step.alongKm = nearestOnRoute(route, step.at).alongKm; });
+    return route;
+  }
+
+  // The closest point of the route to `point`: how far off the route it is, and how far along
+  function nearestOnRoute(route, point) {
+    let best = { offKm: Infinity, alongKm: 0 };
+    for (let i = 1; i < route.line.length; i++) {
+      const a = toKm(point, route.line[i - 1]);
+      const b = toKm(point, route.line[i]);
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const lengthSq = dx * dx + dy * dy;
+      const t = lengthSq ? Math.max(0, Math.min(1, -(a[0] * dx + a[1] * dy) / lengthSq)) : 0;
+      const off = Math.hypot(a[0] + t * dx, a[1] + t * dy);
+      if (off < best.offKm) {
+        best = { offKm: off, alongKm: route.along[i - 1] + t * (route.along[i] - route.along[i - 1]) };
+      }
+    }
+    return best;
+  }
+
+  // Where the traveller is on the route: distance left, the next turn, and whether they've strayed
+  function progress(route, point) {
+    const here = nearestOnRoute(route, point);
+    const leftKm = Math.max(0, route.totalKm - here.alongKm);
+    const next = route.steps.find((step) => step.type !== "depart" && step.alongKm > here.alongKm + 0.005) || null;
+    return {
+      offRouteKm: here.offKm,
+      leftKm,
+      leftSeconds: route.totalKm ? route.duration * (leftKm / route.totalKm) : 0,
+      next,
+      nextKm: next ? Math.max(0, next.alongKm - here.alongKm) : 0
+    };
+  }
+
+  function formatDuration(seconds) {
+    const minutes = Math.max(1, Math.round(seconds / 60));
+    if (minutes < 60) return `${minutes} min`;
+    return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+  }
+
+  // The credit the routing service asks for beside a route, with its "fix the map" link
+  // (where anyone can report a missing or wrong road). Hidden when no route is shown.
+  function showRouteCredit(element, route) {
+    if (!element) return;
+    element.hidden = !route;
+    element.textContent = route ? `${route.credit} · ` : "";
+    if (!route) return;
+    const link = document.createElement("a");
+    link.href = "https://www.openstreetmap.org/fixthemap";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Fix the map";
+    element.appendChild(link);
+  }
+
+  return {
+    create, pin, show, fit, distanceKm, formatDistance, formatDuration, timeAgo, directionsUrl,
+    locate, locationErrorMessage, fetchRoute, progress, showRouteCredit
+  };
 })();

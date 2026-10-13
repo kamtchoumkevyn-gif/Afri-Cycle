@@ -114,13 +114,37 @@ SCHEMA = [
         FOREIGN KEY (materialCategoryId) REFERENCES material_category(id)
     )
     """,
+    # A phone or browser that agreed to receive notifications (Web Push)
+    """
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER NOT NULL,
+        endpoint TEXT UNIQUE NOT NULL,
+        p256dh TEXT NOT NULL,
+        authSecret TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users(id)
+    )
+    """,
+    # Values the app creates once and keeps, such as its notification signing key
+    """
+    CREATE TABLE IF NOT EXISTS app_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        value TEXT NOT NULL
+    )
+    """,
 ]
+
+# The tables of the first release, before photos, notifications and settings were added
+FIRST_RELEASE_TABLE_COUNT = 7
 
 TABLES = [re.search(r"EXISTS (\w+)", statement).group(1) for statement in SCHEMA]
 
 # Columns added after the first release. CREATE TABLE IF NOT EXISTS never changes
 # a table that already exists (like the live one on Neon), so init_db adds any of
-# these that are missing.
+# these that are missing. An optional third item is SQL that fills the new column in
+# for the rows already there, run once, right after the column is added.
 ADDED_COLUMNS = {
     "users": [
         ("isMinor", "INTEGER DEFAULT 0"),
@@ -133,6 +157,11 @@ ADDED_COLUMNS = {
     ],
     "notifications": [
         ("locationUpdatedAt", "TEXT"),
+    ],
+    "chat_messages": [
+        # When the receiver opened the conversation; empty = unread. Messages sent before
+        # this existed count as read, so nobody gets a sudden pile of old "unread" ones.
+        ("readAt", "TEXT", "UPDATE chat_messages SET readAt = createdAt"),
     ],
 }
 
@@ -182,9 +211,11 @@ def init_db():
         cursor.execute(statement)
     for table, columns in ADDED_COLUMNS.items():
         existing = _column_names(cursor, table)
-        for name, definition in columns:
+        for name, definition, *fill in columns:
             if name not in existing:
                 cursor.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
+                for statement in fill:
+                    cursor.execute(statement)
     conn.commit()
     conn.close()
 

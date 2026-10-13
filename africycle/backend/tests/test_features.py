@@ -290,10 +290,14 @@ def test_init_db_upgrades_a_database_made_before_these_features(tmp_path, monkey
     cursor = conn.cursor()
     for table in reversed(db.TABLES):
         cursor.execute(f"DROP TABLE IF EXISTS {table}")
-    for statement in db.SCHEMA[:-1]:
+    for statement in db.SCHEMA[:db.FIRST_RELEASE_TABLE_COUNT]:
         cursor.execute(statement)
     cursor.execute("INSERT INTO users (phoneNumber, passwordHash, name, role) "
                    "VALUES ('677000001', 'x', 'Old', 'seller')")
+    cursor.execute("INSERT INTO users (phoneNumber, passwordHash, name, role) "
+                   "VALUES ('677000002', 'x', 'Old buyer', 'buyer')")
+    cursor.execute("INSERT INTO chat_messages (senderId, receiverId, messageText, createdAt) "
+                   "VALUES (2, 1, 'Sent before read receipts existed', '2026-10-01T09:00:00')")
     conn.commit()
     conn.close()
 
@@ -303,12 +307,15 @@ def test_init_db_upgrades_a_database_made_before_these_features(tmp_path, monkey
     conn = db.get_connection()
     cursor = conn.cursor()
     for table, columns in db.ADDED_COLUMNS.items():
-        assert {name for name, _ in columns} <= db._column_names(cursor, table)
+        assert {column[0] for column in columns} <= db._column_names(cursor, table)
     cursor.execute("SELECT name, isMinor, guardianStatus FROM users")
     old_user = cursor.fetchone()
     assert old_user["name"] == "Old"
     assert old_user["isMinor"] == 0  # existing accounts are adults
     assert old_user["guardianStatus"] is None
-    cursor.execute("SELECT COUNT(*) AS photos FROM material_photos")
-    assert cursor.fetchone()["photos"] == 0
+    cursor.execute("SELECT readAt FROM chat_messages")
+    assert cursor.fetchone()["readAt"] == "2026-10-01T09:00:00"  # old messages don't show up as unread
+    for table in db.TABLES[db.FIRST_RELEASE_TABLE_COUNT:]:  # photos, notifications, settings
+        cursor.execute(f"SELECT COUNT(*) AS n FROM {table}")
+        assert cursor.fetchone()["n"] == 0, table
     conn.close()

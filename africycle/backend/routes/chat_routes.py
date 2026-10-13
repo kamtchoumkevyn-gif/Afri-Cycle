@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify
+
+import alerts
 from auth_utils import get_user_from_token, guardian_block
 from database.db import get_connection
-from models.chat import send_message, get_conversation, get_conversations_for_user
+from models.chat import (get_conversation, get_conversations_for_user, mark_conversation_read,
+                         send_message, unread_summary)
 
 chat_bp = Blueprint("chat_bp", __name__)
 
@@ -13,6 +16,7 @@ def conversations():
         return jsonify({"message": "Unauthorized"}), 401
 
     convos = get_conversations_for_user(payload["userId"])
+    unread = unread_summary(payload["userId"])["bySender"]
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -20,9 +24,19 @@ def conversations():
         cursor.execute("SELECT name FROM users WHERE id = ?", (convo["otherUserId"],))
         row = cursor.fetchone()
         convo["otherUserName"] = row["name"] if row else None
+        convo["unread"] = unread.get(str(convo["otherUserId"]), 0)
     conn.close()
 
     return jsonify({"conversations": convos}), 200
+
+
+@chat_bp.route("/chat/unread", methods=["GET"])
+def unread():
+    """Unread messages for the badge on "Messages", and the newest one for a pop-up."""
+    payload = get_user_from_token()
+    if not payload:
+        return jsonify({"message": "Unauthorized"}), 401
+    return jsonify(unread_summary(payload["userId"])), 200
 
 
 @chat_bp.route("/chat/messages/<int:other_user_id>", methods=["GET"])
@@ -39,6 +53,10 @@ def messages(other_user_id):
 
     if not other:
         return jsonify({"message": "User not found"}), 404
+
+    # Opening the conversation reads it; ?read=0 is sent while the page is in the background
+    if request.args.get("read") != "0":
+        mark_conversation_read(payload["userId"], other_user_id)
 
     thread = get_conversation(payload["userId"], other_user_id)
     # Under-18 sellers' guardians can read their conversations; the page says so
@@ -78,4 +96,7 @@ def send():
         return jsonify({"message": "Receiver not found"}), 404
 
     message_id = send_message(payload["userId"], receiver_id, message_text)
+    # Replying means the sender has read what came before
+    mark_conversation_read(payload["userId"], receiver_id)
+    alerts.new_message(payload["userId"], receiver_id, message_text)
     return jsonify({"message": "Sent", "messageId": message_id}), 201

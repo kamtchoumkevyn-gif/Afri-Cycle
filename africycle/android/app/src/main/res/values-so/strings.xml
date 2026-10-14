@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/so.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">Lama gaari karo server-ka. Hubi xiriirkaaga, kadibna isku day mar kale.</string>
+    <string name="try_again">Isku day mar kale</string>
+    <string name="webview_too_old">Africycle waxay u baahan tahay nooc cusub oo Android System WebView ah. Cusboonaysii, kadibna mar kale fur Africycle.</string>
+    <string name="update">Cusboonaysii</string>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The only folders FileProvider may share, and only with an app this one hands a file to -->
+<paths>
+    <!-- The splash image, given to the browser while the app opens -->
+    <files-path name="twa_splash" path="twa_splash/" />
+    <!-- A photo being taken with the camera in the built-in screen -->
+    <cache-path name="camera" path="camera/" />
+</paths>

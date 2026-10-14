@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/wes.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">We no fit reach the server. Check ya network, then try again.</string>
+    <string name="try_again">Try again</string>
+    <string name="webview_too_old">Africycle need new version of Android System WebView. Update am, then open Africycle again.</string>
+    <string name="update">Update</string>
+</resources>

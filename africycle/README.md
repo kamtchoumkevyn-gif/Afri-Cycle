@@ -110,13 +110,79 @@ The African-language translations are first drafts. Have native speakers check t
 Every page adapts from a 320 px phone to a large desktop screen, upright or sideways, and works by touch, mouse or keyboard.
 
 - **Browsers:** Chrome, Samsung Internet, Opera, Firefox and Edge on Android and computers, and Safari on iPhone and iPad, including phones several years old. A browser too old to run the app shows a notice saying to update it. So does Opera Mini's Extreme data saving, which can't run apps like this; its High or Off setting works.
-- **Install it like an app:** on Android, tap **Install Africycle as an app** on the first page (or *Install app* in the browser menu). On iPhone, tap Share, then **Add to Home Screen**. It then opens full screen from its own icon.
+- **Install it like an app:** on Android, tap **Download the Android app** on the first page for the APK (see [Android app](#android-app)), or **Install Africycle as an app** (or *Install app* in the browser menu). On iPhone, tap Share, then **Add to Home Screen**. It then opens full screen from its own icon.
 - **Weak connections:** after the first visit, pages, styles, scripts, fonts and the map library are kept on the phone (`frontend/sw.js`), so the app opens quickly even when the network is slow. The server also compresses what it sends (Leaflet: 147 KB down to 42 KB). Buyers, prices, messages and locations always come live from the server. When an answer takes more than a few seconds (a weak signal, or the free server waking up), a notice says so instead of the page seeming frozen.
 - **No connection:** the app's pages still open and say what couldn't load; an address that was never visited shows a "You're offline" page.
 - **Updates:** the server gives `sw.js` a fingerprint of every file in `frontend/`. Each deploy changes it, so phones fetch the new version on their next visit, and any page left open offers **Reload**.
 - **Location:** the app asks for GPS first and falls back to the quicker network position when GPS is slow, such as indoors. If location is refused or switched off, it says how to fix that. Browsers only share location over HTTPS (or on `localhost`), so test location features on the deployed site.
 
 To check layouts while developing, use the device toolbar in Chrome's developer tools (Ctrl+Shift+M). To turn the offline copy off for everyone, follow the note at the top of `frontend/sw.js`.
+
+## Android app
+
+`android/` is Africycle as an Android app (an APK). It installs on Android 5.0 and newer, which covers about 99.5% of Android phones in use, and opens `https://afri-cycle.onrender.com` full screen from its own icon. The app shows the live website, so every website change reaches it at once, with no app update.
+
+- **With Chrome, Samsung Internet or Edge** (almost every phone): the browser shows the site full screen, without an address bar. This is a *Trusted Web Activity*. The browser first checks `/.well-known/assetlinks.json` on the site, which names the app (`cm.africycle.app`) and the fingerprint of the key it is signed with. Notifications appear as Africycle's own.
+- **Without one** (phones without Google services, or with a very old browser): the app shows the site in its built-in screen, which uses Android's WebView. Location, photos from the camera or gallery, phone calls, map links, the back button and screens with a notch all work there. Notifications need a browser, so the built-in screen has none. If the phone's WebView is older than version 55, the app asks to update **Android System WebView**.
+- **Permissions:** location, asked the first time a map needs it (approximate is enough), and notifications, asked on Android 13 and newer when they are turned on. Both are under *Settings > Apps > Africycle*. There is no camera permission: photos are taken with the phone's camera app.
+- **Security:**
+  - The app only uses https.
+  - Only Africycle's pages open inside the app. Other links open in the browser or the right app.
+  - A link another app sends to a different site opens Africycle's home page instead.
+  - Certificate errors stop the page, and Google Safe Browsing checks every page.
+  - The login is never copied to backups or to a new phone.
+  - Release builds can't be debugged.
+- **Languages:** the app's own messages come in the website's 21 languages. Run `python tools/android_strings.py` in `backend/` after changing them.
+
+**Installing on a phone:**
+
+1. On the phone, open the website and tap **Download the Android app**, or open the [newest release](https://github.com/kamtchoumkevyn-gif/Afri-Cycle/releases/latest).
+2. Open `Africycle.apk`.
+3. If Android asks, allow the browser to install apps (*Install unknown apps*).
+4. If Play Protect says it doesn't know the app, choose to install anyway.
+
+**Building and testing:** `.github/workflows/android.yml` runs on every change to `android/`.
+
+- It builds the app and runs Android's checks (lint).
+- It installs the app on an emulator of every Android version from 5.0 to the newest. There it opens the app, follows an Africycle link, and tries the security probes.
+- It attaches each screenshot and report, and the overall `*-devices.md` table, to the **android-ci** pre-release.
+
+To build on a computer, open `android/` in Android Studio, or run `./gradlew assembleRelease` there. `android/tools/make_icons.py` remakes the icons from the website's logo.
+
+### The signing key
+
+Android only lets an app be updated by an APK signed with the same key, and the website's `assetlinks.json` names that key. So keep it for as long as the app exists, and keep it private.
+
+- `africycle-release.p12` (alias `africycle`) and its password were handed to the project owner. Keep two copies outside this repository, for example on a USB key and in a password manager. `.gitignore` keeps `.p12`, `.jks` and `.keystore` files out of commits, and a test checks it.
+- Its SHA-256 fingerprint is `D9:A1:78:5C:AC:65:DB:3D:A3:79:6A:DF:09:D3:1C:D2:3B:05:68:CB:30:E9:89:24:30:94:0A:B8:4C:B3:08:6D`. This is the default of `ANDROID_CERT_SHA256` in `backend/app.py`.
+
+**To let GitHub sign and publish new versions:**
+
+1. In the repository's *Settings > Secrets and variables > Actions*, add two secrets:
+   - `ANDROID_KEYSTORE_BASE64`: the key file as text. Get it with `base64 -w0 africycle-release.p12`, or in PowerShell with `[Convert]::ToBase64String([IO.File]::ReadAllBytes("africycle-release.p12"))`.
+   - `ANDROID_KEYSTORE_PASSWORD`: its password.
+2. Open *Actions > Android app > Run workflow* and enter a version such as `1.0.1`. The workflow builds, signs and tests that version, then publishes it as the newest release, which the download link serves.
+
+Without the secrets, the workflow builds `Africycle-unsigned.apk`. Sign it with `apksigner` from Android's build tools, check it, then attach `Africycle.apk` to a new GitHub release named `android-v<version>`:
+
+```
+apksigner sign --ks africycle-release.p12 --ks-key-alias africycle --min-sdk-version 21 --out Africycle.apk Africycle-unsigned.apk
+apksigner verify --print-certs Africycle.apk
+```
+
+Environment variables on the server, all optional:
+
+- `ANDROID_CERT_SHA256`: the key fingerprints `assetlinks.json` names, separated by commas.
+- `ANDROID_PACKAGE`: the app's package name.
+- `ANDROID_APK_URL`: where `/download/android` leads.
+
+If the app is ever published on Google Play with Play App Signing, add the fingerprint Play shows (*Test and release > App integrity*) to `ANDROID_CERT_SHA256`. Otherwise copies installed from Play show an address bar.
+
+### Android developer verification (2026–2027)
+
+Google now requires apps on certified Android phones to come from a verified developer. This started on 30 September 2026 in Indonesia, Singapore and Thailand, and Google plans to apply it worldwide in 2027. After that, phones elsewhere, Cameroon included, will only install an APK from an unverified developer through an advanced setup.
+
+Before then, create a **full distribution** account in the Android Developer Console ($25 and an identity check) and register the app `cm.africycle.app` with the signing key above. The free *limited distribution* account (students, hobbyists) only allows 20 devices: enough for the team's own phones, not for users. See [Google's guide](https://support.google.com/android-developer-console/answer/16561738).
 
 ## Project structure
 
@@ -139,7 +205,13 @@ africycle/
     i18n.py            the server's messages in each person's language
     tools/phone_list.py   copies the country list to frontend/js/phone.js
     tools/i18n_strings.py lists every text to translate and checks each language
+    tools/android_strings.py  copies the translations into the Android app
     tests/             pytest suite (conftest.py sets up a fresh test DB)
+  android/             the Android app (see "Android app"): Gradle project, package cm.africycle.app
+    app/src/main/java/cm/africycle/app/  LauncherActivity (opens the site full screen),
+                       WebAppActivity (the built-in screen), DelegationService, Site
+    ci/                what the GitHub workflow runs: package.sh, device_check.sh
+    tools/make_icons.py   the app's icons and splash, from frontend/icons/icon-512.png
   frontend/
     index.html, login.html, register.html
     seller-dashboard.html, buyer-dashboard.html, guardian-dashboard.html
@@ -170,6 +242,8 @@ All routes except `/register`, `/login`, and `/health` need the header `Authoriz
 | POST | /login | anyone | Get a token (phoneNumber, optional `country`, password, optional role) |
 | GET | /me | logged in | Own account, guardian status, and number of supervised children |
 | GET | /health | anyone | `status` and which `database` is in use |
+| GET | /.well-known/assetlinks.json | anyone | Names the Android app and its signing key, so Chrome opens it full screen |
+| GET | /download/android | anyone | Redirects to the newest Android app (APK) |
 | GET | /material-categories | logged in | List materials for dropdowns |
 | GET, POST | /buyer/profile | buyer | Read or save location and working hours |
 | GET | /buyer/prices | buyer | List own prices, with photoId |

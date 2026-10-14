@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/ig.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">Enweghị ike iru sava. Lelee njikọ gị, wee nwaa ọzọ.</string>
+    <string name="try_again">Nwaa ọzọ</string>
+    <string name="webview_too_old">Africycle chọrọ ụdị Android System WebView ọhụrụ karịa. Melite ya, wee mepee Africycle ọzọ.</string>
+    <string name="update">Melite</string>
+</resources>

@@ -111,6 +111,10 @@ const AfriMap = (function () {
       return t("This browser can't share your location. Try Chrome, Firefox, Safari or Samsung Internet.");
     }
     if (error.code === 1) {
+      // In the Android app, location is the app's own permission (not the browser's)
+      if (typeof inAndroidApp === "function" && inAndroidApp()) {
+        return t("Location is blocked for Africycle. In your phone's settings, open Apps, then Africycle, then Permissions, and allow Location. Then try again.");
+      }
       return t("Location is blocked for Africycle. Allow it in your browser's settings for this site (the icon beside the address), then try again.");
     }
     if (error.code === 2) {

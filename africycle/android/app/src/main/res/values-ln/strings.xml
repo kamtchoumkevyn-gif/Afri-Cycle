@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/ln.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">Tokoki te kokoma na serveur. Tala internet na yo, sima meka lisusu.</string>
+    <string name="try_again">Meka lisusu</string>
+    <string name="webview_too_old">Africycle esengeli version ya sika ya Android System WebView. Bongisa yango, sima fungola Africycle lisusu.</string>
+    <string name="update">Bongisa</string>
+</resources>

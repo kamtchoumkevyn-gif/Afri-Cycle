@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- https only, checked against the certificates Android itself trusts (not ones a person
+     or another app added). Android 7.0 and newer; Android 5.0 and 6.0 get the same from
+     usesCleartextTraffic="false" and from WebAppActivity, which only loads https. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

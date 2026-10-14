@@ -3,8 +3,9 @@ import hashlib
 import json
 import mimetypes
 import os
+import re
 
-from flask import Flask, jsonify, make_response, request, send_from_directory
+from flask import Flask, jsonify, make_response, redirect, request, send_from_directory
 from flask_cors import CORS
 
 from config import Config
@@ -170,6 +171,61 @@ def serve_service_worker():
     response.headers["Content-Type"] = "text/javascript; charset=utf-8"
     response.headers["Cache-Control"] = "no-cache"  # browsers check for a new version on each visit
     return response
+
+
+# ---- The Android app (africycle/android) ----
+
+# Chrome shows the app full screen, without an address bar, only after this site confirms the
+# app is its own: /.well-known/assetlinks.json names the app's package and the SHA-256
+# fingerprint of the certificate it is signed with (see "Android app" in README.md).
+# ANDROID_CERT_SHA256 may list several, separated by commas: if the app is ever published on
+# Google Play with Play App Signing, add the fingerprint Play shows (App integrity page).
+ANDROID_PACKAGE = os.environ.get("ANDROID_PACKAGE", "cm.africycle.app")
+ANDROID_CERT_SHA256 = os.environ.get(
+    "ANDROID_CERT_SHA256",
+    "D9:A1:78:5C:AC:65:DB:3D:A3:79:6A:DF:09:D3:1C:D2:3B:05:68:CB:30:E9:89:24:30:94:0A:B8:4C:B3:08:6D")
+# Where the "Download the Android app" link on the home page leads: the newest release on GitHub
+ANDROID_APK_URL = os.environ.get(
+    "ANDROID_APK_URL",
+    "https://github.com/kamtchoumkevyn-gif/Afri-Cycle/releases/latest/download/Africycle.apk")
+
+
+def certificate_fingerprints(setting):
+    """"D9:A1:...", "d9a1..." or several of either, separated by commas, as Android writes
+    them: 32 pairs of capital hex digits joined by colons. Anything else is skipped."""
+    found = []
+    for item in setting.split(","):
+        digits = re.sub(r"[^0-9A-Fa-f]", "", item).upper()
+        if len(digits) == 64:
+            found.append(":".join(digits[i:i + 2] for i in range(0, 64, 2)))
+        elif item.strip():
+            app.logger.warning("ANDROID_CERT_SHA256: %r is not a SHA-256 fingerprint; skipped", item.strip())
+    return found
+
+
+def asset_links():
+    return [{
+        "relation": ["delegate_permission/common.handle_all_urls",
+                     "delegate_permission/common.get_login_creds"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": ANDROID_PACKAGE,
+            "sha256_cert_fingerprints": certificate_fingerprints(ANDROID_CERT_SHA256),
+        },
+    }]
+
+
+@app.route("/.well-known/assetlinks.json")
+def serve_asset_links():
+    response = jsonify(asset_links())
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+@app.route("/download/android")
+def download_android_app():
+    """The newest Android app (APK) from the project's GitHub releases."""
+    return redirect(ANDROID_APK_URL, code=302)
 
 
 # ---- The website ----

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The first screen and the permission requests: see-through, so only the browser's
+         screen or Android's question shows -->
+    <style name="Theme.Africycle.Translucent" parent="@android:style/Theme.Translucent.NoTitleBar" />
+
+    <!-- The built-in screen (WebAppActivity) -->
+    <style name="Theme.Africycle" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorPrimary">@color/africycle_green</item>
+        <item name="android:colorPrimaryDark">@color/africycle_green</item>
+        <item name="android:colorAccent">@color/africycle_green</item>
+        <item name="android:statusBarColor">@color/africycle_green</item>
+        <item name="android:windowBackground">@color/page_background</item>
+    </style>
+</resources>

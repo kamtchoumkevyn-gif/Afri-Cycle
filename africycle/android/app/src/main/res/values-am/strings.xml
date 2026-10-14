@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/am.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">አገልጋዩን ማግኘት አልተቻለም። ግንኙነትዎን ያረጋግጡ፣ ከዚያም እንደገና ይሞክሩ።</string>
+    <string name="try_again">እንደገና ሞክር</string>
+    <string name="webview_too_old">Africycle አዲስ የAndroid System WebView ስሪት ያስፈልገዋል። ያዘምኑት፣ ከዚያም Africycleን እንደገና ይክፈቱ።</string>
+    <string name="update">አዘምን</string>
+</resources>

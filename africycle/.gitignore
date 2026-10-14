@@ -4,3 +4,19 @@ __pycache__/
 *.pyc
 .pytest_cache/
 backend/database/*.db
+
+# Android app: build output and local settings
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+
+# The app's signing key and its password must never be in this public repository
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore-password*

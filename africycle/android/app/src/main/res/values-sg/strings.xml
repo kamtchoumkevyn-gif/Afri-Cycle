@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/sg.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">E lîngbi ti sî na serveur pëpe. Bâ internet ti mo, na pekoni tara ni mbeni fani.</string>
+    <string name="try_again">Tara ni mbeni fani</string>
+    <string name="webview_too_old">Africycle aye fini version ti Android System WebView. Fini ni, na pekoni zî Africycle mbeni fani.</string>
+    <string name="update">Fini ni</string>
+</resources>

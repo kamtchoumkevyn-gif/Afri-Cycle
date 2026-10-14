@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/fr.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">Impossible de joindre le serveur. Vérifiez votre connexion, puis réessayez.</string>
+    <string name="try_again">Réessayer</string>
+    <string name="webview_too_old">Africycle a besoin d’une version plus récente d’Android System WebView. Mettez-la à jour, puis rouvrez Africycle.</string>
+    <string name="update">Mettre à jour</string>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/rw.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">Ntibishoboka kugera kuri seriveri. Reba interineti yawe, hanyuma wongere ugerageze.</string>
+    <string name="try_again">Ongera ugerageze</string>
+    <string name="webview_too_old">Africycle ikeneye verisiyo nshya ya Android System WebView. Yivugurure, hanyuma wongere ufungure Africycle.</string>
+    <string name="update">Vugurura</string>
+</resources>

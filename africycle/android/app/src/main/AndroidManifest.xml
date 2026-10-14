@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The website -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The map: buyers near a seller, and the way to them. Android asks the person the first
+         time a map needs it; "approximate" is enough. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- New chat messages. Android 13 and newer ask the person first. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- No camera permission on purpose: photos are taken by the phone's camera app, which
+         needs no permission from this one. -->
+
+    <!-- Phones without GPS, a camera or a touch screen can install the app too -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <!-- Android 11 and newer show an app only the other apps it says it needs to find -->
+    <queries>
+        <!-- Browsers that can open the app full screen -->
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+        <!-- Camera apps, for a photo taken in the built-in screen -->
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
+    <!-- allowBackup and dataExtractionRules: the login is never copied to Google Drive or to a
+         new phone. usesCleartextTraffic and networkSecurityConfig: https only. -->
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Africycle.Translucent"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="33">
+
+        <meta-data
+            android:name="asset_statements"
+            android:resource="@string/asset_statements" />
+
+        <!-- The app's icon. Opens the website full screen in Chrome, Samsung Internet or Edge
+             once the browser has checked /.well-known/assetlinks.json; otherwise WebAppActivity. -->
+        <activity
+            android:name=".LauncherActivity"
+            android:alwaysRetainTaskState="true"
+            android:exported="true"
+            android:label="@string/app_name">
+            <meta-data
+                android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                android:value="@string/start_url" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                android:resource="@color/africycle_green" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR_DARK"
+                android:resource="@color/africycle_green" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+                android:resource="@color/page_background" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR_DARK"
+                android:resource="@color/page_background" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+                android:resource="@drawable/splash" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+                android:resource="@color/page_background" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_FADE_OUT_DURATION"
+                android:value="300" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
+                android:value="cm.africycle.app.fileprovider" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Africycle links (from WhatsApp, SMS...) open in the app -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="afri-cycle.onrender.com"
+                    android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <!-- The built-in screen, for phones without a browser that can open the app full screen -->
+        <activity
+            android:name=".WebAppActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Africycle"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Used by the browser to bring the app back to the front -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.FocusActivity"
+            android:exported="false" />
+
+        <!-- Asks Android 13 and newer for permission to show notifications -->
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.NotificationPermissionRequestActivity"
+            android:exported="false" />
+
+        <!-- The browser running the app shows its notifications as this app's and asks it for
+             the location. Only the browser that opened the app may connect (checked by its
+             signature). -->
+        <service
+            android:name=".DelegationService"
+            android:enabled="true"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <meta-data
+                android:name="android.support.customtabs.trusted.SMALL_ICON"
+                android:resource="@drawable/ic_notification" />
+            <intent-filter>
+                <action android:name="android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <!-- Shares exactly two folders, and only with an app this one hands a file to: the
+             splash image (to the browser) and a photo being taken (to the camera app) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="cm.africycle.app.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
+    </application>
+</manifest>

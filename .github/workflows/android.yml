@@ -1,0 +1,260 @@
+# The Android app (africycle/android): builds it, runs Android's checks, and tests it on an
+# emulator of every Android version from 5.0 to the newest. Results (screenshots, reports, the
+# APK) are attached to the "android-ci" pre-release on GitHub, which is replaced on every run.
+#
+# Signing: add two repository secrets (Settings > Secrets and variables > Actions):
+#   ANDROID_KEYSTORE_BASE64    the release key (africycle-release.p12) in base64
+#   ANDROID_KEYSTORE_PASSWORD  its password
+# Without them the release APK is built unsigned, to be signed by hand (see README.md).
+# With them, "Run workflow" with a version number publishes that release for download.
+name: Android app
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "africycle/android/**"
+      - ".github/workflows/android.yml"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, e.g. 1.0.1. Published as a release if the signing key secrets are set."
+        required: false
+        default: ""
+
+permissions:
+  contents: write # to attach the APK and the test results to releases
+
+concurrency:
+  group: android-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI_RELEASE: android-ci
+
+jobs:
+  plan:
+    name: Plan (Android versions to test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      prefix: ${{ steps.matrix.outputs.prefix }}
+    steps:
+      - name: Make sure the "android-ci" pre-release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view "$CI_RELEASE" > /dev/null 2>&1 || gh release create "$CI_RELEASE" --prerelease \
+            --title "Android app: automatic test builds" \
+            --notes "Made by .github/workflows/android.yml on every change to the Android app: test APKs, Android's checks and emulator screenshots for each Android version. Not for download: the app is in the newest release."
+      - name: Every Android version from 5.0 (API 21) that has an emulator
+        id: matrix
+        run: |
+          SDKMANAGER=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
+          "$SDKMANAGER" --list --channel=0 2>/dev/null | grep -o "system-images;android-[0-9]*;[a-z_]*;x86[_64]*" | sort -u > images.txt
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json, os
+          images = [line.split(";") for line in open("images.txt").read().split()]
+          best = {}
+          for _, platform, target, arch in images:
+              level = int(platform.split("-")[1])
+              if level >= 21 and target == "google_apis" and (level not in best or arch == "x86_64"):
+                  best[level] = arch
+          runs = [{"api": level, "target": "google_apis", "arch": arch} for level, arch in sorted(best.items())]
+          # Phones without Chrome: the app's built-in screen, with a recent WebView
+          plain = sorted(int(p.split("-")[1]) for _, p, t, a in images if t == "default" and a == "x86_64" and int(p.split("-")[1]) >= 30)
+          for level in sorted({plain[0], plain[-1]} if plain else set()):
+              runs.append({"api": level, "target": "default", "arch": "x86_64"})
+          print("matrix=" + json.dumps({"include": runs}))
+          print("prefix=" + ("release" if os.environ["GITHUB_EVENT_NAME"] == "release" else "build"))
+          EOF
+          cat "$GITHUB_OUTPUT"
+
+  build:
+    name: Build and check
+    needs: plan
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ANDROID_VERSION_NAME: ${{ inputs.version || '1.0.0' }}
+      HAS_RELEASE_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
+          log-accepted-android-sdk-licenses: false
+      # Also checks that gradle/wrapper/gradle-wrapper.jar is Gradle's own
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Build the release APK and run Android's checks (lint)
+        working-directory: africycle/android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -o pipefail
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.p12"
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.p12"
+            echo "Signing with the release key"
+          else
+            echo "No signing key secrets: building an unsigned APK"
+          fi
+          ./gradlew --no-daemon --stacktrace assembleRelease lintRelease 2>&1 | tee "$GITHUB_WORKSPACE/out/build-log.txt"
+          ./gradlew --no-daemon -q :app:dependencies --configuration releaseRuntimeClasspath > "$GITHUB_WORKSPACE/out/dependencies.txt" 2>&1 || true
+          rm -f "$RUNNER_TEMP/release.p12"
+
+      - name: Check the APK
+        run: bash africycle/android/ci/package.sh out
+
+      - name: Keep the APK for the emulator tests
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apk
+          path: out/Africycle-ci-test-only.apk
+          retention-days: 7
+
+      - name: Attach the APK and reports to the "android-ci" pre-release
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          shopt -s nullglob
+          files=(out/*)
+          [ ${#files[@]} -gt 0 ] && gh release upload "$CI_RELEASE" "${files[@]}" --clobber
+
+      - name: Publish the release (when a version was given and the key is set)
+        if: inputs.version != '' && env.HAS_RELEASE_KEY == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "android-v$VERSION" out/Africycle.apk --latest \
+            --title "Africycle for Android $VERSION" \
+            --notes "Africycle for Android $VERSION, for Android 5.0 and newer. Install: open this page on the phone, tap Africycle.apk, and allow your browser to install apps if asked."
+
+  devices:
+    name: Android ${{ matrix.api }} (${{ matrix.target }})
+    needs: [plan, build]
+    if: ${{ !cancelled() && needs.plan.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    env:
+      LABEL: ${{ needs.plan.outputs.prefix }}-api${{ matrix.api }}-${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: The APK from this build
+        if: github.event_name != 'release'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apk
+          path: apk
+      - name: The published APK
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release download "$TAG" --pattern Africycle.apk --dir apk
+      - name: Pick the APK to test
+        run: |
+          apk=$(ls apk/*.apk | head -1)
+          echo "APK=$apk" >> "$GITHUB_ENV"
+          echo "Testing $apk"
+
+      - name: Let the emulator use the processor's virtualization (KVM)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install and try the app on the emulator
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          ram-size: 3072M
+          disk-size: 6G
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash africycle/android/ci/device_check.sh "$APK" results "$LABEL"
+
+      - name: Attach the results to the "android-ci" pre-release
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          shopt -s nullglob
+          files=(results/*)
+          [ ${#files[@]} -gt 0 ] && gh release upload "$CI_RELEASE" "${files[@]}" --clobber
+          [ -f "results/$LABEL.txt" ] && cat "results/$LABEL.txt" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the report for the summary
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: report-${{ env.LABEL }}
+          path: results/${{ env.LABEL }}.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+  summary:
+    name: Summary of every Android version
+    needs: [plan, devices]
+    if: ${{ always() && needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PREFIX: ${{ needs.plan.outputs.prefix }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: report-*
+          merge-multiple: true
+          path: reports
+      - name: One table, attached to the "android-ci" pre-release as <prefix>-devices.md
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p reports
+          {
+            echo "# Africycle on every Android version ($PREFIX, $(date -u +%Y-%m-%dT%H:%MZ), commit ${GITHUB_SHA::7})"
+            echo
+            echo "| Emulator | Result | On screen |"
+            echo "|---|---|---|"
+            for report in $(ls reports/*.txt 2>/dev/null | sort -V); do
+              name=$(basename "$report" .txt)
+              result=$(grep -m1 "^RESULT:" "$report" | sed 's/^RESULT: //')
+              screen=$(grep -m1 "^on screen:" "$report" | sed 's/^on screen: //' | cut -c1-120 | tr '|' '/')
+              echo "| $name | ${result:-no result} | $screen |"
+            done
+            echo
+            for report in $(ls reports/*.txt 2>/dev/null | sort -V); do
+              echo "## $(basename "$report" .txt)"
+              echo '```'
+              cat "$report"
+              echo '```'
+            done
+          } > "$PREFIX-devices.md"
+          cat "$PREFIX-devices.md" >> "$GITHUB_STEP_SUMMARY"
+          gh release upload "$CI_RELEASE" "$PREFIX-devices.md" --clobber

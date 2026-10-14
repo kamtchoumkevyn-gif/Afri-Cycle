@@ -70,3 +70,15 @@
     (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
   if (iosHint && isIos && !installed) iosHint.hidden = false;
 })();
+
+// Android phones: the Android app (africycle/android), from /download/android. Not offered
+// inside the app itself. Outside the block above, so it shows even without a service worker.
+(function () {
+  const link = document.getElementById("androidAppLink");
+  if (!link || !/android/i.test(navigator.userAgent)) return;
+  const installed = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
+  if (installed || (typeof inAndroidApp === "function" && inAndroidApp())) return;
+  link.hidden = false;
+  const hint = document.getElementById("androidAppHint");
+  if (hint) hint.hidden = false;
+})();

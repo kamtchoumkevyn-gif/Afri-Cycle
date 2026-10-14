@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/af.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">Kan nie die bediener bereik nie. Kontroleer jou verbinding en probeer dan weer.</string>
+    <string name="try_again">Probeer weer</string>
+    <string name="webview_too_old">Africycle het \'n nuwer weergawe van Android System WebView nodig. Werk dit by en maak Africycle dan weer oop.</string>
+    <string name="update">Werk by</string>
+</resources>

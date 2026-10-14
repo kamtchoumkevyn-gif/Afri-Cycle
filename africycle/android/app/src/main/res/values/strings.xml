@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Africycle</string>
+    <string name="start_url" translatable="false">https://afri-cycle.onrender.com/</string>
+    <!-- The website this app belongs to. The website says the same about the app in
+         /.well-known/assetlinks.json (backend/app.py), with the app's signing key. -->
+    <string name="asset_statements" translatable="false">[{\"relation\": [\"delegate_permission/common.handle_all_urls\", \"delegate_permission/common.get_login_creds\"], \"target\": {\"namespace\": \"web\", \"site\": \"https://afri-cycle.onrender.com\"}}]</string>
+
+    <!-- Texts people see. They are translated with the website's texts (frontend/i18n/<code>.json):
+         after changing one, run "python tools/android_strings.py" in backend/ to update the
+         values-<code> folders. -->
+    <string name="server_unreachable">Can\'t reach the server. Check your connection, then try again.</string>
+    <string name="try_again">Try again</string>
+    <string name="webview_too_old">Africycle needs a newer version of Android System WebView. Update it, then open Africycle again.</string>
+    <string name="update">Update</string>
+</resources>

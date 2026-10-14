@@ -10,6 +10,26 @@ const API_BASE_URL = window.location.protocol === "file:" ? "http://localhost:50
 const SLOW_AFTER_MS = 6000;
 const GIVE_UP_AFTER_MS = 70000;
 
+// Whether the page is shown by the Android app (africycle/android). Its built-in screen
+// adds "AfricycleApp/<version>" to the user agent; Chrome opens the app's first page with
+// document.referrer "android-app://cm.africycle.app/", which is remembered for the visit.
+// Used to word help for the app (its own settings) and not to offer the app download.
+const ANDROID_APP_KEY = "africycle_android_app";
+
+function inAndroidApp() {
+  if (/\bAfricycleApp\//.test(navigator.userAgent)) return true;
+  try {
+    if (document.referrer.indexOf("android-app://cm.africycle.app") === 0) {
+      sessionStorage.setItem(ANDROID_APP_KEY, "1");
+    }
+    return sessionStorage.getItem(ANDROID_APP_KEY) === "1";
+  } catch (err) {
+    return false; // storage blocked
+  }
+}
+
+inAndroidApp(); // on the app's first page, before it moves on to the dashboard
+
 let pendingRequests = 0;
 let slowTimer = null;
 let slowNotice = null;

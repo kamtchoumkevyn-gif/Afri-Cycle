@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and newer: nothing is copied, neither to the cloud backup nor to a new phone.
+     The app's storage holds the login of the built-in screen; it stays on this phone. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="external" path="." />
+    </device-transfer>
+</data-extraction-rules>

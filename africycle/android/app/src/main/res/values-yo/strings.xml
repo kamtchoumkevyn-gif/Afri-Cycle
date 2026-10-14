@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by backend/tools/android_strings.py from frontend/i18n/yo.json.
+     Don't edit: change the translation there, then run the tool. -->
+<resources>
+    <string name="server_unreachable">A kò lè dé ọ̀dọ̀ sáfà. Ṣàyẹ̀wò ìsopọ̀ rẹ, lẹ́yìn náà gbìyànjú lẹ́ẹ̀kan sí i.</string>
+    <string name="try_again">Gbìyànjú lẹ́ẹ̀kan sí i</string>
+    <string name="webview_too_old">Africycle nílò ẹ̀dà tuntun ti Android System WebView. Ṣe àtúnṣe rẹ̀, lẹ́yìn náà ṣí Africycle lẹ́ẹ̀kan sí i.</string>
+    <string name="update">Ṣe àtúnṣe</string>
+</resources>

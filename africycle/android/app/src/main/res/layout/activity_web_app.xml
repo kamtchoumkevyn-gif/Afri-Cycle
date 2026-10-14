@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WebAppActivity, the built-in screen. The WebView is added in code (creating one fails when
+     Android System WebView is missing), below the splash, the progress bar and the message. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/page_background">
+
+    <FrameLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- The logo, until the first page appears -->
+        <ImageView
+            android:id="@+id/splash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/splash" />
+
+        <!-- How far the page has loaded (a slow connection, or the server waking up) -->
+        <ProgressBar
+            android:id="@+id/progress"
+            style="@android:style/Widget.Material.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_gravity="top"
+            android:indeterminate="false"
+            android:max="100"
+            android:progressBackgroundTint="@color/page_background"
+            android:progressTint="@color/africycle_green"
+            android:visibility="gone" />
+
+        <!-- No connection, or a WebView too old: what to do, and a button to do it -->
+        <LinearLayout
+            android:id="@+id/message"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/page_background"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_marginBottom="24dp"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/splash" />
+
+            <TextView
+                android:id="@+id/message_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.2"
+                android:maxWidth="480dp"
+                android:textColor="@color/ink"
+                android:textSize="18sp" />
+
+            <Button
+                android:id="@+id/message_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:backgroundTint="@color/africycle_green"
+                android:minHeight="48dp"
+                android:minWidth="160dp"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:textColor="@android:color/white"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Android 15 and newer draw the app behind the status bar: this paints that strip green -->
+    <View
+        android:id="@+id/status_bar_background"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="top"
+        android:background="@color/africycle_green" />
+</FrameLayout>

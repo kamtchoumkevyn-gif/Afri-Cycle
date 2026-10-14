@@ -2,8 +2,10 @@
 
 The text comes from the pages (frontend/*.html: their text, and the placeholder,
 aria-label, title and alt attributes, read the same way js/i18n.js translates them),
-from the scripts (t("...") in frontend/js), and from the server (_("...") and N_("...")
-in backend). Translations are frontend/i18n/<code>.json, keyed by that English text.
+from the scripts (t("...") in frontend/js), from the server (_("...") and N_("...")
+in backend), and from the Android app (android/app/src/main/res/values/strings.xml;
+tools/android_strings.py copies their translations into the app). Translations are
+frontend/i18n/<code>.json, keyed by that English text.
 
 Run from backend/:
     python tools/i18n_strings.py               how complete each language is
@@ -16,11 +18,13 @@ import json
 import os
 import re
 import sys
+import xml.etree.ElementTree as ElementTree
 from html.parser import HTMLParser
 
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND = os.path.join(BACKEND, "..", "frontend")
 CATALOGS = os.path.join(FRONTEND, "i18n")
+ANDROID_RES = os.path.join(BACKEND, "..", "android", "app", "src", "main", "res")
 ATTRIBUTES = ("placeholder", "aria-label", "title", "alt")
 SKIPPED = ("script", "style", "noscript")
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
@@ -109,9 +113,31 @@ def server_texts():
     return found
 
 
+def android_unescape(text):
+    """A string as Android shows it: \\' \\" \\\\ \\@ \\? read as the character, \\n as a new line."""
+    return re.sub(r"\\(.)", lambda match: {"n": "\n", "t": "\t"}.get(match.group(1), match.group(1)), text)
+
+
+def android_strings():
+    """The Android app's texts that people see, as [(resource name, English text)]: the
+    <string>s of res/values/strings.xml, except those marked translatable="false"."""
+    path = os.path.join(ANDROID_RES, "values", "strings.xml")
+    if not os.path.exists(path):
+        return []
+    found = []
+    for element in ElementTree.parse(path).getroot().iter("string"):
+        if element.get("translatable") != "false":
+            found.append((element.get("name"), android_unescape("".join(element.itertext()).strip())))
+    return found
+
+
+def android_texts():
+    return {english for _name, english in android_strings()}
+
+
 def all_texts():
     """Every English text, sorted."""
-    return sorted(page_texts() | script_texts() | server_texts())
+    return sorted(page_texts() | script_texts() | server_texts() | android_texts())
 
 
 def catalog_codes():

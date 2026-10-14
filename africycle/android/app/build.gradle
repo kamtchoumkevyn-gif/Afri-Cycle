@@ -1,0 +1,92 @@
+plugins {
+    id "com.android.application"
+}
+
+// Release settings come from the environment, so no password or key is ever kept in this
+// folder (the repository is public):
+//   ANDROID_VERSION_NAME       the version people see, e.g. 1.0.1 (default 1.0.0)
+//   ANDROID_KEYSTORE_PATH      the signing key (.p12 file). Without it the release APK is
+//   ANDROID_KEYSTORE_PASSWORD  built unsigned, to be signed afterwards with apksigner.
+def env = System.getenv()
+def keystorePath = env["ANDROID_KEYSTORE_PATH"]
+def appVersion = env["ANDROID_VERSION_NAME"] ?: "1.0.0"
+if (!(appVersion ==~ /\d{1,2}\.\d{1,2}\.\d{1,2}/)) {
+    throw new GradleException("ANDROID_VERSION_NAME must look like 1.0.1, not '${appVersion}'")
+}
+// The number Android compares when updating: 1.0.0 -> 10000, 1.2.3 -> 10203. It grows with
+// every version, and phones refuse to "update" an app to a lower one.
+def (major, minor, patch) = appVersion.tokenize(".").collect { it as Integer }
+def appVersionCode = major * 10000 + minor * 100 + patch
+
+android {
+    namespace "cm.africycle.app"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "cm.africycle.app"
+        minSdk 21       // Android 5.0 (Lollipop): about 99.5% of phones in use
+        targetSdk 36    // Android 16: the newest rules on privacy and security apply
+        versionCode appVersionCode
+        versionName appVersion
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storeType "pkcs12"
+                storePassword env["ANDROID_KEYSTORE_PASSWORD"]
+                keyAlias env["ANDROID_KEY_ALIAS"] ?: "africycle"
+                keyPassword env["ANDROID_KEYSTORE_PASSWORD"]
+                enableV1Signing true   // checked by Android 5.0 to 6.0
+                enableV2Signing true   // checked by Android 7.0 and newer
+                enableV3Signing true   // Android 9 and newer: allows replacing the key one day
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            signingConfig keystorePath ? signingConfigs.release : null
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    lint {
+        abortOnError true          // any error (an API a phone doesn't have, a missing translation...) stops the build
+        checkReleaseBuilds true
+        checkDependencies false
+        // Reminders that newer libraries exist: they need the internet and say nothing about this build
+        disable "GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion", "OldTargetApi"
+        textReport true
+        textOutput file("build/reports/lint-results.txt")
+    }
+
+    // A block that only Google Play can read; an APK given to people directly doesn't need it
+    dependenciesInfo {
+        includeInApk false
+        includeInBundle false
+    }
+}
+
+dependencies {
+    // Opens the website full screen in Chrome, Samsung Internet or Edge (a "Trusted Web
+    // Activity"), with its notifications shown as this app's. 2.6.x is the last version
+    // that supports Android 5.0 and 6.0; the newer ones start at Android 7.0.
+    implementation "com.google.androidbrowserhelper:androidbrowserhelper:2.6.2"
+    // Location asked for by this app (Settings > Apps > Africycle), not by the browser
+    implementation "com.google.androidbrowserhelper:locationdelegation:1.1.2"
+    // FileProvider: hands a photo taken with the camera to the page (built-in screen)
+    implementation "androidx.core:core:1.13.1"
+}

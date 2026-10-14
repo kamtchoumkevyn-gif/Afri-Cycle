@@ -240,12 +240,17 @@ jobs:
           # The website's side: is it up, and does it name the app's signing key?
           health=$(curl -sS --max-time 90 --retry 2 --retry-delay 15 https://afri-cycle.onrender.com/health 2>&1 || true)
           links=$(curl -sS --max-time 60 https://afri-cycle.onrender.com/.well-known/assetlinks.json 2>&1 || true)
+          # Which certificates the site presents: Android 5 to 7.0 only trust the older roots
+          chain=$(echo | timeout 30 openssl s_client -connect afri-cycle.onrender.com:443 -servername afri-cycle.onrender.com -showcerts 2>/dev/null \
+            | grep -E "^ *[0-9]+ s:|^ *i:" | sed 's/^ *//' | tr '\n' ' ' || true)
           {
             echo "# Africycle on every Android version ($PREFIX, $(date -u +%Y-%m-%dT%H:%MZ), commit ${GITHUB_SHA::7})"
             echo
             echo "Website /health: \`$health\`"
             echo
             echo "Website /.well-known/assetlinks.json: \`$links\`"
+            echo
+            echo "Website certificate chain: \`$chain\`"
             echo
             echo "| Emulator | Result | On screen |"
             echo "|---|---|---|"

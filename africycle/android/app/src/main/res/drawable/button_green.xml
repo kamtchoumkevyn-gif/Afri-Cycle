@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The built-in screen's button, like the website's green buttons. Drawn here rather than
+     tinted, because Android 5.0 ignores a button's tint. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#40FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/africycle_green" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+</ripple>

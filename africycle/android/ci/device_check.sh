@@ -85,6 +85,12 @@ top_activity() {
 # ---- 2. Open it from its icon and wait for Africycle (the free server may take a minute to wake) ----
 timeout 30 adb logcat -c
 say "start: $(shell am start -W -n $PKG/.LauncherActivity | grep -E 'Status|Activity:|TotalTime' | tr '\n' ' ')"
+# The built-in screen's own message (no connection, or WebView too old), seen in the view
+# list when uiautomator can't read the screen (Android 5)
+app_message_visible() {
+  shell dumpsys activity top | grep -q -E "\{[0-9a-f]+ V[^}]*app:id/message\}"
+}
+
 shown=""
 deadline=$((SECONDS + 180))
 while [ $SECONDS -lt $deadline ]; do
@@ -94,14 +100,19 @@ while [ $SECONDS -lt $deadline ]; do
     shown=$(echo "$text" | head -20 | tr '\n' '|')
     break
   fi
+  if app_message_visible; then
+    shown="the app's own message (screen not readable here; see the screenshot)"
+    break
+  fi
 done
 sleep 3
 timeout 60 adb exec-out screencap -p > "$OUT/$LABEL.png"
 say "on screen: ${shown:-nothing recognisable after 3 minutes}"
 say "top activity: $(top_activity)"
 [ -z "$shown" ] && problem "Africycle did not appear"
-if echo "$shown" | grep -q "Android System WebView"; then
-  say "note: this phone's WebView is too old for the website; the app asks to update it (as designed)"
+webview_major=$(shell dumpsys package com.android.webview | grep -m1 versionName | grep -o "[0-9]\+" | head -1)
+if echo "$shown" | grep -q "Android System WebView" || { echo "$shown" | grep -q "own message" && [ -n "$webview_major" ] && [ "$webview_major" -lt 55 ]; }; then
+  say "note: this phone's WebView ($webview_major) is too old for the website; the app asks to update it (as designed)"
 elif echo "$shown" | grep -q "reach the server"; then
   problem "the app could not reach the website"
 fi
@@ -110,6 +121,8 @@ fi
 say "link: $(shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d https://afri-cycle.onrender.com/login.html | grep -E 'Status|Activity:' | tr '\n' ' ')"
 sleep 5
 say "after link, top activity: $(top_activity)"
+# Before Android 12, an unverified link asks which app should open it: close that question
+shell dumpsys activity activities | grep -q -E "ResumedActivity.*ResolverActivity" && shell input keyevent 4 > /dev/null
 
 # Still installed? (If Android restarted underneath the test, say so instead of blaming the app.)
 if ! shell pm path $PKG | grep -q package:; then
@@ -118,7 +131,7 @@ fi
 
 # ---- 4. Security probes ----
 # Another app tries to make Africycle show a different website: it must open Africycle's own page
-shell am start -W -n $PKG/.LauncherActivity -a android.intent.action.VIEW -d https://example.com/ > /dev/null
+shell am start -n $PKG/.LauncherActivity -a android.intent.action.VIEW -d https://example.com/ > /dev/null
 sleep 8
 foreign=$(shell dumpsys activity activities | grep -E "Intent \{" | grep -v "$PKG/.LauncherActivity" | grep -c "example.com")
 say "foreign link handed to the browser or built-in screen: $foreign time(s)"

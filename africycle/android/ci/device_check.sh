@@ -137,10 +137,16 @@ foreign=$(shell dumpsys activity activities | grep -E "Intent \{" | grep -v "$PK
 say "foreign link handed to the browser or built-in screen: $foreign time(s)"
 [ "$foreign" != "0" ] && problem "another app made Africycle open a foreign website"
 
-# The built-in screen can't be opened by other apps (adb is "another app" here)
+# The built-in screen can't be opened by other apps (adb is "another app" here). On older
+# emulators adb runs as root, or its shell holds START_ANY_ACTIVITY, system rights no app can
+# get: there the probe proves nothing, so it is only reported.
 direct=$(shell am start -n $PKG/.WebAppActivity)
-say "opening the built-in screen from outside: $(echo "$direct" | tail -1)"
-echo "$direct" | grep -q -i -E "not exported|Permission Denial|SecurityException" || problem "the built-in screen can be opened by other apps"
+say "opening the built-in screen from outside: $(echo "$direct" | grep -v "^\s*at " | tail -1)"
+if shell id | grep -q "uid=0(" || shell dumpsys package com.android.shell | grep -q "android.permission.START_ANY_ACTIVITY"; then
+  say "note: adb has system rights on this emulator (it may open any screen); apps don't"
+elif ! echo "$direct" | grep -q -i -E "not exported|Permission Denial|SecurityException"; then
+  problem "the built-in screen can be opened by other apps"
+fi
 
 # A release build can't be inspected (run-as) and keeps no backups
 say "run-as: $(shell run-as $PKG id | head -1)"

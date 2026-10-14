@@ -37,7 +37,7 @@ env:
 jobs:
   plan:
     name: Plan (Android versions to test)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -78,7 +78,7 @@ jobs:
     name: Build and check
     needs: plan
     if: github.event_name != 'release'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       ANDROID_VERSION_NAME: ${{ inputs.version || '1.0.0' }}
@@ -133,7 +133,7 @@ jobs:
         run: |
           shopt -s nullglob
           files=(out/*)
-          [ ${#files[@]} -gt 0 ] && gh release upload "$CI_RELEASE" "${files[@]}" --clobber
+          if [ ${#files[@]} -gt 0 ]; then gh release upload "$CI_RELEASE" "${files[@]}" --clobber; fi
 
       - name: Publish the release (when a version was given and the key is set)
         if: inputs.version != '' && env.HAS_RELEASE_KEY == 'true'
@@ -150,7 +150,7 @@ jobs:
     name: Android ${{ matrix.api }} (${{ matrix.target }})
     needs: [plan, build]
     if: ${{ !cancelled() && needs.plan.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -186,6 +186,22 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Install and try the app on the emulator
+        id: emulator
+        continue-on-error: true # the verdict below decides
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          ram-size: 3072M
+          disk-size: 6G
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash africycle/android/ci/device_check.sh "$APK" results "$LABEL"
+
+      # A download or start-up hiccup of the emulator itself (not of the app): try once more
+      - name: Once more, if the emulator itself didn't start
+        if: steps.emulator.outcome == 'failure' && hashFiles(format('results/{0}.txt', env.LABEL)) == ''
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ matrix.api }}
@@ -205,8 +221,8 @@ jobs:
         run: |
           shopt -s nullglob
           files=(results/*)
-          [ ${#files[@]} -gt 0 ] && gh release upload "$CI_RELEASE" "${files[@]}" --clobber
-          [ -f "results/$LABEL.txt" ] && cat "results/$LABEL.txt" >> "$GITHUB_STEP_SUMMARY"
+          if [ ${#files[@]} -gt 0 ]; then gh release upload "$CI_RELEASE" "${files[@]}" --clobber; fi
+          if [ -f "results/$LABEL.txt" ]; then cat "results/$LABEL.txt" >> "$GITHUB_STEP_SUMMARY"; fi
 
       - name: Keep the report for the summary
         if: always()
@@ -217,11 +233,15 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Verdict (from the report)
+        run: |
+          grep -q "^RESULT: PASS" "results/$LABEL.txt"
+
   summary:
     name: Summary of every Android version
     needs: [plan, devices]
     if: ${{ always() && needs.plan.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       PREFIX: ${{ needs.plan.outputs.prefix }}

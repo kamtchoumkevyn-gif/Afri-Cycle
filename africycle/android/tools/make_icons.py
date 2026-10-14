@@ -1,6 +1,6 @@
 """The Android app's images, made from the website's logo (frontend/icons/icon-512.png):
 
-    mipmap-*/ic_launcher.png, ic_launcher_round.png   the icon on Android 5.0 to 7.1
+    mipmap-*/ic_launcher.png                          the icon on Android 5.0 to 7.1 (round already)
     mipmap-*/ic_launcher_foreground.png               the logo on Android 8.0 and newer, which
                                                       lays it on white and cuts the shape
     mipmap-*/ic_launcher_monochrome.png               the one-colour logo for themed icons (13+)
@@ -62,7 +62,11 @@ def legacy_icon(logo, px):
     icon.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(big / 96)))
     ImageDraw.Draw(icon).ellipse([corner, corner, corner + disc, corner + disc], fill=(255, 255, 255, 255))
     icon.alpha_composite(placed(logo, big, round(big * 37 / 48)))
-    return icon.resize((px, px), Image.LANCZOS)
+    icon = icon.resize((px, px), Image.LANCZOS)
+    alpha = np.asarray(icon)[..., 3].copy()
+    alpha[alpha < 24] = 0  # the shadow's faint outer edge: the corners stay fully transparent
+    icon.putalpha(Image.fromarray(alpha))
+    return icon
 
 
 def save(image, folder, name, one_colour=False):
@@ -80,9 +84,7 @@ def main():
     logo = logo_on_transparent()
     mono = silhouette(logo)
     for density, factor in DENSITIES.items():
-        legacy = legacy_icon(logo, round(48 * factor))
-        save(legacy, f"mipmap-{density}", "ic_launcher.png")
-        save(legacy, f"mipmap-{density}", "ic_launcher_round.png")
+        save(legacy_icon(logo, round(48 * factor)), f"mipmap-{density}", "ic_launcher.png")
         # Adaptive icons: a 108dp square of which about 72dp shows; keep the logo in the
         # 66dp circle that every launcher shape leaves whole
         save(placed(logo, round(108 * factor), round(62 * factor)), f"mipmap-{density}", "ic_launcher_foreground.png")
@@ -96,9 +98,8 @@ def main():
                 '    <monochrome android:drawable="@mipmap/ic_launcher_monochrome" />\n'
                 '</adaptive-icon>\n')
     os.makedirs(os.path.join(RES, "mipmap-anydpi-v26"), exist_ok=True)
-    for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
-        with open(os.path.join(RES, "mipmap-anydpi-v26", name), "w", encoding="utf-8") as f:
-            f.write(adaptive)
+    with open(os.path.join(RES, "mipmap-anydpi-v26", "ic_launcher.xml"), "w", encoding="utf-8") as f:
+        f.write(adaptive)
     print("icons written to", os.path.relpath(RES))
 
 

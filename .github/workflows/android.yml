@@ -237,8 +237,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir -p reports
+          # The website's side: is it up, and does it name the app's signing key?
+          health=$(curl -sS --max-time 90 --retry 2 --retry-delay 15 https://afri-cycle.onrender.com/health 2>&1 || true)
+          links=$(curl -sS --max-time 60 https://afri-cycle.onrender.com/.well-known/assetlinks.json 2>&1 || true)
           {
             echo "# Africycle on every Android version ($PREFIX, $(date -u +%Y-%m-%dT%H:%MZ), commit ${GITHUB_SHA::7})"
+            echo
+            echo "Website /health: \`$health\`"
+            echo
+            echo "Website /.well-known/assetlinks.json: \`$links\`"
             echo
             echo "| Emulator | Result | On screen |"
             echo "|---|---|---|"

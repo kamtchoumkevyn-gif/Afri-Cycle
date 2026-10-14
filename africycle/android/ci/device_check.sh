@@ -18,11 +18,35 @@ REPORT="$OUT/$LABEL.txt"
 problems=()
 
 say() { echo "$*" | tee -a "$REPORT"; }
-shell() { adb shell "$@" 2>&1 | tr -d '\r'; }
+# Every command on the emulator gets at most a minute: an old Android that stops answering
+# must not hold up the whole test
+shell() { timeout 60 adb shell "$@" 2>&1 | tr -d '\r'; }
 problem() { problems+=("$1"); say "PROBLEM: $1"; }
 
+# Android 5 and 6 emulators encrypt their storage on the first start, with a temporary
+# Android running meanwhile (whatever is installed then is lost), and restart Android
+# when done. Wait for the real one: no encryption under way, booted, package manager up.
+wait_for_android() {
+  local until=$((SECONDS + 900))
+  while [ $SECONDS -lt $until ]; do
+    progress=$(shell getprop vold.encrypt_progress)
+    phase=$(shell getprop vold.decrypt)
+    booted=$(shell getprop sys.boot_completed)
+    if [ -z "$progress" ] && [ "$booted" = "1" ] \
+       && [ "$phase" != "trigger_restart_min_framework" ] && [ "$phase" != "trigger_shutdown_framework" ] \
+       && shell pm path android | grep -q package: && shell pm list packages | grep -q "package:com.android.settings"; then
+      return 0
+    fi
+    sleep 5
+  done
+  echo "Android did not finish starting"
+}
+
+wait_for_android
+sleep 10
 API=$(shell getprop ro.build.version.sdk)
 say "== Africycle on Android $(shell getprop ro.build.version.release) (API $API), $LABEL"
+say "storage encryption: $(shell getprop ro.crypto.state) $(shell getprop vold.decrypt)"
 say "Chrome: $(shell dumpsys package com.android.chrome | grep -m1 versionName | sed 's/ *//')"
 if [ "$API" -ge 24 ]; then
   say "WebView: $(shell dumpsys webviewupdate | grep -m1 -i 'current webview package' | sed 's/^ *//')"
@@ -31,7 +55,7 @@ else
 fi
 
 # ---- 1. Install ----
-installed=$(adb install -r "$APK" 2>&1 | tr -d '\r')
+installed=$(timeout 300 adb install -r "$APK" 2>&1 | tr -d '\r')
 say "install: $installed"
 if ! echo "$installed" | grep -q Success; then
   problem "the APK did not install"
@@ -45,17 +69,13 @@ if shell pm path com.android.chrome | grep -q package:; then
   shell am force-stop com.android.chrome > /dev/null
 fi
 
-# The screen's text, as accessibility services see it (web pages included)
+# The screen's text, as accessibility services see it (web pages included). uiautomator
+# waits for the screen to be still, which a loading page may never be: 25 seconds at most.
 screen_text() {
-  for _ in 1 2 3; do
-    shell uiautomator dump /sdcard/africycle-window.xml > /dev/null
-    xml=$(shell cat /sdcard/africycle-window.xml)
-    if echo "$xml" | grep -q "<hierarchy"; then
-      echo "$xml" | grep -o 'text="[^"]*"\|content-desc="[^"]*"' | sed 's/^[a-z-]*="//; s/"$//' | grep -v '^$'
-      return
-    fi
-    sleep 2
-  done
+  shell rm -f /sdcard/africycle-window.xml > /dev/null
+  timeout 25 adb shell uiautomator dump --compressed /sdcard/africycle-window.xml > /dev/null 2>&1
+  shell cat /sdcard/africycle-window.xml | grep -o 'text="[^"]*"\|content-desc="[^"]*"' \
+    | sed 's/^[a-z-]*="//; s/"$//' | grep -v '^$'
 }
 
 top_activity() {
@@ -63,10 +83,11 @@ top_activity() {
 }
 
 # ---- 2. Open it from its icon and wait for Africycle (the free server may take a minute to wake) ----
-adb logcat -c
+timeout 30 adb logcat -c
 say "start: $(shell am start -W -n $PKG/.LauncherActivity | grep -E 'Status|Activity:|TotalTime' | tr '\n' ' ')"
 shown=""
-for _ in $(seq 1 30); do
+deadline=$((SECONDS + 180))
+while [ $SECONDS -lt $deadline ]; do
   sleep 5
   text=$(screen_text)
   if echo "$text" | grep -q -E "Log in|Create an account|Android System WebView|reach the server"; then
@@ -75,8 +96,8 @@ for _ in $(seq 1 30); do
   fi
 done
 sleep 3
-adb exec-out screencap -p > "$OUT/$LABEL.png"
-say "on screen: ${shown:-nothing recognisable after 150 s}"
+timeout 60 adb exec-out screencap -p > "$OUT/$LABEL.png"
+say "on screen: ${shown:-nothing recognisable after 3 minutes}"
 say "top activity: $(top_activity)"
 [ -z "$shown" ] && problem "Africycle did not appear"
 if echo "$shown" | grep -q "Android System WebView"; then
@@ -89,6 +110,11 @@ fi
 say "link: $(shell am start -W -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d https://afri-cycle.onrender.com/login.html | grep -E 'Status|Activity:' | tr '\n' ' ')"
 sleep 5
 say "after link, top activity: $(top_activity)"
+
+# Still installed? (If Android restarted underneath the test, say so instead of blaming the app.)
+if ! shell pm path $PKG | grep -q package:; then
+  problem "the app is no longer installed: the emulator's Android restarted during the test"
+fi
 
 # ---- 4. Security probes ----
 # Another app tries to make Africycle show a different website: it must open Africycle's own page
@@ -117,7 +143,7 @@ if [ "$API" -ge 31 ]; then
 fi
 
 # ---- 5. Crashes ----
-adb logcat -d > "$OUT/$LABEL-logcat.txt" 2>&1
+timeout 120 adb logcat -d > "$OUT/$LABEL-logcat.txt" 2>&1
 crashes=$(grep -E "FATAL EXCEPTION|ANR in $PKG" -A 12 "$OUT/$LABEL-logcat.txt" | grep -c "$PKG")
 say "crashes of $PKG in the log: $crashes"
 [ "$crashes" != "0" ] && problem "the app crashed (see $LABEL-logcat.txt)"

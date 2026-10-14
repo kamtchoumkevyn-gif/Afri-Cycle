@@ -73,6 +73,13 @@ android {
         textOutput file("build/reports/lint-results.txt")
     }
 
+    // Library bookkeeping files the app never reads: a smaller download
+    packaging {
+        resources {
+            excludes += ["META-INF/*.version", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "DebugProbesKt.bin"]
+        }
+    }
+
     // A block that only Google Play can read; an APK given to people directly doesn't need it
     dependenciesInfo {
         includeInApk false

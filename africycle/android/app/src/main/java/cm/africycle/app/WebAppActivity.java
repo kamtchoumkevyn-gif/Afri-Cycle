@@ -2,7 +2,6 @@ package cm.africycle.app;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -41,6 +40,7 @@ import android.widget.TextView;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.content.FileProvider;
 
 import java.io.File;
@@ -226,7 +226,7 @@ public class WebAppActivity extends Activity {
 
     /** Decides where each link opens, and handles pages that can't load. */
     private final class PageClient extends WebViewClient {
-        @TargetApi(Build.VERSION_CODES.N)
+        @RequiresApi(Build.VERSION_CODES.N)
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             return keepOutOfApp(request.getUrl(), request.isForMainFrame());
@@ -264,7 +264,7 @@ public class WebAppActivity extends Activity {
             }
         }
 
-        @TargetApi(Build.VERSION_CODES.M)
+        @RequiresApi(Build.VERSION_CODES.M)
         @Override
         public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
             if (request.isForMainFrame()) {
@@ -280,7 +280,7 @@ public class WebAppActivity extends Activity {
             }
         }
 
-        @TargetApi(Build.VERSION_CODES.O)
+        @RequiresApi(Build.VERSION_CODES.O)
         @Override
         public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
             // The page's process crashed, or Android stopped it to free memory: start a fresh
@@ -417,7 +417,7 @@ public class WebAppActivity extends Activity {
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.M)
+    @RequiresApi(Build.VERSION_CODES.M)
     private boolean hasLocationPermission() {
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
@@ -549,6 +549,7 @@ public class WebAppActivity extends Activity {
         message.setVisibility(View.GONE);
     }
 
+    @SuppressLint("WebViewApiAvailability") // the platform's own call, from Android 8.0; before, the usual package
     private String webViewPackage() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             PackageInfo current = WebView.getCurrentWebViewPackage();
@@ -589,7 +590,7 @@ public class WebAppActivity extends Activity {
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private void setBackCallback(boolean wanted) {
         if (wanted == backCallbackRegistered) {
             return;
@@ -613,7 +614,7 @@ public class WebAppActivity extends Activity {
 
     // ---- Notches and system bars (Android 15 and newer draw the app behind them) ----
 
-    @TargetApi(35)
+    @RequiresApi(35)
     private void fitAroundSystemBars() {
         findViewById(R.id.root).setOnApplyWindowInsetsListener((root, insets) -> {
             Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());

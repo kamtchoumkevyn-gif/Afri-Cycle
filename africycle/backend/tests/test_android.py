@@ -133,7 +133,7 @@ def test_android_text_is_escaped_for_android():
 
 def test_icons_for_every_screen_density_and_android_version():
     for density in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
-        for name in ("ic_launcher", "ic_launcher_round", "ic_launcher_foreground", "ic_launcher_monochrome"):
+        for name in ("ic_launcher", "ic_launcher_foreground", "ic_launcher_monochrome"):
             assert os.path.exists(os.path.join(RES, f"mipmap-{density}", f"{name}.png")), (density, name)
         for name in ("ic_notification", "splash"):
             assert os.path.exists(os.path.join(RES, f"drawable-{density}", f"{name}.png")), (density, name)
@@ -161,10 +161,14 @@ def test_https_only_and_nothing_copied_to_backups():
     assert 'cleartextTrafficPermitted="false"' in config and '<certificates src="system" />' in config
     assert '<certificates src="user"' not in config
     rules = ElementTree.parse(os.path.join(RES, "xml", "data_extraction_rules.xml")).getroot()
-    for kind in ("cloud-backup", "device-transfer"):
+    for kind in ("cloud-backup", "device-transfer"):  # Android 12 and newer
         excluded = {(e.get("domain"), e.get("path")) for e in rules.find(kind).iter("exclude")}
         assert ("root", ".") in excluded and ("external", ".") in excluded, kind
         assert not list(rules.find(kind).iter("include")), kind
+    assert attr(application, "fullBackupContent") == "@xml/backup_rules"  # Android 6.0 to 11
+    old_rules = ElementTree.parse(os.path.join(RES, "xml", "backup_rules.xml")).getroot()
+    assert ("root", ".") in {(e.get("domain"), e.get("path")) for e in old_rules.iter("exclude")}
+    assert not list(old_rules.iter("include"))
 
 
 def test_only_the_icon_and_the_browser_service_are_open_to_other_apps():

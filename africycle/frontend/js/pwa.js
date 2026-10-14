@@ -18,7 +18,7 @@
   // A new version was installed while this page was open: offer to load it
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!startedWithWorker || reloading) return;
-    showBar("Africycle has been updated.", "Reload", () => {
+    showBar(t("Africycle has been updated."), t("Reload"), () => {
       reloading = true;
       window.location.reload();
     });

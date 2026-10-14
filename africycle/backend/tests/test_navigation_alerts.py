@@ -74,9 +74,9 @@ def login_seller():
     ({"type": "turn", "modifier": "sharp left"}, "Avenue Kennedy", "Turn sharp left onto Avenue Kennedy"),
     ({"type": "new name", "modifier": "straight"}, "Rue de la Joie", "Continue on Rue de la Joie"),
     ({"type": "continue", "modifier": "straight"}, "", "Continue straight on"),
-    ({"type": "roundabout", "modifier": "right", "exit": 2}, "Avenue Ahidjo", "At the roundabout, take the second exit onto Avenue Ahidjo"),
-    ({"type": "rotary", "modifier": "right", "exit": 12}, "", "At the roundabout, take the number 12 exit"),
-    ({"type": "fork", "modifier": "slight left"}, "", "Keep left at the fork"),
+    ({"type": "roundabout", "modifier": "right", "exit": 2}, "Avenue Ahidjo", "At the roundabout, take exit 2 onto Avenue Ahidjo"),
+    ({"type": "rotary", "modifier": "right", "exit": 12}, "", "At the roundabout, take exit 12"),
+    ({"type": "fork", "modifier": "slight left"}, "", "Keep left"),
     ({"type": "end of road", "modifier": "right"}, "Rue Njo-Njo", "At the end of the road, turn right onto Rue Njo-Njo"),
     ({"type": "turn", "modifier": "uturn"}, "", "Make a U-turn"),
     ({"type": "arrive", "modifier": "left"}, "Rue Joss", "You have arrived"),
@@ -478,7 +478,8 @@ def test_buyer_is_told_when_a_seller_is_coming_on_the_way_and_arrived(client, pu
     client.patch(f"/notifications/{trip}/status", json={"status": "completed"}, headers=auth_header(buyer, "buyer"))
 
     messages = [phone.decrypt(r["body"]) for r in service.received]
-    assert [m["title"] for m in messages] == ["Jean is bringing you scrap iron", "Jean is on the way", "Jean has arrived"]
+    assert [m["title"] for m in messages] == ["Jean is coming to you", "Jean is on the way", "Jean has arrived"]
+    assert messages[0]["body"] == "Material: Scrap Iron. Open Africycle to see the details."
     assert all(m["url"] == "/buyer-dashboard.html" and m["tag"] == f"trip-{trip}" for m in messages)
 
 

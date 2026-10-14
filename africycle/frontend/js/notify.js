@@ -13,7 +13,7 @@ const AfricycleAlerts = (function () {
   const POLL_MS = 20000;
   const SEEN_KEY = `africycle_last_alerted_${user.userId}`;
   const ASKED_KEY = "africycle_notifications_prompt";
-  const baseTitle = document.title;
+  let baseTitle = null; // the page's title in the chosen language, once translated
   const canPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window &&
     window.location.protocol !== "file:";
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
@@ -54,12 +54,13 @@ const AfricycleAlerts = (function () {
           link.appendChild(badge);
         }
         badge.textContent = count > 99 ? "99+" : String(count);
-        link.setAttribute("aria-label", `Messages, ${count} unread`);
+        link.setAttribute("aria-label", t("Messages, unread: {count}", { count }));
       } else if (badge) {
         badge.remove();
         link.removeAttribute("aria-label");
       }
     }
+    if (baseTitle === null) baseTitle = document.title;
     document.title = count > 0 ? `(${count}) ${baseTitle}` : baseTitle;
   }
 
@@ -70,11 +71,12 @@ const AfricycleAlerts = (function () {
     popup.setAttribute("role", "status");
     const text = document.createElement("span");
     text.className = "notice-text";
+    text.dir = "auto"; // the message may be in another script than the page
     text.textContent = `${message.senderName}: ${message.messageText}`;
     const open = document.createElement("a");
     open.className = "btn";
     open.href = `chat.html?with=${message.senderId}`;
-    open.textContent = "Open";
+    open.textContent = t("Open");
     popup.appendChild(text);
     popup.appendChild(open);
     document.body.appendChild(popup);
@@ -147,9 +149,10 @@ const AfricycleAlerts = (function () {
       });
     }
     if (window.africycleLoggingOut) return false; // logged out while this was under way
+    // Each phone gets its notifications in the language chosen on it
     const response = await authFetch("/push/subscribe", {
       method: "POST",
-      body: JSON.stringify(subscription.toJSON())
+      body: JSON.stringify(Object.assign(subscription.toJSON(), { language: AfriI18n.language }))
     });
     return response.ok;
   }
@@ -160,9 +163,9 @@ const AfricycleAlerts = (function () {
 
     let text = "";
     if (canPush && Notification.permission === "default") {
-      text = "Get a notification on this device when someone messages you or a collector is on the way, even when Africycle is closed.";
+      text = t("Get a notification on this device when someone messages you or a collector is on the way, even when Africycle is closed.");
     } else if (!canPush && isIos && !installed) {
-      text = "To get notifications on iPhone, add Africycle to your Home Screen first: tap Share, then \"Add to Home Screen\".";
+      text = t("To get notifications on iPhone, add Africycle to your Home Screen first: tap Share, then \"Add to Home Screen\".");
     } else {
       return;
     }
@@ -170,7 +173,7 @@ const AfricycleAlerts = (function () {
     const box = document.createElement("div");
     box.className = "notify-prompt";
     box.setAttribute("role", "region");
-    box.setAttribute("aria-label", "Notifications");
+    box.setAttribute("aria-label", t("Notifications"));
     const message = document.createElement("p");
     message.textContent = text;
     const actions = document.createElement("div");
@@ -179,7 +182,7 @@ const AfricycleAlerts = (function () {
       const on = document.createElement("button");
       on.type = "button";
       on.className = "btn btn-primary";
-      on.textContent = "Turn on";
+      on.textContent = t("Turn on");
       on.addEventListener("click", async () => {
         on.disabled = true;
         let ok = false;
@@ -189,17 +192,17 @@ const AfricycleAlerts = (function () {
           ok = false;
         }
         if (ok) {
-          message.textContent = "Notifications are on for this device.";
+          message.textContent = t("Notifications are on for this device.");
           actions.remove();
           setTimeout(() => box.remove(), 4000);
         } else if (Notification.permission === "denied") {
-          message.textContent = "Notifications are blocked for Africycle. You can allow them in your browser's settings for this site.";
+          message.textContent = t("Notifications are blocked for Africycle. You can allow them in your browser's settings for this site.");
           actions.remove();
         } else if (Notification.permission === "default") {
-          message.textContent = "Notifications weren't allowed. Tap Turn on to try again.";
+          message.textContent = t("Notifications weren't allowed. Tap Turn on to try again.");
           on.disabled = false;
         } else {
-          message.textContent = "Notifications couldn't be turned on just now. Check your connection and try again.";
+          message.textContent = t("Notifications couldn't be turned on just now. Check your connection, then try again.");
           on.disabled = false;
         }
       });
@@ -208,7 +211,7 @@ const AfricycleAlerts = (function () {
     const later = document.createElement("button");
     later.type = "button";
     later.className = "btn btn-quiet";
-    later.textContent = "Not now";
+    later.textContent = t("Not now");
     later.addEventListener("click", () => {
       remember(ASKED_KEY, "no");
       box.remove();
@@ -219,18 +222,22 @@ const AfricycleAlerts = (function () {
     anchor.insertAdjacentElement("afterend", box);
   }
 
-  // ---- Start ----
+  // ---- Start, once the page is in the chosen language ----
 
-  check();
-  setInterval(check, POLL_MS);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) check();
+  AfriI18n.whenReady(() => {
+    baseTitle = document.title;
+    check();
+    setInterval(check, POLL_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) check();
+    });
+    offerNotifications();
+    // Already allowed on this device: make sure it's signed up for whoever is logged in
+    // now, in the language chosen now
+    if (canPush && Notification.permission === "granted") {
+      signUp(false).catch(() => {});
+    }
   });
-  offerNotifications();
-  // Already allowed on this device: make sure it's signed up for whoever is logged in now
-  if (canPush && Notification.permission === "granted") {
-    signUp(false).catch(() => {});
-  }
 
   return {
     // The conversation on screen: no pop-up or count for it

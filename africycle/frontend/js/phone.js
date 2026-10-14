@@ -75,7 +75,7 @@ const AfriPhone = (function () {
   // options.follow: another country list to copy until this one is changed by hand.
   function setUp(select, input, codeLabel, options = {}) {
     COUNTRIES.forEach((country) => {
-      select.appendChild(new Option(`${country.name} (+${country.code})`, country.iso));
+      select.appendChild(new Option(`${t(country.name)} (+${country.code})`, country.iso));
     });
     select.value = (options.follow && options.follow.value) || remembered() || COUNTRIES[0].iso;
     let changedByHand = false;

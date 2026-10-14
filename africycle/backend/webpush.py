@@ -145,14 +145,17 @@ def send(subscription, message, subject):
 
 def notify_user(user_id, message, subject):
     """Sends message ({"title", "body", "url", "tag"}) to every device on which user_id
-    turned notifications on. Runs in the background so the sender doesn't wait."""
+    turned notifications on. message may also be a function of a language code that
+    returns it, so that each device gets it in the language chosen there. Runs in the
+    background so the sender doesn't wait."""
     subscriptions = get_subscriptions_for_user(user_id)
     if not subscriptions:
         return
 
     def deliver():
         for subscription in subscriptions:
-            status = send(subscription, message, subject)
+            text = message(subscription.get("language") or "en") if callable(message) else message
+            status = send(subscription, text, subject)
             if status in (404, 410):  # notifications were turned off, or the app was removed
                 delete_subscription(subscription["endpoint"])
             elif status not in (200, 201, 202):

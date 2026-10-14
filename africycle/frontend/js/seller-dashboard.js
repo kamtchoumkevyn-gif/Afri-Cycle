@@ -2,7 +2,7 @@
 // material you carry), then follow the way there by road on a map that stays until you
 // arrive. Your live location is shared with the buyer while the delivery is in transit.
 
-(function () {
+AfriI18n.whenReady(function () {
   const user = requireAuth(["seller", "both"]);
   if (!user) return;
 
@@ -21,6 +21,7 @@
   const routeCredit = document.getElementById("routeCredit");
 
   const NEXT_STATUS = { "pending": "in transit", "in transit": "arrived" };
+  const MARK_AS = { "in transit": t("Mark in transit"), "arrived": t("Mark arrived") };
   const LOCATION_PING_MS = 10000;
   const TRIP_KEY = "africycle_trip";          // the delivery the trip map shows
   const MODE_KEY = "africycle_travel_mode";   // on foot, or by motorbike/car
@@ -62,12 +63,8 @@
     }
   }
 
-  function modeWords() {
-    return travelMode === "car" ? "by motorbike or car" : "on foot";
-  }
-
   function serverError() {
-    showMessage(pageMsg, "Can't reach the server. Check your connection and try again.", "error");
+    showMessage(pageMsg, t("Can't reach the server. Check your connection, then try again."), "error");
   }
 
   // ---- Account: guardian approval for children, "My children" link for parents ----
@@ -79,13 +76,14 @@
     if (!me.isMinor) return;
 
     if (me.guardianStatus === "approved") {
-      guardianBanner.textContent = `Your guardian ${me.guardianName} can see your deliveries, sales and messages.`;
+      guardianBanner.textContent = t("Your guardian {name} can see your deliveries, sales and messages.", { name: me.guardianName });
     } else {
       locked = true;
       findBtn.disabled = true;
       guardianBanner.textContent = me.guardianStatus === "declined"
-        ? "Your guardian declined this account, so it can't be used to sell."
-        : `Your guardian ${me.guardianName} (${AfriPhone.format(me.guardianPhone)}) needs to approve your account before you can sell. Ask them to log in to Africycle with that phone number.`;
+        ? t("Your guardian declined this account, so it can't be used to sell.")
+        : t("Your guardian {name} ({phone}) needs to approve your account before you can sell. Ask them to log in to Africycle with that phone number.",
+          { name: me.guardianName, phone: AfriPhone.format(me.guardianPhone) });
     }
     guardianBanner.hidden = false;
   }
@@ -96,7 +94,7 @@
     const response = await authFetch("/material-categories");
     const data = await readJson(response);
     (data.categories || []).forEach((category) => {
-      materialSelect.add(new Option(category.name, category.id));
+      materialSelect.add(new Option(materialName(category.name), category.id));
     });
   }
 
@@ -113,24 +111,24 @@
     pageMsg.hidden = true;
     const materialId = materialSelect.value;
     if (!materialId) {
-      showMessage(pageMsg, "Choose a material first.", "error");
+      showMessage(pageMsg, t("Choose a material first."), "error");
       return;
     }
 
     findBtn.disabled = true;
-    buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">Finding your location...</td></tr>`;
+    buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("Finding your location...")}</td></tr>`;
 
     let position;
     try {
       position = await getPosition();
     } catch (err) {
-      buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">We couldn't find your position.</td></tr>`;
+      buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("We couldn't find your position.")}</td></tr>`;
       showMessage(pageMsg, AfriMap.locationErrorMessage(err), "error");
       findBtn.disabled = false;
       return;
     }
 
-    buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">Searching...</td></tr>`;
+    buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("Searching...")}</td></tr>`;
     const [latitude, longitude] = position;
     myPosition = position;
     myPositionAt = Date.now();
@@ -140,7 +138,7 @@
       const response = await authFetch(`/seller/nearby-buyers?${query}`);
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Buyers could not be loaded.", "error");
+        showMessage(pageMsg, data.message || t("Buyers could not be loaded."), "error");
         return;
       }
       buyers = data.buyers || [];
@@ -155,19 +153,19 @@
 
   function renderBuyers() {
     if (buyers.length === 0) {
-      buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">No buyers for this material in that distance. Try a wider search.</td></tr>`;
+      buyersBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("No buyers for this material in that distance. Try a wider search.")}</td></tr>`;
       return;
     }
     buyersBody.innerHTML = buyers.map((b) => `
       <tr>
-        <td data-label="Buyer">${escapeHtml(b.buyerName)}</td>
-        <td data-label="Price per kg"><strong>${formatMoney(b.pricePerKg)}</strong></td>
-        <td data-label="Distance">${b.distanceKm} km</td>
-        <td data-label="Hours">${escapeHtml(b.workingHours || "Not set")}</td>
+        <td data-label="${t("Buyer")}">${escapeHtml(b.buyerName)}</td>
+        <td data-label="${t("Price per kg")}"><strong>${formatMoney(b.pricePerKg)}</strong></td>
+        <td data-label="${t("Distance")}">${AfriI18n.formatUnit(b.distanceKm, "kilometer", 1)}</td>
+        <td data-label="${t("Hours")}">${escapeHtml(b.workingHours || t("Not set"))}</td>
         <td>
           <div class="row-actions">
-            <button class="btn btn-quiet" data-action="view" data-id="${b.buyerId}" type="button">Details</button>
-            <button class="btn btn-primary" data-action="notify" data-id="${b.buyerId}" type="button">I'm coming</button>
+            <button class="btn btn-quiet" data-action="view" data-id="${b.buyerId}" type="button">${t("Details")}</button>
+            <button class="btn btn-primary" data-action="notify" data-id="${b.buyerId}" type="button">${t("I'm coming")}</button>
           </div>
         </td>
       </tr>
@@ -221,11 +219,11 @@
   function popupHtml(b) {
     return `
       <div class="popup-title">${escapeHtml(b.buyerName)}</div>
-      <div>${formatMoney(b.pricePerKg)}/kg &middot; ${escapeHtml(b.workingHours || "Hours not set")}</div>
+      <div>${formatMoney(b.pricePerKg)}/kg &middot; ${escapeHtml(b.workingHours || t("Hours not set"))}</div>
       <div class="row-actions">
-        <button class="btn btn-quiet" data-action="view" data-id="${b.buyerId}" type="button">Details</button>
-        <button class="btn btn-primary" data-action="notify" data-id="${b.buyerId}" type="button">I'm coming</button>
-        <button class="btn btn-quiet" data-action="route" data-id="${b.buyerId}" type="button">Route</button>
+        <button class="btn btn-quiet" data-action="view" data-id="${b.buyerId}" type="button">${t("Details")}</button>
+        <button class="btn btn-primary" data-action="notify" data-id="${b.buyerId}" type="button">${t("I'm coming")}</button>
+        <button class="btn btn-quiet" data-action="route" data-id="${b.buyerId}" type="button">${t("Route")}</button>
       </div>`;
   }
 
@@ -234,7 +232,7 @@
     if (myMarker) {
       myMarker.setLatLng(myPosition);
     } else {
-      myMarker = L.marker(myPosition, { icon: AfriMap.pin("me", "You"), zIndexOffset: 1000, keyboard: false }).addTo(map);
+      myMarker = L.marker(myPosition, { icon: AfriMap.pin("me", t("You")), zIndexOffset: 1000, keyboard: false }).addTo(map);
     }
     drawRoute();
   }
@@ -249,8 +247,8 @@
     if (!map || !myPosition) return;
     if (!selectedBuyer) {
       mapStatus.textContent = buyers.length
-        ? "The orange dot pays the most. Tap a buyer to see how far they are."
-        : "No buyers for this material near you yet.";
+        ? t("The orange dot pays the most. Tap a buyer to see how far they are.")
+        : t("No buyers for this material near you yet.");
       return;
     }
     const name = selectedBuyer.buyerName;
@@ -258,21 +256,23 @@
       routeLine = L.polyline(roadPreview.route.line, { color: "#1565c0", weight: 5, opacity: 0.85 }).addTo(map);
       AfriMap.showRouteCredit(routeCredit, roadPreview.route);
       const left = AfriMap.progress(roadPreview.route, myPosition);
-      mapStatus.textContent = `${name} is ${AfriMap.formatDistance(left.leftKm)} away by road, about ` +
-        `${AfriMap.formatDuration(left.leftSeconds)} ${modeWords()}. Tap "I'm coming" to be guided there.`;
+      const values = { name, distance: AfriMap.formatDistance(left.leftKm), time: AfriMap.formatDuration(left.leftSeconds) };
+      mapStatus.textContent = travelMode === "car"
+        ? t("{name} is {distance} away by road, about {time} by motorbike or car. Tap \"I'm coming\" to be guided there.", values)
+        : t("{name} is {distance} away by road, about {time} on foot. Tap \"I'm coming\" to be guided there.", values);
       return;
     }
     const target = [selectedBuyer.latitude, selectedBuyer.longitude];
     routeLine = L.polyline([myPosition, target], { color: "#1565c0", weight: 3, dashArray: "6 8" }).addTo(map);
     const distance = AfriMap.formatDistance(AfriMap.distanceKm(myPosition, target));
-    mapStatus.textContent = `${name} is ${distance} away in a straight line. Tap Route for the way by road.`;
+    mapStatus.textContent = t("{name} is {distance} away in a straight line. Tap Route for the way by road.", { name, distance });
   }
 
   async function previewRoad(buyerId) {
     const buyer = buyers.find((b) => b.buyerId === buyerId);
     if (!buyer || !myPosition) return;
     selectedBuyer = buyer;
-    mapStatus.textContent = `Working out the way to ${buyer.buyerName} by road...`;
+    mapStatus.textContent = t("Working out the way to {name} by road...", { name: buyer.buyerName });
     try {
       const route = await AfriMap.fetchRoute(myPosition, [buyer.latitude, buyer.longitude], travelMode);
       roadPreview = { buyerId, route };
@@ -281,7 +281,7 @@
       drawRoute();
       if (map) AfriMap.fit(map, route.line.concat([myPosition, [buyer.latitude, buyer.longitude]]));
     } catch (err) {
-      mapStatus.textContent = `${err.message} The dashed line points straight at ${buyer.buyerName}.`;
+      mapStatus.textContent = `${err.message} ${t("The dashed line points straight at {name}.", { name: buyer.buyerName })}`;
     }
   }
 
@@ -330,8 +330,8 @@
       stopWatchingIfIdle();
     }
     sharingHint.textContent = activeDeliveryIds.length > 0
-      ? "Sharing your live location with the buyer while you are in transit."
-      : "Your location is shared with the buyer only while a delivery is in transit.";
+      ? t("Sharing your live location with the buyer while you are in transit.")
+      : t("Your location is shared with the buyer only while a delivery is in transit.");
   }
 
   // ---- Your trip: a map that stays until you arrive, showing the way by road ----
@@ -492,7 +492,7 @@
     tripStepsBox.hidden = !tripRoute;
     if (!tripRoute) return;
     tripSteps.innerHTML = tripRoute.steps.map((step) => {
-      const text = step.type === "arrive" ? `Arrive at ${trip.buyerName}'s buying point` : step.text;
+      const text = step.type === "arrive" ? t("Arrive at {name}'s buying point", { name: trip.buyerName }) : step.text;
       const distance = step.distance ? ` <span class="step-distance">${AfriMap.formatDistance(step.distance / 1000)}</span>` : "";
       return `<li>${escapeHtml(text)}${distance}</li>`;
     }).join("");
@@ -502,7 +502,7 @@
   function updateTrip() {
     if (!trip) return;
     if (!myPosition) {
-      tripSummary.textContent = "Finding your position...";
+      tripSummary.textContent = t("Finding your position...");
       tripNext.hidden = true;
       return;
     }
@@ -510,7 +510,7 @@
       if (tripMe) {
         tripMe.setLatLng(myPosition);
       } else {
-        tripMe = L.marker(myPosition, { icon: AfriMap.pin("me", "You"), zIndexOffset: 1000, keyboard: false }).addTo(tripMap);
+        tripMe = L.marker(myPosition, { icon: AfriMap.pin("me", t("You")), zIndexOffset: 1000, keyboard: false }).addTo(tripMap);
       }
       if (!tripRoute) drawTripLine(false); // keep the straight line starting where you are
     }
@@ -523,24 +523,29 @@
     const straightKm = AfriMap.distanceKm(myPosition, trip.target);
     tripPanel.classList.toggle("trip-arrived", straightKm <= ARRIVED_KM);
     if (straightKm <= ARRIVED_KM) {
-      tripSummary.textContent = "You're there.";
+      tripSummary.textContent = t("You're there.");
       tripNext.hidden = false;
-      tripNextDistance.textContent = "Here";
+      tripNextDistance.textContent = t("Here");
       tripNextText.textContent = trip.status === "in transit"
-        ? `You're at ${trip.buyerName}'s buying point. Tap "I've arrived".`
-        : `You're at ${trip.buyerName}'s buying point.`;
+        ? t("You're at {name}'s buying point. Tap \"I've arrived\".", { name: trip.buyerName })
+        : t("You're at {name}'s buying point.", { name: trip.buyerName });
     } else if (info) {
-      tripSummary.textContent = `${AfriMap.formatDistance(info.leftKm)} to go, about ${AfriMap.formatDuration(info.leftSeconds)} ${modeWords()}.`;
+      const left = { distance: AfriMap.formatDistance(info.leftKm), time: AfriMap.formatDuration(info.leftSeconds) };
+      tripSummary.textContent = travelMode === "car"
+        ? t("{distance} to go, about {time} by motorbike or car.", left)
+        : t("{distance} to go, about {time} on foot.", left);
       tripNext.hidden = !info.next;
       if (info.next) {
         const arriving = info.next.type === "arrive";
-        tripNextDistance.textContent = arriving ? AfriMap.formatDistance(info.nextKm) : `In ${AfriMap.formatDistance(info.nextKm)}`;
-        tripNextText.textContent = arriving ? `Arrive at ${trip.buyerName}'s buying point` : info.next.text;
+        const distance = AfriMap.formatDistance(info.nextKm);
+        tripNextDistance.textContent = arriving ? distance : t("In {distance}", { distance });
+        tripNextText.textContent = arriving ? t("Arrive at {name}'s buying point", { name: trip.buyerName }) : info.next.text;
       }
     } else {
       tripNext.hidden = true;
-      tripSummary.textContent = `${trip.buyerName} is ${AfriMap.formatDistance(straightKm)} away in a straight line. ` +
-        (routeLoading ? "Working out the way by road..." : tripRouteError);
+      tripSummary.textContent = t("{name} is {distance} away in a straight line.",
+        { name: trip.buyerName, distance: AfriMap.formatDistance(straightKm) }) +
+        " " + (routeLoading ? t("Working out the way by road...") : tripRouteError);
     }
 
     if (following && tripMap && trip.status === "in transit") {
@@ -556,7 +561,7 @@
       const data = await readJson(response);
       if (response.ok && data.phoneNumber && trip && trip.buyerId === buyerId) {
         link.href = `tel:${data.phoneNumber}`;
-        link.textContent = "Call";
+        link.textContent = t("Call");
         link.hidden = false;
       }
     } catch (err) {
@@ -576,9 +581,9 @@
       });
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Status not updated.", "error");
+        showMessage(pageMsg, data.message || t("Status not updated."), "error");
       } else if (status === "arrived") {
-        showMessage(pageMsg, `${name} has been told you've arrived. Weigh the material together, then they record the purchase.`, "success");
+        showMessage(pageMsg, t("{name} has been told you've arrived. Weigh the material together, then they record the purchase.", { name }), "success");
       }
       await loadDeliveries();
     } catch (err) {
@@ -604,30 +609,31 @@
       const contact = await readJson(contactRes);
 
       if (!profileRes.ok) {
-        showMessage(pageMsg, profile.message || "Buyer details could not be loaded.", "error");
+        showMessage(pageMsg, profile.message || t("Buyer details could not be loaded."), "error");
         return;
       }
 
       modalBuyerId = buyerId;
       const prices = profile.prices || [];
       document.getElementById("modalName").textContent = profile.name;
-      document.getElementById("modalMeta").textContent = `Open: ${profile.workingHours || "hours not set"}`;
+      document.getElementById("modalMeta").textContent = t("Open: {hours}", { hours: profile.workingHours || t("hours not set") });
       document.getElementById("modalPrices").innerHTML = prices.map((p) => `
-        <li><span>${escapeHtml(p.materialName || "Material")}</span><strong>${formatMoney(p.pricePerKg)}/kg</strong></li>
+        <li><span>${escapeHtml(materialName(p.materialName))}</span><strong>${formatMoney(p.pricePerKg)}/kg</strong></li>
       `).join("");
 
       const withPhotos = prices.filter((p) => p.photoId);
       modalPhotos.innerHTML = withPhotos.map((p) => `
         <button type="button" class="photo-tap" data-material="${p.materialCategoryId}">
-          <img data-photo-id="${p.photoId}" alt="${escapeHtml(p.materialName || "Material")} this buyer accepts">
-          <span>${escapeHtml(p.materialName || "Material")} &middot; ${formatMoney(p.pricePerKg)}/kg</span>
+          <img data-photo-id="${p.photoId}" alt="${escapeHtml(t("{material} this buyer accepts", { material: materialName(p.materialName) }))}">
+          <span>${escapeHtml(materialName(p.materialName))} &middot; ${formatMoney(p.pricePerKg)}/kg</span>
         </button>`).join("");
       document.getElementById("modalPhotosHint").hidden = withPhotos.length === 0;
       loadPhotos(modalPhotos);
 
       const callLink = document.getElementById("modalCallLink");
       callLink.href = contact.phoneNumber ? `tel:${contact.phoneNumber}` : "#";
-      callLink.textContent = contact.phoneNumber ? `Call ${AfriPhone.format(contact.phoneNumber)}` : "Phone not available";
+      callLink.textContent = contact.phoneNumber
+        ? t("Call {phone}", { phone: AfriPhone.format(contact.phoneNumber) }) : t("Phone not available");
       document.getElementById("modalChatLink").href = `chat.html?with=${buyerId}`;
 
       modal.hidden = false;
@@ -669,7 +675,7 @@
   async function notifyBuyer(buyerId, materialId, onTheWay = false) {
     if (locked) return;
     if (!materialId) {
-      showMessage(pageMsg, "Choose the material you are carrying first.", "error");
+      showMessage(pageMsg, t("Choose the material you are carrying first."), "error");
       return;
     }
     try {
@@ -679,12 +685,12 @@
       });
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "The buyer was not notified. Try again.", "error");
+        showMessage(pageMsg, data.message || t("The buyer was not notified. Try again."), "error");
         return;
       }
       showMessage(pageMsg, data.status === "in transit"
-        ? "The buyer knows you're on your way. Follow the map below; your live location is shared with them until you arrive."
-        : "Buyer notified. The map below shows the way; tap \"I'm leaving now\" when you set off.", "success");
+        ? t("The buyer knows you're on your way. Follow the map below; your live location is shared with them until you arrive.")
+        : t("Buyer notified. The map below shows the way; tap \"I'm leaving now\" when you set off."), "success");
       guideTo(data.notificationId);
       await loadDeliveries();
       if (!tripPanel.hidden) tripPanel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -703,24 +709,24 @@
 
       const mine = (data.notifications || []).filter((n) => n.sellerId === user.userId);
       if (mine.length === 0) {
-        deliveriesBody.innerHTML = `<tr><td colspan="5" class="empty-row">No deliveries yet. Find a buyer above to start one.</td></tr>`;
+        deliveriesBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("No deliveries yet. Find a buyer above to start one.")}</td></tr>`;
       } else {
         deliveriesBody.innerHTML = mine.map((n) => {
           const next = NEXT_STATUS[n.status];
           const action = next
-            ? `<button class="btn btn-quiet" data-id="${n.id}" data-status="${next}" type="button">Mark ${next}</button>`
+            ? `<button class="btn btn-quiet" data-id="${n.id}" data-status="${next}" type="button">${MARK_AS[next]}</button>`
             : "";
           const route = next && n.buyerLatitude != null
-            ? `<button class="btn btn-quiet" data-trip="${n.id}" type="button">Map</button>`
+            ? `<button class="btn btn-quiet" data-trip="${n.id}" type="button">${t("Map")}</button>`
             : "";
           return `
             <tr>
-              <td data-label="Buyer">${escapeHtml(n.buyerName)}</td>
-              <td data-label="Material">${escapeHtml(n.materialName || "")}</td>
-              <td data-label="Status">${statusPill(n.status)}</td>
-              <td data-label="Sent">${formatDate(n.createdAt)}</td>
+              <td data-label="${t("Buyer")}">${escapeHtml(n.buyerName)}</td>
+              <td data-label="${t("Material")}">${escapeHtml(materialName(n.materialName))}</td>
+              <td data-label="${t("Status")}">${statusPill(n.status)}</td>
+              <td data-label="${t("Sent")}">${formatDate(n.createdAt)}</td>
               <td><div class="row-actions">${route}${action}
-                <a class="btn btn-quiet" href="chat.html?with=${n.buyerId}">Message</a></div></td>
+                <a class="btn btn-quiet" href="chat.html?with=${n.buyerId}">${t("Message")}</a></div></td>
             </tr>`;
         }).join("");
       }
@@ -729,7 +735,7 @@
       showTrip(chooseTrip(mine));
       updateLocationSharing();
     } catch (err) {
-      deliveriesBody.innerHTML = `<tr><td colspan="5" class="empty-row">Deliveries could not be loaded.</td></tr>`;
+      deliveriesBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("Deliveries could not be loaded.")}</td></tr>`;
     }
   }
 
@@ -751,7 +757,7 @@
       });
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Status not updated.", "error");
+        showMessage(pageMsg, data.message || t("Status not updated."), "error");
       }
       loadDeliveries();
     } catch (err) {
@@ -762,9 +768,9 @@
 
   checkAccount();
   loadMaterials().catch(() => {
-    showMessage(pageMsg, "Can't reach the server. Check your connection, then reload the page.", "error");
+    showMessage(pageMsg, t("Can't reach the server. Check your connection, then reload the page."), "error");
   });
   loadDeliveries();
   setInterval(shareLocation, LOCATION_PING_MS);
   setInterval(loadDeliveries, 30000);
-})();
+});

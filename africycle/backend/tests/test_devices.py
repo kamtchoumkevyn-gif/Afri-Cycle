@@ -174,8 +174,10 @@ def test_every_page_is_ready_for_phones_and_installing():
         assert 'rel="apple-touch-icon"' in html, page
         assert "<noscript>" in html, page
         scripts = re.findall(r'<script src="([^"]+)"', html)
-        # The browser check runs before anything else, and the app helper last
-        assert scripts[:2] == ["js/probe.js", "js/compat.js"], page
+        # The translations load first, in <head>, so the page shows in its language; then
+        # the browser check runs before the rest of the app, and the app helper last
+        assert scripts[0] == "js/i18n.js" and html.index("js/i18n.js") < html.index("</head>"), page
+        assert scripts[1:3] == ["js/probe.js", "js/compat.js"], page
         assert scripts[-1] == "js/pwa.js", page
 
 

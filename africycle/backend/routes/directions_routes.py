@@ -4,6 +4,7 @@ import directions
 from auth_utils import get_user_from_token
 from extensions import limiter
 from routes.notification_routes import to_number
+from i18n import _
 
 directions_bp = Blueprint("directions_bp", __name__)
 
@@ -29,7 +30,7 @@ def get_directions():
     """Road route from ?from=lat,lng to ?to=lat,lng, on foot (default) or by car/motorbike
     (?mode=car), with turn-by-turn instructions."""
     if not get_user_from_token():
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     start, end = parse_point(request.args.get("from")), parse_point(request.args.get("to"))
     mode = request.args.get("mode", "foot")
@@ -38,12 +39,12 @@ def get_directions():
     if mode not in directions.PROFILES:
         return jsonify({"message": "mode must be foot or car"}), 400
     if directions.straight_km(start, end) > directions.MAX_KM:
-        return jsonify({"message": f"Directions are only given for trips under {directions.MAX_KM} km"}), 400
+        return jsonify({"message": _("Directions are only given for trips under {km} km", km=directions.MAX_KM)}), 400
 
     try:
         route = directions.get_route(start, end, mode, referer=request.url_root)
     except directions.NoRoute:
-        return jsonify({"message": "No road route was found between you and the buyer."}), 404
+        return jsonify({"message": _("No road route was found between you and the buyer.")}), 404
     except directions.RoutingUnavailable:
-        return jsonify({"message": "Directions aren't available right now. Try again in a minute."}), 502
+        return jsonify({"message": _("Directions aren't available right now. Try again in a minute.")}), 502
     return jsonify(route), 200

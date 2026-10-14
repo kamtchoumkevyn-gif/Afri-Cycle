@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from i18n import _
 
 import alerts
 from auth_utils import get_user_from_token, guardian_block
@@ -13,7 +14,7 @@ chat_bp = Blueprint("chat_bp", __name__)
 def conversations():
     payload = get_user_from_token()
     if not payload:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     convos = get_conversations_for_user(payload["userId"])
     unread = unread_summary(payload["userId"])["bySender"]
@@ -35,7 +36,7 @@ def unread():
     """Unread messages for the badge on "Messages", and the newest one for a pop-up."""
     payload = get_user_from_token()
     if not payload:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
     return jsonify(unread_summary(payload["userId"])), 200
 
 
@@ -43,7 +44,7 @@ def unread():
 def messages(other_user_id):
     payload = get_user_from_token()
     if not payload:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -52,7 +53,7 @@ def messages(other_user_id):
     conn.close()
 
     if not other:
-        return jsonify({"message": "User not found"}), 404
+        return jsonify({"message": _("User not found")}), 404
 
     # Opening the conversation reads it; ?read=0 is sent while the page is in the background
     if request.args.get("read") != "0":
@@ -68,7 +69,7 @@ def messages(other_user_id):
 def send():
     payload = get_user_from_token()
     if not payload:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     data = request.get_json() or {}
     receiver_id = data.get("receiverId")
@@ -78,10 +79,10 @@ def send():
         return jsonify({"message": "receiverId and messageText are required"}), 400
 
     if len(message_text) > 1000:
-        return jsonify({"message": "Message is too long (max 1000 characters)"}), 400
+        return jsonify({"message": _("Message is too long (max 1000 characters)")}), 400
 
     if receiver_id == payload["userId"]:
-        return jsonify({"message": "You cannot message yourself"}), 400
+        return jsonify({"message": _("You cannot message yourself")}), 400
 
     blocked = guardian_block(payload["userId"])
     if blocked:
@@ -93,10 +94,10 @@ def send():
     exists = cursor.fetchone()
     conn.close()
     if not exists:
-        return jsonify({"message": "Receiver not found"}), 404
+        return jsonify({"message": _("Receiver not found")}), 404
 
     message_id = send_message(payload["userId"], receiver_id, message_text)
     # Replying means the sender has read what came before
     mark_conversation_read(payload["userId"], receiver_id)
     alerts.new_message(payload["userId"], receiver_id, message_text)
-    return jsonify({"message": "Sent", "messageId": message_id}), 201
+    return jsonify({"message": _("Sent"), "messageId": message_id}), 201

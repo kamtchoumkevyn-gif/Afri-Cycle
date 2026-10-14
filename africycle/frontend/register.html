@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#2e7d32">
   <meta name="color-scheme" content="light">
+  <script src="js/i18n.js"></script>
   <meta name="apple-mobile-web-app-title" content="Africycle">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
@@ -16,13 +17,20 @@
 <body class="auth-body">
   <noscript><p class="msg msg-error noscript-notice">Africycle needs JavaScript. Turn it on in your browser's settings, then reload this page.</p></noscript>
   <main class="auth-card">
+    <div class="language-bar">
+      <label class="language-menu" title="Language">
+        <svg class="language-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="language-code" aria-hidden="true" translate="no">EN</span>
+        <select data-language-menu aria-label="Language"></select>
+      </label>
+    </div>
     <img src="assets/Africycle_logo.jpg" alt="Africycle logo" class="auth-logo">
     <h1 class="auth-title">Create your account</h1>
     <p class="auth-subtitle">It takes less than a minute</p>
 
     <form id="registerForm" class="auth-form" novalidate>
       <label for="name">Full name</label>
-      <input type="text" id="name" autocomplete="name" required>
+      <input type="text" id="name" dir="auto" autocomplete="name" required>
 
       <label for="phoneCountry">Country</label>
       <select id="phoneCountry" autocomplete="country"></select>
@@ -42,7 +50,7 @@
         <legend>Your parent or guardian</legend>
         <p class="field-hint">They create their own Africycle account with this phone number and approve yours before you can sell. They can see your deliveries, sales and messages.</p>
         <label for="guardianName">Guardian's full name</label>
-        <input type="text" id="guardianName" autocomplete="off" maxlength="100">
+        <input type="text" id="guardianName" dir="auto" autocomplete="off" maxlength="100">
         <label for="guardianCountry">Guardian's country</label>
         <select id="guardianCountry"></select>
         <label for="guardianPhone">Guardian's phone number</label>

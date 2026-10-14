@@ -1,6 +1,6 @@
 // Messages page. Open with chat.html?with=<userId> to start a conversation.
 
-(function () {
+AfriI18n.whenReady(function () {
   const user = requireAuth();
   if (!user) return;
 
@@ -25,21 +25,22 @@
       const convos = data.conversations || [];
 
       if (convos.length === 0 && !activeUserId) {
-        listEl.innerHTML = `<p class="panel-hint">No conversations yet. Open one from a buyer or delivery with "Message".</p>`;
+        listEl.innerHTML = `<p class="panel-hint">${escapeHtml(t("No conversations yet. Open one from a buyer or delivery with \"Message\"."))}</p>`;
         return;
       }
       listEl.innerHTML = convos.map((c) => {
         // The open conversation is being read, so it never shows as unread
         const unread = c.otherUserId === activeUserId ? 0 : c.unread || 0;
-        const badge = unread ? ` <span class="count-badge" aria-label="${unread} unread">${unread}</span>` : "";
+        const badge = unread
+          ? ` <span class="count-badge" aria-label="${escapeHtml(t("{count} unread", { count: unread }))}">${unread}</span>` : "";
         return `
         <button type="button" class="conversation-item ${c.otherUserId === activeUserId ? "active" : ""} ${unread ? "unread" : ""}"
                 data-id="${c.otherUserId}">
-          ${escapeHtml(c.otherUserName || "User")}${badge}
+          <bdi>${escapeHtml(c.otherUserName || t("User"))}</bdi>${badge}
         </button>`;
       }).join("");
     } catch (err) {
-      showMessage(pageMsg, "Conversations could not be loaded.", "error");
+      showMessage(pageMsg, t("Conversations could not be loaded."), "error");
     }
   }
 
@@ -73,9 +74,9 @@
     lastThreadData = data;
     const notice = document.getElementById("minorNotice");
     if (iAmMinor) {
-      notice.textContent = "Your parent or guardian can read your conversations.";
+      notice.textContent = t("Your parent or guardian can read your conversations.");
     } else if (data.otherIsMinor) {
-      notice.textContent = `${data.otherUserName} is under 18. Their parent or guardian can read this conversation.`;
+      notice.textContent = t("{name} is under 18. Their parent or guardian can read this conversation.", { name: data.otherUserName });
     }
     notice.hidden = !(iAmMinor || data.otherIsMinor);
   }
@@ -87,7 +88,7 @@
       const response = await authFetch(`/chat/messages/${activeUserId}${document.hidden ? "?read=0" : ""}`);
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Messages could not be loaded.", "error");
+        showMessage(pageMsg, data.message || t("Messages could not be loaded."), "error");
         return;
       }
       threadTitle.textContent = data.otherUserName;
@@ -99,13 +100,13 @@
       threadEl.innerHTML = messages.length
         ? messages.map((m) => `
             <div class="bubble ${m.senderId === user.userId ? "sent" : "received"}">
-              ${escapeHtml(m.messageText)}
+              <span dir="auto">${escapeHtml(m.messageText)}</span>
               <time>${formatDate(m.createdAt)}</time>
             </div>`).join("")
-        : `<p class="panel-hint">No messages yet. Say hello and agree on a pickup time.</p>`;
+        : `<p class="panel-hint">${t("No messages yet. Say hello and agree on a pickup time.")}</p>`;
       threadEl.scrollTop = threadEl.scrollHeight;
     } catch (err) {
-      showMessage(pageMsg, "Can't reach the server. Check your connection and try again.", "error");
+      showMessage(pageMsg, t("Can't reach the server. Check your connection, then try again."), "error");
     }
   }
 
@@ -122,14 +123,14 @@
       });
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Message not sent.", "error");
+        showMessage(pageMsg, data.message || t("Message not sent."), "error");
         return;
       }
       chatInput.value = "";
       await loadThread();
       loadConversations();
     } catch (err) {
-      showMessage(pageMsg, "Message not sent. Check your connection and try again.", "error");
+      showMessage(pageMsg, t("Message not sent. Check your connection, then try again."), "error");
     } finally {
       chatInput.disabled = false;
       chatInput.focus();
@@ -151,4 +152,4 @@
       loadThread().then(loadConversations);
     }
   });
-})();
+});

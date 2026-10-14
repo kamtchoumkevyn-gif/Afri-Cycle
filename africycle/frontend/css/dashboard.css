@@ -743,10 +743,24 @@
 }
 
 .trip-next-distance {
-  flex: none;
+  flex: 0 1 auto;
+  max-width: 45%;
   margin-right: 12px;
   padding-right: 12px;
   border-right: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Flex items don't shrink below their longest word unless told to; some languages'
+   words are long ("kwesobunxele") */
+.trip-next-distance,
+.trip-next-text {
+  min-width: 0;
+  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.trip-next-text {
+  flex: 1 1 auto;
 }
 
 .trip-arrived .trip-next {
@@ -892,4 +906,95 @@
 
 .trip-panel .row-actions {
   justify-content: flex-start;
+}
+
+/* ---- Right-to-left languages (Arabic): what isn't mirrored by itself ---- */
+
+[dir="rtl"] .topbar-brand span {
+  margin-left: 0;
+  margin-right: 10px;
+}
+
+[dir="rtl"] .topbar-nav {
+  margin: -2px 10px -2px -2px;
+}
+
+[dir="rtl"] .data-table th,
+[dir="rtl"] .conversation-item,
+[dir="rtl"] .photo-tap {
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  [dir="rtl"] .data-table td {
+    text-align: left;
+  }
+
+  [dir="rtl"] .data-table td::before {
+    margin-right: 0;
+    margin-left: 12px;
+    text-align: right;
+  }
+}
+
+[dir="rtl"] .modal-close {
+  right: auto;
+  left: 6px;
+}
+
+[dir="rtl"] .modal-box h3 {
+  padding-right: 0;
+  padding-left: 36px;
+}
+
+[dir="rtl"] .price-list li strong,
+[dir="rtl"] .badge,
+[dir="rtl"] .count-badge {
+  margin-left: 0;
+  margin-right: 6px;
+}
+
+[dir="rtl"] .price-list li strong {
+  margin-right: 12px;
+}
+
+[dir="rtl"] .chat-form > * + * {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+@media (max-width: 720px) {
+  [dir="rtl"] .conversation-list > * + * {
+    margin-left: 0;
+    margin-right: 4px;
+  }
+}
+
+[dir="rtl"] .trip-next-distance {
+  margin-right: 0;
+  padding-right: 0;
+  border-right: 0;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+[dir="rtl"] .segmented button + button {
+  border-left: 0;
+  border-right: 2px solid var(--green);
+}
+
+/* Maps keep their own left-to-right layout (zoom buttons, labels beside the dots); the
+   text in pop-ups and labels follows its own language */
+.leaflet-container {
+  direction: ltr;
+}
+
+[dir="rtl"] .leaflet-popup-content {
+  direction: rtl;
+  text-align: right;
+}
+
+.map-pin-label {
+  unicode-bidi: plaintext;
 }

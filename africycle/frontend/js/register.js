@@ -1,6 +1,6 @@
 // Register page
 
-(function () {
+AfriI18n.whenReady(function () {
   const form = document.getElementById("registerForm");
   const submitBtn = document.getElementById("submitBtn");
   const btnText = document.getElementById("btnText");
@@ -45,15 +45,15 @@
     const isMinor = isMinorBox.checked;
 
     if (!name || !phoneNumber || !role || !password) {
-      showMessage(formMsg, "Fill in every field to create your account.", "error");
+      showMessage(formMsg, t("Fill in every field to create your account."), "error");
       return;
     }
     if (password.length < 6) {
-      showMessage(formMsg, "Use a password with at least 6 characters.", "error");
+      showMessage(formMsg, t("Use a password with at least 6 characters."), "error");
       return;
     }
     if (password !== confirmPassword) {
-      showMessage(formMsg, "The two passwords don't match.", "error");
+      showMessage(formMsg, t("The two passwords don't match."), "error");
       return;
     }
 
@@ -65,7 +65,7 @@
       body.guardianCountry = guardianCountry.value;
       body.guardianRelation = document.getElementById("guardianRelation").value;
       if (!body.guardianName || !body.guardianPhone || !body.guardianRelation) {
-        showMessage(formMsg, "Fill in your guardian's name, phone number and how they are related to you.", "error");
+        showMessage(formMsg, t("Fill in your guardian's name, phone number and how they are related to you."), "error");
         return;
       }
     }
@@ -79,18 +79,18 @@
       const data = await readJson(response);
 
       if (!response.ok) {
-        showMessage(formMsg, data.message || "Account not created. Check your details and try again.", "error");
+        showMessage(formMsg, data.message || t("Account not created. Check your details and try again."), "error");
         setLoading(false);
         return;
       }
 
       showMessage(formMsg, isMinor
-        ? "Account created. Ask your guardian to create their Africycle account with their phone number and approve you. Taking you to log in..."
-        : "Account created. Taking you to log in...", "success");
+        ? t("Account created. Ask your guardian to create their Africycle account with their phone number and approve you. Taking you to log in...")
+        : t("Account created. Taking you to log in..."), "success");
       setTimeout(() => window.location.replace("login.html"), isMinor ? 4000 : 1200);
     } catch (err) {
-      showMessage(formMsg, "Can't reach the server. Make sure the backend is running, then try again.", "error");
+      showMessage(formMsg, t("Can't reach the server. Check your connection, then try again."), "error");
       setLoading(false);
     }
   });
-})();
+});

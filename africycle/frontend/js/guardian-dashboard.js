@@ -1,7 +1,7 @@
 // Guardian page: approve a child's account, then follow their deliveries (with a live map
 // while they're on the way), sales and messages. Any adult account can be a guardian.
 
-(function () {
+AfriI18n.whenReady(function () {
   const user = requireAuth([]);
   if (!user) return;
 
@@ -19,6 +19,9 @@
   const thread = document.getElementById("thread");
 
   const REFRESH_MS = 15000;
+  // How the child said they're related to you (saved in English), as on the sign-up page
+  const RELATIONS = { "mother": t("Mother"), "father": t("Father"), "grandparent": t("Grandparent"),
+    "aunt or uncle": t("Aunt or uncle"), "older sibling": t("Older brother or sister"), "other guardian": t("Other guardian") };
 
   let children = [];
   let currentChild = null;
@@ -29,12 +32,12 @@
   let shownTrips = "";
 
   function serverError() {
-    showMessage(pageMsg, "Can't reach the server. Check your connection and try again.", "error");
+    showMessage(pageMsg, t("Can't reach the server. Check your connection, then try again."), "error");
   }
 
   function childName() {
     const child = children.find((c) => c.id === currentChild);
-    return child ? child.name : "Your child";
+    return child ? child.name : t("Your child");
   }
 
   // ---- Children waiting for approval, and children you supervise ----
@@ -44,7 +47,7 @@
       const response = await authFetch("/guardian/children");
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Your children could not be loaded.", "error");
+        showMessage(pageMsg, data.message || t("Your children could not be loaded."), "error");
         return;
       }
       renderPending(data.pending || []);
@@ -59,17 +62,17 @@
     pendingBody.innerHTML = pending.length
       ? pending.map((c) => `
           <tr>
-            <td data-label="Name">${escapeHtml(c.name)}</td>
-            <td data-label="Phone">${escapeHtml(AfriPhone.format(c.phoneNumber))}</td>
-            <td data-label="You are their">${escapeHtml(c.guardianRelation || "")}</td>
+            <td data-label="${t("Name")}"><bdi>${escapeHtml(c.name)}</bdi></td>
+            <td data-label="${t("Phone")}"><bdi>${escapeHtml(AfriPhone.format(c.phoneNumber))}</bdi></td>
+            <td data-label="${t("You are their")}">${escapeHtml(RELATIONS[c.guardianRelation] || c.guardianRelation || "")}</td>
             <td>
               <div class="row-actions">
-                <button class="btn btn-primary" type="button" data-approve="${c.id}">Approve</button>
-                <button class="btn btn-danger" type="button" data-decline="${c.id}">Decline</button>
+                <button class="btn btn-primary" type="button" data-approve="${c.id}">${t("Approve")}</button>
+                <button class="btn btn-danger" type="button" data-decline="${c.id}">${t("Decline")}</button>
               </div>
             </td>
           </tr>`).join("")
-      : `<tr><td colspan="4" class="empty-row">No children are waiting for your approval.</td></tr>`;
+      : `<tr><td colspan="4" class="empty-row">${t("No children are waiting for your approval.")}</td></tr>`;
   }
 
   pendingBody.addEventListener("click", async (event) => {
@@ -77,14 +80,14 @@
     const decline = event.target.closest("button[data-decline]");
     const button = approve || decline;
     if (!button) return;
-    if (decline && !window.confirm("Decline this account? The child won't be able to sell on Africycle.")) return;
+    if (decline && !window.confirm(t("Decline this account? The child won't be able to sell on Africycle."))) return;
 
     const id = approve ? approve.dataset.approve : decline.dataset.decline;
     button.disabled = true;
     try {
       const response = await authFetch(`/guardian/children/${id}/${approve ? "approve" : "decline"}`, { method: "POST" });
       const data = await readJson(response);
-      showMessage(pageMsg, data.message || "That didn't work. Try again.", response.ok ? "success" : "error");
+      showMessage(pageMsg, data.message || t("That didn't work. Try again."), response.ok ? "success" : "error");
       await loadChildren();
     } catch (err) {
       serverError();
@@ -113,7 +116,7 @@
     currentConversation = null;
     lastThread = "";
     shownTrips = "";
-    thread.innerHTML = `<p class="panel-hint">Choose a conversation.</p>`;
+    thread.innerHTML = `<p class="panel-hint">${t("Choose a conversation.")}</p>`;
     loadActivity();
   });
 
@@ -125,7 +128,7 @@
       const response = await authFetch(`/guardian/children/${currentChild}/activity`);
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Activity could not be loaded.", "error");
+        showMessage(pageMsg, data.message || t("Activity could not be loaded."), "error");
         return;
       }
       childView.hidden = false;
@@ -145,7 +148,7 @@
     const trips = deliveries.filter((d) => d.status === "in transit");
     const name = childName();
     if (trips.length === 0) {
-      tripStatus.textContent = `${name} is not on a delivery right now.`;
+      tripStatus.textContent = t("{name} is not on a delivery right now.", { name });
       mapEl.hidden = true;
       return;
     }
@@ -164,7 +167,7 @@
         points.push(buyerPoint);
       }
       if (d.sellerLatitude == null) {
-        lines.push(`${name} is on the way to ${d.buyerName}; waiting for the first location update.`);
+        lines.push(t("{name} is on the way to {buyer}; waiting for the first location update.", { name, buyer: d.buyerName }));
         return;
       }
       const childPoint = [d.sellerLatitude, d.sellerLongitude];
@@ -177,8 +180,9 @@
         }
       }
       lines.push(buyerPoint
-        ? `${name} is ${AfriMap.formatDistance(AfriMap.distanceKm(childPoint, buyerPoint))} from ${d.buyerName} (updated ${seen}).`
-        : `${name} was seen ${seen} on the way to ${d.buyerName}.`);
+        ? t("{name} is {distance} from {buyer} (updated {time}).",
+          { name, distance: AfriMap.formatDistance(AfriMap.distanceKm(childPoint, buyerPoint)), buyer: d.buyerName, time: seen })
+        : t("{name} was seen {time} on the way to {buyer}.", { name, time: seen, buyer: d.buyerName }));
     });
     tripStatus.textContent = lines.join(" ");
 
@@ -196,25 +200,25 @@
     deliveriesBody.innerHTML = deliveries.length
       ? deliveries.map((d) => `
           <tr>
-            <td data-label="Buyer">${escapeHtml(d.buyerName)}</td>
-            <td data-label="Material">${escapeHtml(d.materialName || "")}</td>
-            <td data-label="Status">${statusPill(d.status)}</td>
-            <td data-label="Started">${formatDate(d.createdAt)}</td>
+            <td data-label="${t("Buyer")}"><bdi>${escapeHtml(d.buyerName)}</bdi></td>
+            <td data-label="${t("Material")}">${escapeHtml(materialName(d.materialName))}</td>
+            <td data-label="${t("Status")}">${statusPill(d.status)}</td>
+            <td data-label="${t("Started")}">${formatDate(d.createdAt)}</td>
           </tr>`).join("")
-      : `<tr><td colspan="4" class="empty-row">No deliveries yet.</td></tr>`;
+      : `<tr><td colspan="4" class="empty-row">${t("No deliveries yet.")}</td></tr>`;
   }
 
   function renderSales(sales) {
     salesBody.innerHTML = sales.length
-      ? sales.map((t) => `
+      ? sales.map((sale) => `
           <tr>
-            <td data-label="Buyer">${escapeHtml(t.buyerName)}</td>
-            <td data-label="Material">${escapeHtml(t.materialName || "")}</td>
-            <td data-label="Weight">${t.weightKg} kg</td>
-            <td data-label="Total"><strong>${formatMoney(t.totalAmount)}</strong></td>
-            <td data-label="Date">${formatDate(t.createdAt)}</td>
+            <td data-label="${t("Buyer")}"><bdi>${escapeHtml(sale.buyerName)}</bdi></td>
+            <td data-label="${t("Material")}">${escapeHtml(materialName(sale.materialName))}</td>
+            <td data-label="${t("Weight")}">${AfriI18n.formatUnit(sale.weightKg, "kilogram", 2)}</td>
+            <td data-label="${t("Total")}"><strong>${formatMoney(sale.totalAmount)}</strong></td>
+            <td data-label="${t("Date")}">${formatDate(sale.createdAt)}</td>
           </tr>`).join("")
-      : `<tr><td colspan="5" class="empty-row">No sales recorded yet.</td></tr>`;
+      : `<tr><td colspan="5" class="empty-row">${t("No sales recorded yet.")}</td></tr>`;
   }
 
   // ---- Messages (read-only) ----
@@ -224,9 +228,9 @@
       ? conversations.map((c) => `
           <button type="button" class="conversation-item ${c.otherUserId === currentConversation ? "active" : ""}"
                   data-id="${c.otherUserId}">
-            ${escapeHtml(c.otherUserName || "User")}
+            <bdi>${escapeHtml(c.otherUserName || t("User"))}</bdi>
           </button>`).join("")
-      : `<p class="panel-hint">No conversations yet.</p>`;
+      : `<p class="panel-hint">${t("No conversations yet.")}</p>`;
   }
 
   conversationList.addEventListener("click", (event) => {
@@ -253,11 +257,11 @@
       thread.innerHTML = messages.length
         ? messages.map((m) => `
             <div class="bubble ${m.senderId === currentChild ? "sent" : "received"}">
-              <strong>${escapeHtml(m.senderId === currentChild ? name : data.otherUserName)}</strong><br>
-              ${escapeHtml(m.messageText)}
+              <strong><bdi>${escapeHtml(m.senderId === currentChild ? name : data.otherUserName)}</bdi></strong><br>
+              <span dir="auto">${escapeHtml(m.messageText)}</span>
               <time>${formatDate(m.createdAt)}</time>
             </div>`).join("")
-        : `<p class="panel-hint">No messages yet.</p>`;
+        : `<p class="panel-hint">${t("No messages yet.")}</p>`;
       thread.scrollTop = thread.scrollHeight;
     } catch (err) {
       serverError();
@@ -282,4 +286,4 @@
   }
 
   start();
-})();
+});

@@ -1,4 +1,5 @@
 from database.db import get_connection
+from i18n import N_
 
 
 def create_material_category(name, reference_photo_url=None):
@@ -68,11 +69,11 @@ def seed_default_categories():
     existing = get_all_categories()
     if existing:
         return
-    defaults = [
-        ("Scrap Iron", None),
-        ("Plastic", None),
-        ("Water Bidon", None),
-        ("Organic Waste", None),
+    defaults = [  # saved in English; the pages show them in each person's language
+        (N_("Scrap Iron"), None),
+        (N_("Plastic"), None),
+        (N_("Water Bidon"), None),
+        (N_("Organic Waste"), None),
     ]
     conn = get_connection()
     cursor = conn.cursor()

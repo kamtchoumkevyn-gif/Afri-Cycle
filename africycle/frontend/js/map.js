@@ -9,7 +9,8 @@ const AfriMap = (function () {
 
   function create(element) {
     if (typeof window.L === "undefined" || !element) return null;
-    const map = L.map(element, { scrollWheelZoom: false }).setView(CAMEROON, 6);
+    const map = L.map(element, { scrollWheelZoom: false, zoomControl: false }).setView(CAMEROON, 6);
+    L.control.zoom({ zoomInTitle: t("Zoom in"), zoomOutTitle: t("Zoom out") }).addTo(map);
     L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map);
     // Pop-ups that fit on a small phone: clear of the zoom buttons on the left (which
     // Leaflet draws on top of pop-ups) and inside the map on the right. 50 px covers the
@@ -63,16 +64,16 @@ const AfriMap = (function () {
     return 2 * 6371 * Math.asin(Math.sqrt(h));
   }
 
+  // 850 m, 1.2 km (1,2 km in French...)
   function formatDistance(km) {
-    return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+    return km < 1 ? AfriI18n.formatUnit(Math.round(km * 1000), "meter") : AfriI18n.formatUnit(km, "kilometer", 1);
   }
 
   function timeAgo(isoString) {
     if (!isoString) return "";
     const value = isoString.endsWith("Z") ? isoString : `${isoString}Z`;
     const seconds = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 1000));
-    if (seconds < 60) return `${seconds} s ago`;
-    if (seconds < 3600) return `${Math.round(seconds / 60)} min ago`;
+    if (seconds < 3600) return AfriI18n.formatAgo(seconds);
     return formatDate(isoString);
   }
 
@@ -104,18 +105,18 @@ const AfriMap = (function () {
   // What to tell the person when locate() fails
   function locationErrorMessage(error) {
     if (window.isSecureContext === false) {
-      return "Location only works on a secure address. Open Africycle with https:// at the start.";
+      return t("Location only works on a secure address. Open Africycle with https:// at the start.");
     }
     if (!error || !error.code) {
-      return "This browser can't share your location. Try Chrome, Firefox, Safari or Samsung Internet.";
+      return t("This browser can't share your location. Try Chrome, Firefox, Safari or Samsung Internet.");
     }
     if (error.code === 1) {
-      return "Location is blocked for Africycle. Allow it in your browser's settings for this site (the icon beside the address), then try again.";
+      return t("Location is blocked for Africycle. Allow it in your browser's settings for this site (the icon beside the address), then try again.");
     }
     if (error.code === 2) {
-      return "Your position isn't available. Turn on location (GPS) in your phone's settings, then try again.";
+      return t("Your position isn't available. Turn on location (GPS) in your phone's settings, then try again.");
     }
-    return "Finding your position took too long. Move near a window or outside, then try again.";
+    return t("Finding your position took too long. Move near a window or outside, then try again.");
   }
 
   // ---- Road directions (the server asks OpenStreetMap's routing service; see /directions) ----
@@ -125,7 +126,7 @@ const AfriMap = (function () {
     const response = await authFetch(`/directions?${query}`);
     const data = await readJson(response);
     if (!response.ok) {
-      throw new Error(data.message || "Directions aren't available right now.");
+      throw new Error(data.message || t("Directions aren't available right now. Try again in a minute."));
     }
     return prepareRoute(data);
   }
@@ -157,10 +158,10 @@ const AfriMap = (function () {
       const dx = b[0] - a[0];
       const dy = b[1] - a[1];
       const lengthSq = dx * dx + dy * dy;
-      const t = lengthSq ? Math.max(0, Math.min(1, -(a[0] * dx + a[1] * dy) / lengthSq)) : 0;
-      const off = Math.hypot(a[0] + t * dx, a[1] + t * dy);
+      const share = lengthSq ? Math.max(0, Math.min(1, -(a[0] * dx + a[1] * dy) / lengthSq)) : 0; // of the segment
+      const off = Math.hypot(a[0] + share * dx, a[1] + share * dy);
       if (off < best.offKm) {
-        best = { offKm: off, alongKm: route.along[i - 1] + t * (route.along[i] - route.along[i - 1]) };
+        best = { offKm: off, alongKm: route.along[i - 1] + share * (route.along[i] - route.along[i - 1]) };
       }
     }
     return best;
@@ -180,10 +181,11 @@ const AfriMap = (function () {
     };
   }
 
+  // 13 min, 1 h 5 min, in the units' local names
   function formatDuration(seconds) {
     const minutes = Math.max(1, Math.round(seconds / 60));
-    if (minutes < 60) return `${minutes} min`;
-    return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
+    if (minutes < 60) return AfriI18n.formatUnit(minutes, "minute");
+    return `${AfriI18n.formatUnit(Math.floor(minutes / 60), "hour")} ${AfriI18n.formatUnit(minutes % 60, "minute")}`;
   }
 
   // The credit the routing service asks for beside a route, with its "fix the map" link
@@ -191,13 +193,13 @@ const AfriMap = (function () {
   function showRouteCredit(element, route) {
     if (!element) return;
     element.hidden = !route;
-    element.textContent = route ? `${route.credit} · ` : "";
+    element.textContent = route ? `${t(route.credit)} · ` : "";
     if (!route) return;
     const link = document.createElement("a");
     link.href = "https://www.openstreetmap.org/fixthemap";
     link.target = "_blank";
     link.rel = "noopener";
-    link.textContent = "Fix the map";
+    link.textContent = t("Fix the map");
     element.appendChild(link);
   }
 

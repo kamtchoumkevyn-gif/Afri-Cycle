@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime, timedelta
 from auth_utils import get_user_from_token
 from database.db import get_connection
+from i18n import _
 
 admin_bp = Blueprint("admin_bp", __name__)
 
@@ -21,7 +22,7 @@ def count(cursor, query, params=()):
 @admin_bp.route("/admin/stats", methods=["GET"])
 def user_counts():
     if not require_admin():
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     today_start = datetime.utcnow().strftime("%Y-%m-%d")
     conn = get_connection()
@@ -42,7 +43,7 @@ def user_counts():
 @admin_bp.route("/admin/activity-stats", methods=["GET"])
 def activity_stats():
     if not require_admin():
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     seven_days_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
     conn = get_connection()
@@ -82,7 +83,7 @@ def activity_stats():
 @admin_bp.route("/admin/users", methods=["GET"])
 def list_users():
     if not require_admin():
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -98,7 +99,7 @@ def list_users():
 @admin_bp.route("/admin/flagged-accounts", methods=["GET"])
 def flagged_accounts():
     if not require_admin():
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -124,7 +125,7 @@ def flagged_accounts():
 @admin_bp.route("/admin/flag-account/<int:user_id>", methods=["POST"])
 def flag_account(user_id):
     if not require_admin():
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     data = request.get_json(silent=True) or {}
     reason = data.get("reason") or "Flagged by admin"
@@ -139,14 +140,14 @@ def flag_account(user_id):
     conn.close()
 
     if not updated:
-        return jsonify({"message": "User not found"}), 404
-    return jsonify({"message": "Account flagged"}), 200
+        return jsonify({"message": _("User not found")}), 404
+    return jsonify({"message": _("Account flagged")}), 200
 
 
 @admin_bp.route("/admin/unflag-account/<int:user_id>", methods=["POST"])
 def unflag_account(user_id):
     if not require_admin():
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -158,5 +159,5 @@ def unflag_account(user_id):
     conn.close()
 
     if not updated:
-        return jsonify({"message": "User not found"}), 404
-    return jsonify({"message": "Account unflagged"}), 200
+        return jsonify({"message": _("User not found")}), 404
+    return jsonify({"message": _("Account unflagged")}), 200

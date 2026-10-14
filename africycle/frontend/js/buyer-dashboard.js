@@ -1,7 +1,7 @@
 // Buyer dashboard: location, prices and material photos, collectors on their way (with a
 // live map), purchase records
 
-(function () {
+AfriI18n.whenReady(function () {
   const user = requireAuth(["buyer", "both"]);
   if (!user) return;
 
@@ -32,7 +32,7 @@
   }
 
   function serverError() {
-    showMessage(pageMsg, "Can't reach the server. Check your connection and try again.", "error");
+    showMessage(pageMsg, t("Can't reach the server. Check your connection, then try again."), "error");
   }
 
   async function checkAccount() {
@@ -47,7 +47,7 @@
     const data = await readJson(response);
     ["priceMaterialSelect", "txMaterialSelect"].forEach((id) => {
       const select = document.getElementById(id);
-      (data.categories || []).forEach((c) => select.add(new Option(c.name, c.id)));
+      (data.categories || []).forEach((c) => select.add(new Option(materialName(c.name), c.id)));
     });
   }
 
@@ -59,20 +59,20 @@
     if (data.profile) {
       homePoint = [data.profile.latitude, data.profile.longitude];
       hoursInput.value = data.profile.workingHours || "";
-      locationStatus.textContent = "Your buying point is saved. Collectors nearby can find you.";
-      saveLocationBtn.textContent = "Update to my current location";
+      locationStatus.textContent = t("Your buying point is saved. Collectors nearby can find you.");
+      saveLocationBtn.textContent = t("Update to my current location");
     }
   }
 
   saveLocationBtn.addEventListener("click", async () => {
     saveLocationBtn.disabled = true;
-    locationStatus.textContent = "Finding your location...";
+    locationStatus.textContent = t("Finding your location...");
 
     let position;
     try {
       position = await AfriMap.locate();
     } catch (err) {
-      locationStatus.textContent = "We couldn't find your position.";
+      locationStatus.textContent = t("We couldn't find your position.");
       showMessage(pageMsg, AfriMap.locationErrorMessage(err), "error");
       saveLocationBtn.disabled = false;
       return;
@@ -89,9 +89,9 @@
       });
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Location not saved.", "error");
+        showMessage(pageMsg, data.message || t("Location not saved."), "error");
       } else {
-        showMessage(pageMsg, "Buying point saved.", "success");
+        showMessage(pageMsg, t("Buying point saved."), "success");
         loadProfile();
       }
     } catch (err) {
@@ -110,23 +110,23 @@
       const prices = data.prices || [];
       pricesBody.innerHTML = prices.length
         ? prices.map((p) => {
-            const name = escapeHtml(p.materialName);
+            const name = escapeHtml(materialName(p.materialName));
             const photo = p.photoId
-              ? `<img class="thumb" data-photo-id="${p.photoId}" alt="Your photo of ${name}">
-                 <button class="btn btn-quiet" type="button" data-photo="add" data-material="${p.materialCategoryId}">Change</button>
-                 <button class="btn btn-quiet" type="button" data-photo="remove" data-material="${p.materialCategoryId}">Remove</button>`
-              : `<button class="btn btn-secondary" type="button" data-photo="add" data-material="${p.materialCategoryId}">Add photo</button>`;
+              ? `<img class="thumb" data-photo-id="${p.photoId}" alt="${escapeHtml(t("Your photo of {material}", { material: materialName(p.materialName) }))}">
+                 <button class="btn btn-quiet" type="button" data-photo="add" data-material="${p.materialCategoryId}">${t("Change")}</button>
+                 <button class="btn btn-quiet" type="button" data-photo="remove" data-material="${p.materialCategoryId}">${t("Remove")}</button>`
+              : `<button class="btn btn-secondary" type="button" data-photo="add" data-material="${p.materialCategoryId}">${t("Add photo")}</button>`;
             return `
               <tr>
-                <td data-label="Material">${name}</td>
-                <td data-label="Price per kg">${formatMoney(p.pricePerKg)}</td>
-                <td data-label="Photo"><div class="photo-cell">${photo}</div></td>
+                <td data-label="${t("Material")}">${name}</td>
+                <td data-label="${t("Price per kg")}">${formatMoney(p.pricePerKg)}</td>
+                <td data-label="${t("Photo")}"><div class="photo-cell">${photo}</div></td>
               </tr>`;
           }).join("")
-        : `<tr><td colspan="3" class="empty-row">No prices yet. Add one above so collectors can see you.</td></tr>`;
+        : `<tr><td colspan="3" class="empty-row">${t("No prices yet. Add one above so collectors can see you.")}</td></tr>`;
       loadPhotos(pricesBody);
     } catch (err) {
-      pricesBody.innerHTML = `<tr><td colspan="3" class="empty-row">Prices could not be loaded.</td></tr>`;
+      pricesBody.innerHTML = `<tr><td colspan="3" class="empty-row">${t("Prices could not be loaded.")}</td></tr>`;
     }
   }
 
@@ -135,7 +135,7 @@
     const materialCategoryId = Number(document.getElementById("priceMaterialSelect").value);
     const pricePerKg = Number(document.getElementById("priceInput").value);
     if (!materialCategoryId || !(pricePerKg > 0)) {
-      showMessage(pageMsg, "Choose a material and enter a price above zero.", "error");
+      showMessage(pageMsg, t("Choose a material and enter a price above zero."), "error");
       return;
     }
     try {
@@ -145,10 +145,10 @@
       });
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Price not saved.", "error");
+        showMessage(pageMsg, data.message || t("Price not saved."), "error");
         return;
       }
-      showMessage(pageMsg, "Price saved.", "success");
+      showMessage(pageMsg, t("Price saved."), "success");
       priceForm.reset();
       loadPrices();
     } catch (err) {
@@ -172,7 +172,7 @@
       const response = await authFetch(`/buyer/material-photo/${materialId}`, { method: "DELETE" });
       if (!response.ok) {
         const data = await readJson(response);
-        showMessage(pageMsg, data.message || "Photo not removed.", "error");
+        showMessage(pageMsg, data.message || t("Photo not removed."), "error");
       }
       loadPrices();
     } catch (err) {
@@ -183,12 +183,12 @@
   photoInput.addEventListener("change", async () => {
     const file = photoInput.files[0];
     if (!file || !photoMaterialId) return;
-    showMessage(pageMsg, "Preparing your photo...", "info");
+    showMessage(pageMsg, t("Preparing your photo..."), "info");
     let photo;
     try {
       photo = await shrinkPhoto(file);
     } catch (err) {
-      showMessage(pageMsg, "That file couldn't be read as a photo. Choose a JPG or PNG photo, or take a new one with the camera.", "error");
+      showMessage(pageMsg, t("That file couldn't be read as a photo. Choose a JPG or PNG photo, or take a new one with the camera."), "error");
       return;
     }
     try {
@@ -198,10 +198,10 @@
       });
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Photo not saved.", "error");
+        showMessage(pageMsg, data.message || t("Photo not saved."), "error");
         return;
       }
-      showMessage(pageMsg, "Photo saved. Collectors can now tap it to tell you they're coming.", "success");
+      showMessage(pageMsg, t("Photo saved. Collectors can now tap it to tell you they're coming."), "success");
       loadPrices();
     } catch (err) {
       serverError();
@@ -260,7 +260,7 @@
       renderMap();
       fillSellerSelect();
     } catch (err) {
-      incomingBody.innerHTML = `<tr><td colspan="5" class="empty-row">Updates could not be loaded.</td></tr>`;
+      incomingBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("Updates could not be loaded.")}</td></tr>`;
     }
   }
 
@@ -275,28 +275,29 @@
 
   function renderIncoming() {
     if (incoming.length === 0) {
-      incomingBody.innerHTML = `<tr><td colspan="5" class="empty-row">No collectors on their way yet.</td></tr>`;
+      incomingBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("No collectors on their way yet.")}</td></tr>`;
       return;
     }
     incomingBody.innerHTML = incoming.map((n) => {
       const actions = [];
       if (n.sellerLatitude != null && n.status === "in transit" && map) {
-        actions.push(`<button class="btn btn-quiet" type="button" data-focus="${n.id}">Show on map</button>`);
+        actions.push(`<button class="btn btn-quiet" type="button" data-focus="${n.id}">${t("Show on map")}</button>`);
       }
       if (BUYER_NEXT_STATUS[n.status]) {
-        actions.push(`<button class="btn btn-quiet" type="button" data-complete="${n.id}">Mark completed</button>`);
+        actions.push(`<button class="btn btn-quiet" type="button" data-complete="${n.id}">${t("Mark completed")}</button>`);
       }
       if (n.status === "arrived" || n.status === "completed") {
-        actions.push(`<button class="btn btn-quiet" type="button" data-record="${n.id}">Record purchase</button>`);
+        actions.push(`<button class="btn btn-quiet" type="button" data-record="${n.id}">${t("Record purchase")}</button>`);
       }
-      actions.push(`<a class="btn btn-quiet" href="chat.html?with=${n.sellerId}">Message</a>`);
-      const minor = n.sellerIsMinor ? `<span class="badge" title="Supervised by a parent or guardian">Under 18</span>` : "";
+      actions.push(`<a class="btn btn-quiet" href="chat.html?with=${n.sellerId}">${t("Message")}</a>`);
+      const minor = n.sellerIsMinor
+        ? `<span class="badge" title="${t("Supervised by a parent or guardian")}">${t("Under 18")}</span>` : "";
       return `
         <tr>
-          <td data-label="Collector">${escapeHtml(n.sellerName)}${minor}</td>
-          <td data-label="Material">${escapeHtml(n.materialName || "")}</td>
-          <td data-label="Status">${statusPill(n.status)}</td>
-          <td data-label="Received">${formatDate(n.createdAt)}</td>
+          <td data-label="${t("Collector")}">${escapeHtml(n.sellerName)}${minor}</td>
+          <td data-label="${t("Material")}">${escapeHtml(materialName(n.materialName))}</td>
+          <td data-label="${t("Status")}">${statusPill(n.status)}</td>
+          <td data-label="${t("Received")}">${formatDate(n.createdAt)}</td>
           <td><div class="row-actions">${actions.join("")}</div></td>
         </tr>`;
     }).join("");
@@ -319,7 +320,7 @@
     mapStatus.hidden = false;
 
     if (homePoint && !homeMarker) {
-      homeMarker = L.marker(homePoint, { icon: AfriMap.pin("home", "You"), keyboard: false }).addTo(map);
+      homeMarker = L.marker(homePoint, { icon: AfriMap.pin("home", t("You")), keyboard: false }).addTo(map);
     }
 
     mapLayer.clearLayers();
@@ -327,21 +328,23 @@
     const lines = [];
     coming.forEach((n) => {
       if (n.sellerLatitude == null) {
-        lines.push(`${n.sellerName} is on the way; waiting for their first location update.`);
+        lines.push(t("{name} is on the way; waiting for their first location update.", { name: n.sellerName }));
         return;
       }
       const point = [n.sellerLatitude, n.sellerLongitude];
       const marker = L.marker(point, { icon: AfriMap.pin("seller", n.sellerName), zIndexOffset: 500 })
         .bindPopup(`<div class="popup-title">${escapeHtml(n.sellerName)}</div>
-                    <div>${escapeHtml(n.materialName || "")} &middot; updated ${escapeHtml(AfriMap.timeAgo(n.locationUpdatedAt))}</div>`)
+                    <div>${escapeHtml(materialName(n.materialName))} &middot; ${escapeHtml(t("updated {time}", { time: AfriMap.timeAgo(n.locationUpdatedAt) }))}</div>`)
         .addTo(mapLayer);
       sellerMarkers.set(n.id, marker);
       if (homePoint) {
         L.polyline([point, homePoint], { color: "#1565c0", weight: 3, dashArray: "6 8" }).addTo(mapLayer);
         const distance = AfriMap.formatDistance(AfriMap.distanceKm(point, homePoint));
-        lines.push(`${n.sellerName} is ${distance} away (updated ${AfriMap.timeAgo(n.locationUpdatedAt)}).`);
+        lines.push(t("{name} is {distance} away (updated {time}).",
+          { name: n.sellerName, distance, time: AfriMap.timeAgo(n.locationUpdatedAt) }));
       } else {
-        lines.push(`${n.sellerName} was seen ${AfriMap.timeAgo(n.locationUpdatedAt)}. Save your buying point to see the distance.`);
+        lines.push(t("{name} was seen {time}. Save your buying point to see the distance.",
+          { name: n.sellerName, time: AfriMap.timeAgo(n.locationUpdatedAt) }));
       }
     });
     mapStatus.textContent = lines.join(" ");
@@ -387,7 +390,7 @@
         });
         if (!response.ok) {
           const data = await readJson(response);
-          showMessage(pageMsg, data.message || "Status not updated.", "error");
+          showMessage(pageMsg, data.message || t("Status not updated."), "error");
         }
         loadIncoming();
       } catch (err) {
@@ -410,7 +413,7 @@
   function updateTotal() {
     const weight = Number(document.getElementById("weightInput").value);
     const price = Number(document.getElementById("txPriceInput").value);
-    totalPreview.textContent = weight > 0 && price > 0 ? `Total to pay in cash: ${formatMoney(weight * price)}` : "";
+    totalPreview.textContent = weight > 0 && price > 0 ? t("Total to pay in cash: {amount}", { amount: formatMoney(weight * price) }) : "";
   }
   document.getElementById("weightInput").addEventListener("input", updateTotal);
   document.getElementById("txPriceInput").addEventListener("input", updateTotal);
@@ -424,7 +427,7 @@
       pricePerKg: Number(document.getElementById("txPriceInput").value)
     };
     if (!body.sellerId || !body.materialCategoryId || !(body.weightKg > 0) || !(body.pricePerKg > 0)) {
-      showMessage(pageMsg, "Choose the collector and material, then enter weight and price.", "error");
+      showMessage(pageMsg, t("Choose the collector and material, then enter weight and price."), "error");
       return;
     }
     try {
@@ -434,10 +437,10 @@
       });
       const data = await readJson(response);
       if (!response.ok) {
-        showMessage(pageMsg, data.message || "Purchase not recorded.", "error");
+        showMessage(pageMsg, data.message || t("Purchase not recorded."), "error");
         return;
       }
-      showMessage(pageMsg, "Purchase recorded.", "success");
+      showMessage(pageMsg, t("Purchase recorded."), "success");
       transactionForm.reset();
       totalPreview.textContent = "";
       loadHistory();
@@ -454,17 +457,17 @@
       const data = await readJson(response);
       const rows = data.transactions || [];
       historyBody.innerHTML = rows.length
-        ? rows.map((t) => `
+        ? rows.map((row) => `
             <tr>
-              <td data-label="Collector">${escapeHtml(t.sellerName)}</td>
-              <td data-label="Material">${escapeHtml(t.materialName || "")}</td>
-              <td data-label="Weight">${t.weightKg} kg</td>
-              <td data-label="Total"><strong>${formatMoney(t.totalAmount)}</strong></td>
-              <td data-label="Date">${formatDate(t.createdAt)}</td>
+              <td data-label="${t("Collector")}">${escapeHtml(row.sellerName)}</td>
+              <td data-label="${t("Material")}">${escapeHtml(materialName(row.materialName))}</td>
+              <td data-label="${t("Weight")}">${AfriI18n.formatUnit(row.weightKg, "kilogram", 2)}</td>
+              <td data-label="${t("Total")}"><strong>${formatMoney(row.totalAmount)}</strong></td>
+              <td data-label="${t("Date")}">${formatDate(row.createdAt)}</td>
             </tr>`).join("")
-        : `<tr><td colspan="5" class="empty-row">No purchases recorded yet.</td></tr>`;
+        : `<tr><td colspan="5" class="empty-row">${t("No purchases recorded yet.")}</td></tr>`;
     } catch (err) {
-      historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">History could not be loaded.</td></tr>`;
+      historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("History could not be loaded.")}</td></tr>`;
     }
   }
 
@@ -482,4 +485,4 @@
     await loadIncoming();
     scheduleIncoming();
   })();
-})();
+});

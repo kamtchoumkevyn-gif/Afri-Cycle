@@ -164,6 +164,9 @@ ADDED_COLUMNS = {
         # this existed count as read, so nobody gets a sudden pile of old "unread" ones.
         ("readAt", "TEXT", "UPDATE chat_messages SET readAt = createdAt"),
     ],
+    "push_subscriptions": [
+        ("language", "TEXT DEFAULT 'en'"),  # the language chosen on that phone
+    ],
 }
 
 

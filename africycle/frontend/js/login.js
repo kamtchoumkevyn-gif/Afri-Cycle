@@ -1,6 +1,6 @@
 // Login page
 
-(function () {
+AfriI18n.whenReady(function () {
   const form = document.getElementById("loginForm");
   const submitBtn = document.getElementById("submitBtn");
   const btnText = document.getElementById("btnText");
@@ -32,7 +32,7 @@
     const remember = document.getElementById("rememberMe").checked;
 
     if (!phoneNumber || !role || !password) {
-      showMessage(formMsg, "Enter your phone number, choose a role, and enter your password.", "error");
+      showMessage(formMsg, t("Enter your phone number, choose a role, and enter your password."), "error");
       return;
     }
 
@@ -46,8 +46,8 @@
 
       if (!response.ok) {
         const text = response.status === 429
-          ? "Too many attempts. Wait a minute, then try again."
-          : (data.message || "Login failed. Check your details and try again.");
+          ? t("Too many attempts. Wait a minute, then try again.")
+          : (data.message || t("Login failed. Check your details and try again."));
         showMessage(formMsg, text, "error");
         setLoading(false);
         return;
@@ -57,8 +57,8 @@
       // A "both" account goes to whichever side it chose at login
       window.location.replace(dashboardFor(data.role === "both" ? role : data.role));
     } catch (err) {
-      showMessage(formMsg, "Can't reach the server. Make sure the backend is running, then try again.", "error");
+      showMessage(formMsg, t("Can't reach the server. Check your connection, then try again."), "error");
       setLoading(false);
     }
   });
-})();
+});

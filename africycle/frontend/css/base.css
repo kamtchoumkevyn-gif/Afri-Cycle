@@ -79,6 +79,8 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   -webkit-tap-highlight-color: rgba(46, 125, 50, 0.15);
+  /* Long words (isiZulu, Ikinyarwanda, German...) break rather than run off a phone screen */
+  overflow-wrap: break-word;
 }
 
 h1, h2, h3 {
@@ -344,4 +346,77 @@ select:focus {
 .auth-logo,
 .topbar-brand img {
   mix-blend-mode: multiply;
+}
+
+/* ---- Languages (js/i18n.js) ---- */
+
+/* Hidden for the moment it takes to put the page in the chosen language, so nobody sees
+   it change. If the script never finishes, the page appears after 6 seconds anyway. */
+html.translating body {
+  visibility: hidden;
+  -webkit-animation: show-anyway 0s 6s forwards;
+  animation: show-anyway 0s 6s forwards;
+}
+
+@-webkit-keyframes show-anyway { to { visibility: visible; } }
+@keyframes show-anyway { to { visibility: visible; } }
+
+/* The language menu: a globe and the language's code ("FR"). The real menu (a select,
+   invisible) lies over them, so a tap opens the phone's own list of languages. */
+label.language-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blue);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.language-menu .language-icon {
+  flex: none;
+  margin-right: 5px;
+}
+
+.language-menu select {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  font-size: 16px; /* 16px stops iOS from zooming when it opens */
+  opacity: 0;
+  cursor: pointer;
+}
+
+.language-menu:focus-within {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Phone numbers are written left to right in every language */
+.phone-input {
+  direction: ltr;
+}
+
+/* Right-to-left languages (Arabic): what isn't mirrored by itself */
+[dir="rtl"] .language-menu .language-icon {
+  margin-right: 0;
+  margin-left: 5px;
+}
+
+[dir="rtl"] .checkbox-label input {
+  margin-right: 0;
+  margin-left: 10px;
+}
+
+[dir="rtl"] .notice-bar .btn {
+  margin-left: 0;
+  margin-right: 12px;
 }

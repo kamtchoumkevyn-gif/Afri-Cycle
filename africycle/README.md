@@ -84,6 +84,27 @@ People under 18 can sell scrap with a parent or guardian watching over the accou
 3. The guardian registers with the phone number the child typed, choosing **Supervise my child's account**, and logs in to approve or decline. A guardian who already has a buyer or seller account with that number finds the same page under **My children**.
 4. After approval, the guardian sees the child's trips on a map, their deliveries and sales, and can read their conversations. Buyers see an **Under 18** badge, and both sides of a chat are told the guardian can read it.
 
+## Languages
+
+Africycle comes in 21 languages:
+
+- **Widely used worldwide:** English, French, Spanish, Portuguese, Arabic and Chinese
+- **Common in Africa:** Kiswahili, Hausa, Yorùbá, Igbo, Amharic, isiZulu, Afrikaans, Somali, Afaan Oromoo, Ikinyarwanda, Ikirundi, Lingála, Sängö, Fulfulde and Cameroonian Pidgin (Kamtok)
+
+How it works for people:
+
+- **Choosing:** the app opens in the phone's own language when it has it, and in English otherwise. The globe menu at the top of every page switches language, and that phone remembers the choice. For any other language, the menu's last entry, **Other languages...**, explains how to use the browser's Translate.
+- **What is translated:** every page, the server's messages, phone notifications (each phone gets them in the language chosen on it), turn-by-turn directions, and the old-browser notice. Numbers, dates and units are written the language's own way, always with the digits 0-9. In Arabic the whole page reads right to left, while phone numbers and maps keep their usual direction.
+- **What is not:** names, messages and working hours that people type are shown as they typed them. Material names are stored in English and translated on screen.
+
+Translations are the files in `frontend/i18n/`, one per language (`fr.json`, `sw.json`...), each keyed by the English text. The pages and the server read the same files, and any text missing from a file shows in English.
+
+- **To correct a translation:** edit its file.
+- **To translate new text:** first add it to a page, wrap it in `t("...")` in a script, or `_("...")` in the server. Then, in `backend/`, run `python tools/i18n_strings.py` to see how complete each language is, and `python tools/i18n_strings.py --missing fr` to get the texts French still needs, as JSON to fill in. The tests fail until every language has the new text, with the same `{placeholders}`.
+- **To add a language:** run `python tools/i18n_strings.py --new > ../frontend/i18n/<code>.json` in `backend/` and translate it. Then add the language to the lists at the top of `frontend/js/i18n.js` and `frontend/js/compat.js`.
+
+The African-language translations are first drafts. Have native speakers check them before relying on them, especially Sängö, Fulfulde, Lingála, Ikirundi, Afaan Oromoo, Igbo and Pidgin. A correction only touches that language's file.
+
 ## Phones, tablets and computers
 
 Every page adapts from a 320 px phone to a large desktop screen, upright or sideways, and works by touch, mouse or keyboard.
@@ -115,7 +136,9 @@ africycle/
     directions.py      road routes from OpenStreetMap's routing service
     webpush.py         phone notifications (Web Push encryption and signing)
     alerts.py          what the notifications say (new message, seller coming, arrived)
+    i18n.py            the server's messages in each person's language
     tools/phone_list.py   copies the country list to frontend/js/phone.js
+    tools/i18n_strings.py lists every text to translate and checks each language
     tests/             pytest suite (conftest.py sets up a fresh test DB)
   frontend/
     index.html, login.html, register.html
@@ -124,20 +147,22 @@ africycle/
     manifest.webmanifest  app name, colours and icons for installing
     sw.js              keeps the app's files on the phone (the server fills in its file list)
     css/               base.css (shared), auth.css, dashboard.css
+    i18n/              translations, one file per language (fr.json, sw.json...)
     js/                shared scripts (see below), one script per page, map.js for the maps,
                        notify.js for unread counts, pop-ups and phone notifications,
-                       phone.js for the country list and how numbers are shown
+                       phone.js for the country list and how numbers are shown,
+                       i18n.js for the language: picks it, translates, formats numbers
     fonts/             Archivo ExtraBold for headings (SIL Open Font License)
     icons/             app icons and favicon
     vendor/leaflet/    the map library, served from the site itself
     assets/            Africycle_logo.jpg
 ```
 
-Every page loads `js/probe.js` and `js/compat.js` (the old-browser check), then `js/api.js` and `js/auth.js`, then its own script, and `js/pwa.js` last. Each shared name is declared once, in one file. Declaring the same `const` in two scripts on one page breaks the second script, and forms then reload the page instead of submitting. Keep `js/compat.js` in old-style JavaScript (no `=>`, `const` or template strings) so that old browsers can run it; if the page scripts start using newer syntax than `js/probe.js` contains, add it there.
+Every page loads `js/i18n.js` first, in `<head>`: it picks the language, translates the page before it shows, and provides `t()` for the scripts, which start inside `AfriI18n.whenReady(...)`. Then come `js/probe.js` and `js/compat.js` (the old-browser check), `js/api.js` and `js/auth.js`, the page's own script, and `js/pwa.js` last. Each shared name is declared once, in one file. Declaring the same `const` in two scripts on one page breaks the second script, and forms then reload the page instead of submitting. Keep `js/compat.js` in old-style JavaScript (no `=>`, `const` or template strings) so that old browsers can run it; if the page scripts start using newer syntax than `js/probe.js` contains, add it there.
 
 ## API reference
 
-All routes except `/register`, `/login`, and `/health` need the header `Authorization: Bearer <token>`. Phone numbers come back in international form, e.g. `+237677123456`.
+All routes except `/register`, `/login`, and `/health` need the header `Authorization: Bearer <token>`. Phone numbers come back in international form, e.g. `+237677123456`. Messages and directions come in the language named in the `Accept-Language` header (e.g. `fr`, `sw`), and in English otherwise.
 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
@@ -167,7 +192,7 @@ All routes except `/register`, `/login`, and `/health` need the header `Authoriz
 | GET | /chat/messages/<userId> | logged in | Messages with one person; marks them read unless `?read=0` |
 | POST | /chat/send | logged in | Send a message (also notifies the receiver's phones) |
 | GET | /push/key | logged in | The app's public key, which browsers need to turn notifications on |
-| POST | /push/subscribe | logged in | Turn notifications on for this device (the browser's PushSubscription as JSON) |
+| POST | /push/subscribe | logged in | Turn notifications on for this device (the browser's PushSubscription as JSON, plus `language`, the language its notifications should come in) |
 | DELETE | /push/subscribe | logged in | Turn them off for this device (`endpoint`) |
 | GET | /guardian/children | guardian named by the child | Children waiting for approval and children supervised |
 | POST | /guardian/children/<id>/approve, /guardian/children/<id>/decline | guardian named by the child | Let the child trade, or not |

@@ -1,18 +1,20 @@
 """What the app tells people through phone notifications: new chat messages, and a
 seller's trip to a buyer (coming, on the way, arrived). Sending is done by webpush.py;
 people who haven't turned notifications on simply get nothing here (the app itself
-still shows unread messages and trips when they open it)."""
+still shows unread messages and trips when they open it). Each phone gets them in the
+language chosen on it."""
 import os
 
 from flask import request
 
 import webpush
 from database.db import get_connection
+from i18n import N_, _
 
 TRIP_NEWS = {
-    "pending": ("{seller} is bringing you {material}", "Open Africycle to see the details."),
-    "in transit": ("{seller} is on the way", "Bringing {material}. Follow them on your map."),
-    "arrived": ("{seller} has arrived", "With {material}. Weigh it, then record the purchase."),
+    "pending": (N_("{seller} is coming to you"), N_("Material: {material}. Open Africycle to see the details.")),
+    "in transit": (N_("{seller} is on the way"), N_("Material: {material}. Follow them on your map.")),
+    "arrived": (N_("{seller} has arrived"), N_("Material: {material}. Weigh it, then record the purchase.")),
 }
 
 
@@ -32,8 +34,9 @@ def new_message(sender_id, receiver_id, text):
     cursor.execute("SELECT name FROM users WHERE id = ?", (sender_id,))
     sender = cursor.fetchone()
     conn.close()
-    webpush.notify_user(receiver_id, {
-        "title": f"Message from {sender['name'] if sender else 'Africycle'}",
+    name = sender["name"] if sender else "Africycle"
+    webpush.notify_user(receiver_id, lambda language: {
+        "title": _("Message from {name}", language, name=name),
         "body": webpush.short(text),
         "url": f"/chat.html?with={sender_id}",
         "tag": f"chat-{sender_id}",  # several messages from one person stay one notification
@@ -60,10 +63,9 @@ def trip_update(notification_id, status):
     if not trip:
         return
     title, body = TRIP_NEWS[status]
-    words = {"seller": trip["sellerName"], "material": (trip["materialName"] or "materials").lower()}
-    webpush.notify_user(trip["buyerId"], {
-        "title": title.format(**words),
-        "body": body.format(**words),
+    webpush.notify_user(trip["buyerId"], lambda language: {
+        "title": _(title, language, seller=trip["sellerName"]),
+        "body": _(body, language, material=_(trip["materialName"] or N_("Materials"), language)),
         "url": "/buyer-dashboard.html",
         "tag": f"trip-{notification_id}",
     }, push_subject())

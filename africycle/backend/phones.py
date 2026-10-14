@@ -12,19 +12,21 @@ tests/test_phones.py checks that the two lists agree.
 import phonenumbers
 from phonenumbers import NumberParseException, PhoneNumberFormat, PhoneNumberType
 
+from i18n import N_, _
+
 # In the order the pages list them: Cameroon first, then A to Z
 COUNTRIES = {
-    "CM": "Cameroon",
-    "AO": "Angola",
-    "BI": "Burundi",
-    "CF": "Central African Republic",
-    "TD": "Chad",
-    "CG": "Congo",
-    "CD": "DR Congo",
-    "GQ": "Equatorial Guinea",
-    "GA": "Gabon",
-    "RW": "Rwanda",
-    "ST": "São Tomé and Príncipe",
+    "CM": N_("Cameroon"),
+    "AO": N_("Angola"),
+    "BI": N_("Burundi"),
+    "CF": N_("Central African Republic"),
+    "TD": N_("Chad"),
+    "CG": N_("Congo"),
+    "CD": N_("DR Congo"),
+    "GQ": N_("Equatorial Guinea"),
+    "GA": N_("Gabon"),
+    "RW": N_("Rwanda"),
+    "ST": N_("São Tomé and Príncipe"),
 }
 DEFAULT_COUNTRY = "CM"
 CALLABLE = (PhoneNumberType.MOBILE, PhoneNumberType.FIXED_LINE, PhoneNumberType.FIXED_LINE_OR_MOBILE)
@@ -81,8 +83,7 @@ def example(country):
 
 
 def _names(codes):
-    names = [COUNTRIES[code] for code in codes]
-    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " or " + names[-1]
+    return " / ".join(_(COUNTRIES[code]) for code in codes)
 
 
 def country_code(value):
@@ -90,19 +91,38 @@ def country_code(value):
     Raises PhoneError for a country outside the list."""
     code = str(value or DEFAULT_COUNTRY).strip().upper()
     if code not in COUNTRIES:
-        raise PhoneError("Choose a country from the list")
+        raise PhoneError(_("Choose a country from the list"))
     return code
 
 
-def normalize(text, country=DEFAULT_COUNTRY, whose="your"):
+# The messages, for a person's own number and for their guardian's
+MESSAGES = {
+    False: {
+        "missing": N_("Enter your phone number"),
+        "long": N_("Your phone number is too long"),
+        "abroad": N_("Your phone number is from outside Central Africa. Africycle works with numbers from the countries in the list."),
+        "wrong": N_("Check your phone number: {country} numbers look like {example}."),
+    },
+    True: {
+        "missing": N_("Enter your guardian's phone number"),
+        "long": N_("Your guardian's phone number is too long"),
+        "abroad": N_("Your guardian's phone number is from outside Central Africa. Africycle works with numbers from the countries in the list."),
+        "wrong": N_("Check your guardian's phone number: {country} numbers look like {example}."),
+    },
+}
+
+
+def normalize(text, country=DEFAULT_COUNTRY, guardian=False):
     """The number in international form, for saving with a new account. Typed as people
     write it at home ("6 77 12 34 56", "077 12 34 56"), with the country chosen on the
-    page, or with its country code ("+241 ...", "00241 ..."). Raises PhoneError."""
+    page, or with its country code ("+241 ...", "00241 ..."). guardian: the number is a
+    child's guardian's, which the messages say. Raises PhoneError."""
+    messages = MESSAGES[bool(guardian)]
     text = _clean(text)
     if not text:
-        raise PhoneError(f"Enter {whose} phone number")
+        raise PhoneError(_(messages["missing"]))
     if len(text) > MAX_LENGTH:
-        raise PhoneError(f"{whose.capitalize()} phone number is too long")
+        raise PhoneError(_(messages["long"]))
     country = country_code(country)
 
     number = _parse(text, country)
@@ -111,16 +131,14 @@ def normalize(text, country=DEFAULT_COUNTRY, whose="your"):
 
     if number is not None and phonenumbers.is_valid_number(number) and \
             phonenumbers.region_code_for_number(number) not in COUNTRIES:
-        raise PhoneError(f"{whose.capitalize()} phone number is from outside Central Africa. "
-                         f"Africycle works with numbers from the countries in the list.")
-    message = (f"Check {whose} phone number: {COUNTRIES[country]} numbers look like "
-               f"{example(country)}.")
+        raise PhoneError(_(messages["abroad"]))
+    message = _(messages["wrong"], country=_(COUNTRIES[country]), example=example(country))
     if not _has_country_code(text):
         # The right number with the wrong country chosen, e.g. a Chad number under Cameroon
         elsewhere = [code for code in COUNTRIES if code != country and _usable(_parse(text, code))]
         if elsewhere:
-            message += (f" If it's a number from {_names(elsewhere)}, choose that country "
-                        f"in the list.")
+            message += " " + _("If it's a number from {countries}, choose that country in the list.",
+                               countries=_names(elsewhere))
     raise PhoneError(message)
 
 

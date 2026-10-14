@@ -13,6 +13,7 @@ from models.buyer_profile import (
     update_buyer_location, update_working_hours
 )
 from database.db import get_connection
+from i18n import _
 
 buyer_bp = Blueprint("buyer_bp", __name__)
 
@@ -26,21 +27,21 @@ def decode_photo(data_url):
     """(mime_type, raw_bytes) for a real JPEG/PNG/WebP data URL, else (None, error message)."""
     match = PHOTO_DATA_URL.fullmatch(data_url or "") if isinstance(data_url, str) else None
     if not match:
-        return None, "photo must be a JPEG, PNG or WebP image"
+        return None, _("The photo must be a JPEG, PNG or WebP image")
     mime_type, encoded = match.groups()
     try:
         raw = base64.b64decode(re.sub(r"\s", "", encoded), validate=True)
     except (binascii.Error, ValueError):
-        return None, "photo data is damaged"
+        return None, _("The photo is damaged. Try another one.")
     if len(raw) > MAX_PHOTO_BYTES:
-        return None, "photo is too large (max 400 KB)"
+        return None, _("The photo is too large (400 KB at most)")
     looks_right = {
         "image/jpeg": raw[:3] == b"\xff\xd8\xff",
         "image/png": raw[:8] == b"\x89PNG\r\n\x1a\n",
         "image/webp": raw[:4] == b"RIFF" and raw[8:12] == b"WEBP",
     }[mime_type]
     if not looks_right:
-        return None, "photo content doesn't match its type"
+        return None, _("The photo is damaged. Try another one.")
     return mime_type, raw
 
 
@@ -62,7 +63,7 @@ def to_number(value, low, high):
 def set_price():
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("buyer", "both"):
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     data = request.get_json() or {}
     material_category_id = data.get("materialCategoryId")
@@ -73,17 +74,17 @@ def set_price():
 
     price_per_kg = to_number(price_per_kg, 0, MAX_PRICE_PER_KG)
     if price_per_kg is None:
-        return jsonify({"message": "pricePerKg must be a number from 0 to 1,000,000"}), 400
+        return jsonify({"message": _("Enter a price from 0 to 1,000,000 FCFA per kg")}), 400
 
     set_price_model(payload["userId"], material_category_id, price_per_kg)
-    return jsonify({"message": "Price updated successfully"}), 200
+    return jsonify({"message": _("Price updated successfully")}), 200
 
 
 @buyer_bp.route("/buyer/prices", methods=["GET"])
 def list_prices():
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("buyer", "both"):
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -110,14 +111,14 @@ def upload_material_photo():
     Sellers tap this photo to tell the buyer they're coming with that material."""
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("buyer", "both"):
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     data = request.get_json() or {}
     material_category_id = data.get("materialCategoryId")
     if not material_category_id:
         return jsonify({"message": "materialCategoryId and photo are required"}), 400
     if not get_price_for_buyer_and_category(payload["userId"], material_category_id):
-        return jsonify({"message": "Set your price for this material first"}), 400
+        return jsonify({"message": _("Set your price for this material first")}), 400
 
     mime_type, raw = decode_photo(data.get("photo"))
     if mime_type is None:
@@ -125,27 +126,27 @@ def upload_material_photo():
 
     photo_id = save_photo(payload["userId"], material_category_id, mime_type,
                           base64.b64encode(raw).decode("ascii"))
-    return jsonify({"message": "Photo saved", "photoId": photo_id}), 201
+    return jsonify({"message": _("Photo saved"), "photoId": photo_id}), 201
 
 
 @buyer_bp.route("/buyer/material-photo/<int:material_category_id>", methods=["DELETE"])
 def remove_material_photo(material_category_id):
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("buyer", "both"):
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
     if not delete_photo(payload["userId"], material_category_id):
-        return jsonify({"message": "No photo for this material"}), 404
-    return jsonify({"message": "Photo removed"}), 200
+        return jsonify({"message": _("No photo for this material")}), 404
+    return jsonify({"message": _("Photo removed")}), 200
 
 
 @buyer_bp.route("/photos/<int:photo_id>", methods=["GET"])
 def material_photo(photo_id):
     """Any logged-in user can view a material photo (pages fetch it with their token)."""
     if not get_user_from_token():
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
     photo = get_photo(photo_id)
     if not photo:
-        return jsonify({"message": "Photo not found"}), 404
+        return jsonify({"message": _("Photo not found")}), 404
     response = Response(base64.b64decode(photo["imageData"]), mimetype=photo["mimeType"])
     response.headers["Cache-Control"] = "private, max-age=86400"  # a new photo gets a new id
     return response
@@ -155,7 +156,7 @@ def material_photo(photo_id):
 def get_profile():
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("buyer", "both"):
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     profile = get_buyer_profile_by_user_id(payload["userId"])
     return jsonify({"profile": profile}), 200
@@ -166,7 +167,7 @@ def save_profile():
     """Creates or updates the buyer's fixed location and working hours."""
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("buyer", "both"):
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     data = request.get_json() or {}
     latitude = data.get("latitude")
@@ -189,14 +190,14 @@ def save_profile():
     else:
         create_buyer_profile(user_id, latitude, longitude, working_hours)
 
-    return jsonify({"message": "Profile saved"}), 200
+    return jsonify({"message": _("Profile saved")}), 200
 
 
 @buyer_bp.route("/buyer/log-transaction", methods=["POST"])
 def log_transaction():
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("buyer", "both"):
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     data = request.get_json() or {}
     seller_id = data.get("sellerId")
@@ -211,20 +212,20 @@ def log_transaction():
     weight_kg = to_number(weight_kg, 0, MAX_WEIGHT_KG)
     price_per_kg = to_number(price_per_kg, 0, MAX_PRICE_PER_KG)
     if not weight_kg or price_per_kg is None:
-        return jsonify({"message": "weightKg must be a number above 0 and pricePerKg from 0 to 1,000,000"}), 400
+        return jsonify({"message": _("Enter a weight above 0 kg, and a price from 0 to 1,000,000 FCFA per kg")}), 400
 
     transaction_id = create_transaction(
         seller_id, payload["userId"], material_category_id,
         weight_kg, price_per_kg, photo_url
     )
-    return jsonify({"message": "Transaction logged", "transactionId": transaction_id}), 201
+    return jsonify({"message": _("Transaction logged"), "transactionId": transaction_id}), 201
 
 
 @buyer_bp.route("/buyer/transaction-history", methods=["GET"])
 def transaction_history():
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("buyer", "both"):
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     conn = get_connection()
     cursor = conn.cursor()

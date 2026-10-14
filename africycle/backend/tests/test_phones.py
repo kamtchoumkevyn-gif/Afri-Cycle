@@ -96,13 +96,13 @@ def test_wrong_numbers_are_explained():
     assert problem("6" * 41) == "Your phone number is too long"
     assert problem("677123456", "FR") == "Choose a country from the list"
     with pytest.raises(phones.PhoneError) as error:
-        phones.normalize("", "CM", whose="your guardian's")
+        phones.normalize("", "CM", guardian=True)
     assert str(error.value) == "Enter your guardian's phone number"
 
 
 def test_a_number_from_another_country_says_which_to_choose():
     assert problem("63 01 23 45") == ("Check your phone number: Cameroon numbers look like 6 71 23 45 67. "
-                                      "If it's a number from Burundi or Chad, choose that country in the list.")
+                                      "If it's a number from Burundi / Chad, choose that country in the list.")
     assert "from Cameroon, choose" in problem("677 12 34 56", "GA")
 
 

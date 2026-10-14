@@ -37,14 +37,20 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return; // map tiles come straight from OpenStreetMap
   const path = url.pathname === "/" ? "/index.html" : url.pathname;
   const isPage = request.mode === "navigate";
-  if (!isPage && !FILES.includes(path)) return; // API calls and photos go straight to the server
+  // A language's translations are kept once used, so the app opens in that language offline
+  // too. Only the languages a phone uses are downloaded, not all of them.
+  const isTranslation = /^\/i18n\/[\w-]+\.json$/.test(path);
+  if (!isPage && !isTranslation && !FILES.includes(path)) return; // API calls and photos go straight to the server
 
   event.respondWith(
-    caches.open(CACHE)
-      .then((cache) => cache.match(path))
-      .then((saved) => saved || fetch(request).catch(() => (isPage
+    caches.open(CACHE).then((cache) => cache.match(path).then((saved) => saved || fetch(request)
+      .then((response) => {
+        if (isTranslation && response.ok) cache.put(path, response.clone());
+        return response;
+      })
+      .catch(() => (isPage
         ? caches.match("/offline.html").then((page) => page || Response.error())
-        : Response.error())))
+        : Response.error()))))
   );
 });
 

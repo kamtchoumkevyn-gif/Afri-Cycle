@@ -19,7 +19,7 @@ function showSlowNotice(show) {
     slowNotice = document.createElement("div");
     slowNotice.className = "notice-bar";
     slowNotice.setAttribute("role", "status");
-    slowNotice.textContent = "Still working... The connection is slow, or the server is waking up. This can take up to a minute.";
+    slowNotice.textContent = t("Still working... The connection is slow, or the server is waking up. This can take up to a minute.");
     document.body.appendChild(slowNotice);
   } else if (!show && slowNotice) {
     slowNotice.parentNode.removeChild(slowNotice);
@@ -58,14 +58,19 @@ async function readJson(response) {
   }
 }
 
+// The server answers in the language chosen on this phone (see i18n.js)
 async function apiFetch(path, options = {}) {
-  const headers = Object.assign({ "Content-Type": "application/json" }, options.headers);
+  const headers = Object.assign({
+    "Content-Type": "application/json",
+    "Accept-Language": AfriI18n.language
+  }, options.headers);
   return trackedFetch(`${API_BASE_URL}${path}`, Object.assign({}, options, { headers }));
 }
 
 async function authFetch(path, options = {}) {
   const headers = Object.assign({
     "Content-Type": "application/json",
+    "Accept-Language": AfriI18n.language,
     "Authorization": `Bearer ${getToken()}`
   }, options.headers);
   return trackedFetch(`${API_BASE_URL}${path}`, Object.assign({}, options, { headers }));
@@ -85,14 +90,14 @@ function showMessage(element, text, type) {
 }
 
 function formatMoney(amount) {
-  return `${Number(amount).toLocaleString()} FCFA`;
+  return `${AfriI18n.formatNumber(amount)} FCFA`;
 }
 
 function formatDate(isoString) {
   if (!isoString) return "";
   // Stored as UTC without a zone marker, so add one before parsing
   const value = isoString.endsWith("Z") ? isoString : `${isoString}Z`;
-  return new Date(value).toLocaleString();
+  return AfriI18n.formatDateTime(new Date(value));
 }
 
 // Material photos need the login token, so they're fetched here and shown via blob: URLs.
@@ -127,7 +132,23 @@ async function loadMe() {
   }
 }
 
+// A delivery's status, in the reader's language
+function statusName(status) {
+  const names = {
+    "pending": t("pending"),
+    "in transit": t("in transit"),
+    "arrived": t("arrived"),
+    "completed": t("completed")
+  };
+  return names[status] || status;
+}
+
 function statusPill(status) {
   const cssClass = `status-${String(status).replace(/\s+/g, "-")}`;
-  return `<span class="status ${cssClass}">${escapeHtml(status)}</span>`;
+  return `<span class="status ${cssClass}">${escapeHtml(statusName(status))}</span>`;
+}
+
+// A material's name (saved in English, like "Scrap Iron") in the reader's language
+function materialName(name) {
+  return name ? t(name) : t("Material");
 }

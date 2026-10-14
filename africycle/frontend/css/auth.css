@@ -156,3 +156,14 @@
   font-size: 14px;
   color: var(--muted);
 }
+
+/* The language menu at the top of the card */
+.language-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin: -12px -12px 0 0;
+}
+
+[dir="rtl"] .language-bar {
+  margin: -12px 0 0 -12px;
+}

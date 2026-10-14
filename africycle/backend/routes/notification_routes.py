@@ -6,6 +6,7 @@ import alerts
 from auth_utils import get_user_from_token
 from database.db import get_connection
 from models.notification import get_notification_by_id, update_location, update_status
+from i18n import _
 
 notification_bp = Blueprint("notification_bp", __name__)
 
@@ -42,7 +43,7 @@ def list_notifications():
     """Buyers see notifications they received; sellers see the ones they sent."""
     payload = get_user_from_token()
     if not payload:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     role = payload.get("role")
     if role == "buyer":
@@ -55,7 +56,7 @@ def list_notifications():
         where = "n.buyerId = ? OR n.sellerId = ?"
         params = (payload["userId"], payload["userId"])
     else:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -69,14 +70,14 @@ def list_notifications():
 def get_notification(notification_id):
     payload = get_user_from_token()
     if not payload:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     notification = get_notification_by_id(notification_id)
     if not notification:
-        return jsonify({"message": "Notification not found"}), 404
+        return jsonify({"message": _("Notification not found")}), 404
 
     if payload["userId"] not in (notification["buyerId"], notification["sellerId"]):
-        return jsonify({"message": "Forbidden"}), 403
+        return jsonify({"message": _("Forbidden")}), 403
 
     return jsonify(notification), 200
 
@@ -85,14 +86,14 @@ def get_notification(notification_id):
 def update_notification_location(notification_id):
     payload = get_user_from_token()
     if not payload:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     notification = get_notification_by_id(notification_id)
     if not notification:
-        return jsonify({"message": "Notification not found"}), 404
+        return jsonify({"message": _("Notification not found")}), 404
 
     if notification["sellerId"] != payload["userId"]:
-        return jsonify({"message": "Forbidden"}), 403
+        return jsonify({"message": _("Forbidden")}), 403
 
     data = request.get_json() or {}
     latitude = data.get("latitude")
@@ -108,21 +109,21 @@ def update_notification_location(notification_id):
         return jsonify({"message": "latitude must be a number from -90 to 90 and longitude from -180 to 180"}), 400
 
     update_location(notification_id, latitude, longitude)
-    return jsonify({"message": "Location updated"}), 200
+    return jsonify({"message": _("Location updated")}), 200
 
 
 @notification_bp.route("/notifications/<int:notification_id>/status", methods=["PATCH"])
 def update_notification_status(notification_id):
     payload = get_user_from_token()
     if not payload:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     notification = get_notification_by_id(notification_id)
     if not notification:
-        return jsonify({"message": "Notification not found"}), 404
+        return jsonify({"message": _("Notification not found")}), 404
 
     if payload["userId"] not in (notification["buyerId"], notification["sellerId"]):
-        return jsonify({"message": "Forbidden"}), 403
+        return jsonify({"message": _("Forbidden")}), 403
 
     data = request.get_json() or {}
     new_status = data.get("status")
@@ -131,9 +132,9 @@ def update_notification_status(notification_id):
 
     try:
         update_status(notification_id, new_status)
-    except ValueError as e:
-        return jsonify({"message": str(e)}), 400
+    except ValueError:
+        return jsonify({"message": _("Choose pending, in transit, arrived or completed")}), 400
 
     if payload["userId"] == notification["sellerId"]:
         alerts.trip_update(notification_id, new_status)  # tell the buyer: on the way, or arrived
-    return jsonify({"message": "Status updated"}), 200
+    return jsonify({"message": _("Status updated")}), 200

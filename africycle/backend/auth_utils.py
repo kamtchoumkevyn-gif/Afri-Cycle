@@ -2,6 +2,7 @@ import jwt
 from flask import request, jsonify
 from config import Config
 from database.db import get_connection
+from i18n import _
 
 
 def get_user_from_token():
@@ -30,8 +31,8 @@ def guardian_block(user_id):
     if not row or not row["isMinor"] or row["guardianStatus"] == "approved":
         return None
     if row["guardianStatus"] == "declined":
-        message = "Your guardian declined this account, so it can't be used to sell."
+        message = _("Your guardian declined this account, so it can't be used to sell.")
     else:
-        message = ("Your guardian needs to approve your account before you can sell. "
-                   "Ask them to log in to Africycle with the phone number you gave.")
+        message = _("Your guardian needs to approve your account before you can sell. "
+                    "Ask them to log in to Africycle with the phone number you gave.")
     return jsonify({"message": message, "code": "guardian_approval_required"}), 403

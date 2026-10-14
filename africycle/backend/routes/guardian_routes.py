@@ -12,6 +12,7 @@ from database.db import get_connection
 from models.chat import get_conversation, get_conversations_for_user
 from models.user import get_user_by_id
 import phones
+from i18n import _
 
 guardian_bp = Blueprint("guardian_bp", __name__)
 
@@ -43,7 +44,7 @@ def child_for(guardian, child_id, status):
 def list_children():
     guardian = current_guardian()
     if not guardian:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -83,34 +84,34 @@ def set_child_status(child_id, status, guardian_id=None):
 def approve_child(child_id):
     guardian = current_guardian()
     if not guardian:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
     child = child_for(guardian, child_id, "pending")
     if not child:
-        return jsonify({"message": "No account is waiting for your approval"}), 404
+        return jsonify({"message": _("No account is waiting for your approval")}), 404
     set_child_status(child_id, "approved", guardian["id"])
-    return jsonify({"message": f"{child['name']} can now sell on Africycle"}), 200
+    return jsonify({"message": _("{name} can now sell on Africycle", name=child["name"])}), 200
 
 
 @guardian_bp.route("/guardian/children/<int:child_id>/decline", methods=["POST"])
 def decline_child(child_id):
     guardian = current_guardian()
     if not guardian:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
     child = child_for(guardian, child_id, "pending")
     if not child:
-        return jsonify({"message": "No account is waiting for your approval"}), 404
+        return jsonify({"message": _("No account is waiting for your approval")}), 404
     set_child_status(child_id, "declined")
-    return jsonify({"message": f"{child['name']}'s account was declined"}), 200
+    return jsonify({"message": _("You declined the account of {name}", name=child["name"])}), 200
 
 
 @guardian_bp.route("/guardian/children/<int:child_id>/activity", methods=["GET"])
 def child_activity(child_id):
     guardian = current_guardian()
     if not guardian:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
     child = child_for(guardian, child_id, "approved")
     if not child:
-        return jsonify({"message": "Child not found"}), 404
+        return jsonify({"message": _("Child not found")}), 404
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -160,13 +161,13 @@ def child_activity(child_id):
 def child_messages(child_id, other_user_id):
     guardian = current_guardian()
     if not guardian:
-        return jsonify({"message": "Unauthorized"}), 401
+        return jsonify({"message": _("Unauthorized")}), 401
     if not child_for(guardian, child_id, "approved"):
-        return jsonify({"message": "Child not found"}), 404
+        return jsonify({"message": _("Child not found")}), 404
 
     other = get_user_by_id(other_user_id)
     if not other:
-        return jsonify({"message": "User not found"}), 404
+        return jsonify({"message": _("User not found")}), 404
     return jsonify({
         "otherUserName": other["name"],
         "messages": get_conversation(child_id, other_user_id),

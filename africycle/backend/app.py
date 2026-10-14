@@ -79,6 +79,8 @@ def add_security_headers(response):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    if response.mimetype == "application/json" and not request.path.startswith("/i18n/"):
+        response.vary.add("Accept-Language")  # API messages come in the language asked for
     return response
 
 
@@ -103,7 +105,7 @@ def compress(response):
     response.set_data(gzip.compress(data, compresslevel=6))
     response.headers["Content-Encoding"] = "gzip"
     response.vary.add("Accept-Encoding")
-    etag, _ = response.get_etag()
+    etag, _weak = response.get_etag()
     if etag:
         # Same file, different bytes on the wire: a weak tag says so, and the browser's
         # "has it changed?" check still gets a quick 304 when it hasn't

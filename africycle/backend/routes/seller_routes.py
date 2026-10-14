@@ -6,6 +6,7 @@ import alerts
 from auth_utils import get_user_from_token, guardian_block
 from database.db import get_connection
 from models.notification import create_notification, find_active_notification, update_status
+from i18n import _
 
 seller_bp = Blueprint("seller_bp", __name__)
 
@@ -25,7 +26,7 @@ def require_seller():
     """(payload, None) for a seller allowed to trade, else (None, error response)."""
     payload = get_user_from_token()
     if not payload or payload.get("role") not in ("seller", "both"):
-        return None, (jsonify({"message": "Unauthorized"}), 401)
+        return None, (jsonify({"message": _("Unauthorized")}), 401)
     blocked = guardian_block(payload["userId"])
     if blocked:
         return None, blocked
@@ -106,7 +107,7 @@ def buyer_profile_view(buyer_id):
 
     if not buyer:
         conn.close()
-        return jsonify({"message": "Buyer not found"}), 404
+        return jsonify({"message": _("Buyer not found")}), 404
 
     cursor.execute(
         """
@@ -145,7 +146,7 @@ def notify_buyer():
     if not buyer_id or not material_category_id:
         return jsonify({"message": "buyerId and materialCategoryId are required"}), 400
     if buyer_id == payload["userId"]:
-        return jsonify({"message": "You cannot notify yourself"}), 400
+        return jsonify({"message": _("You cannot notify yourself")}), 400
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -155,9 +156,9 @@ def notify_buyer():
     material = cursor.fetchone()
     conn.close()
     if not buyer or buyer["role"] not in ("buyer", "both"):
-        return jsonify({"message": "Buyer not found"}), 404
+        return jsonify({"message": _("Buyer not found")}), 404
     if not material:
-        return jsonify({"message": "Material not found"}), 404
+        return jsonify({"message": _("Material not found")}), 404
 
     status = "in transit" if on_the_way else "pending"
 
@@ -168,7 +169,7 @@ def notify_buyer():
             update_status(existing["id"], "in transit")
             existing["status"] = "in transit"
             alerts.trip_update(existing["id"], "in transit")
-        return jsonify({"message": "Buyer already notified", "notificationId": existing["id"],
+        return jsonify({"message": _("Buyer already notified"), "notificationId": existing["id"],
                         "status": existing["status"]}), 200
 
     notification_id = create_notification(
@@ -178,7 +179,7 @@ def notify_buyer():
         status=status
     )
     alerts.trip_update(notification_id, status)  # a phone notification, if the buyer turned them on
-    return jsonify({"message": "Buyer notified", "notificationId": notification_id,
+    return jsonify({"message": _("Buyer notified"), "notificationId": notification_id,
                     "status": status}), 201
 
 
@@ -195,6 +196,6 @@ def contact_buyer(buyer_id):
     conn.close()
 
     if not buyer:
-        return jsonify({"message": "Buyer not found"}), 404
+        return jsonify({"message": _("Buyer not found")}), 404
 
     return jsonify({"phoneNumber": buyer["phoneNumber"]}), 200

@@ -54,7 +54,7 @@
   background-color: var(--surface);
   border-radius: var(--radius-md);
   border-top: 5px solid var(--green);
-  padding: 28px;
+  padding: 24px; /* browsers without clamp() (Chrome before 79): the small-screen value */
   padding: clamp(24px, 6vw, 36px);
   box-shadow: 0 12px 32px rgba(18, 53, 91, 0.10);
 }
@@ -104,7 +104,7 @@
 }
 
 .landing-wordmark {
-  font-size: 38px;
+  font-size: 34px; /* without clamp(): small enough that AFRICYCLE fits a 320px-wide phone */
   font-size: clamp(34px, 9vw, 44px);
   font-weight: 800;
   letter-spacing: 0.02em;

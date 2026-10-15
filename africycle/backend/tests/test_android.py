@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ElementTree
+import zipfile
 
 import pytest
 
@@ -72,11 +73,44 @@ def test_another_key_can_be_added_without_a_code_change(client, monkeypatch):
     assert statement["target"]["sha256_cert_fingerprints"] == [RELEASE_KEY, play]
 
 
-def test_the_download_link_leads_to_the_newest_apk(client):
+def test_the_download_link_gives_the_apk_kept_on_the_site(client):
+    response = client.get("/download/android")
+    assert response.status_code == 200
+    assert response.mimetype == "application/vnd.android.package-archive"  # installed, not saved as .zip
+    assert response.headers["Content-Disposition"] == "attachment; filename=Africycle.apk"
+    assert "Content-Encoding" not in response.headers
+    with open(app_module.ANDROID_APK_FILE, "rb") as f:
+        assert response.get_data() == f.read()
+
+
+def test_without_a_copy_on_the_site_the_link_leads_to_the_newest_github_release(client, monkeypatch):
+    monkeypatch.setattr(app_module, "ANDROID_APK_FILE", os.path.join(AFRICYCLE, "no-such.apk"))
     response = client.get("/download/android")
     assert response.status_code == 302
     assert response.headers["Location"] == \
         "https://github.com/kamtchoumkevyn-gif/Afri-Cycle/releases/latest/download/Africycle.apk"
+
+
+def test_a_set_apk_address_wins_over_the_copy_on_the_site(client, monkeypatch):
+    monkeypatch.setattr(app_module, "ANDROID_APK_URL_SET", True)
+    monkeypatch.setattr(app_module, "ANDROID_APK_URL", "https://example.org/Africycle.apk")
+    response = client.get("/download/android")
+    assert response.status_code == 302 and response.headers["Location"] == "https://example.org/Africycle.apk"
+
+
+def test_the_apk_on_the_site_is_signed_with_the_key_the_website_names():
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.serialization import pkcs7
+    with zipfile.ZipFile(app_module.ANDROID_APK_FILE) as apk:
+        names = apk.namelist()
+        assert {"AndroidManifest.xml", "classes.dex", "resources.arsc"} <= set(names)
+        [block] = [n for n in names if re.fullmatch(r"META-INF/[^/]+\.RSA", n)]  # v1, for Android 5.0 to 6.0
+        [certificate] = pkcs7.load_der_pkcs7_certificates(apk.read(block))
+    digest = certificate.fingerprint(hashes.SHA256()).hex().upper()
+    assert ":".join(digest[i:i + 2] for i in range(0, 64, 2)) == RELEASE_KEY
+    with open(app_module.ANDROID_APK_FILE, "rb") as f:
+        assert b"APK Sig Block 42" in f.read()  # v2 and v3, for Android 7.0 and newer
+    assert certificate.public_key().key_size >= 2048
 
 
 def test_the_home_page_offers_the_app_on_android_phones_only():

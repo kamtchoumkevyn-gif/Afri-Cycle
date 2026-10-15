@@ -30,6 +30,7 @@ FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "fr
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 mimetypes.add_type("font/woff2", ".woff2")
 mimetypes.add_type("text/javascript", ".js")
+mimetypes.add_type("application/vnd.android.package-archive", ".apk")  # phones install it, not save it as .zip
 
 app = Flask(__name__, static_folder=None)
 app.config.from_object(Config)
@@ -184,7 +185,11 @@ ANDROID_PACKAGE = os.environ.get("ANDROID_PACKAGE", "cm.africycle.app")
 ANDROID_CERT_SHA256 = os.environ.get(
     "ANDROID_CERT_SHA256",
     "D9:A1:78:5C:AC:65:DB:3D:A3:79:6A:DF:09:D3:1C:D2:3B:05:68:CB:30:E9:89:24:30:94:0A:B8:4C:B3:08:6D")
-# Where the "Download the Android app" link on the home page leads: the newest release on GitHub
+# What the "Download the Android app" link on the home page gives: the signed APK kept on this
+# site (frontend/downloads/Africycle.apk) when there is one, otherwise ANDROID_APK_URL, the
+# newest release on GitHub by default. Setting ANDROID_APK_URL makes the link go there instead.
+ANDROID_APK_FILE = os.path.join(FRONTEND_DIR, "downloads", "Africycle.apk")
+ANDROID_APK_URL_SET = "ANDROID_APK_URL" in os.environ
 ANDROID_APK_URL = os.environ.get(
     "ANDROID_APK_URL",
     "https://github.com/kamtchoumkevyn-gif/Afri-Cycle/releases/latest/download/Africycle.apk")
@@ -224,7 +229,11 @@ def serve_asset_links():
 
 @app.route("/download/android")
 def download_android_app():
-    """The newest Android app (APK) from the project's GitHub releases."""
+    """The Android app (APK): this site's copy, or the GitHub release (see ANDROID_APK_FILE)."""
+    if not ANDROID_APK_URL_SET and os.path.isfile(ANDROID_APK_FILE):
+        return send_from_directory(os.path.dirname(ANDROID_APK_FILE), "Africycle.apk", max_age=0,
+                                   as_attachment=True, download_name="Africycle.apk",
+                                   mimetype="application/vnd.android.package-archive")
     return redirect(ANDROID_APK_URL, code=302)
 
 

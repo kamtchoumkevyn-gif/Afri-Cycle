@@ -14,6 +14,7 @@ on:
     branches: [master]
     paths:
       - "africycle/android/**"
+      - "africycle/frontend/downloads/**"
       - ".github/workflows/android.yml"
   release:
     types: [published]
@@ -23,6 +24,11 @@ on:
         description: "Version to build, e.g. 1.0.1. Published as a release if the signing key secrets are set."
         required: false
         default: ""
+      test:
+        description: "Which APK the emulators test: the one just built, or the one the website gives (frontend/downloads)"
+        type: choice
+        options: [build, published]
+        default: build
 
 permissions:
   contents: write # to attach the APK and the test results to releases
@@ -70,7 +76,16 @@ jobs:
           for level in sorted({plain[0], plain[-1]} if plain else set()):
               runs.append({"api": level, "target": "default", "arch": "x86_64"})
           print("matrix=" + json.dumps({"include": runs}))
-          print("prefix=" + ("release" if os.environ["GITHUB_EVENT_NAME"] == "release" else "build"))
+          # Which APK to test: a GitHub release's; the one the website gives, when this push
+          # changed it (or when asked); otherwise the one built from this commit
+          event = json.load(open(os.environ["GITHUB_EVENT_PATH"]))
+          changed = {path for commit in event.get("commits") or [] for path in commit.get("added", []) + commit.get("modified", [])}
+          if os.environ["GITHUB_EVENT_NAME"] == "release":
+              print("prefix=release")
+          elif "africycle/frontend/downloads/Africycle.apk" in changed or (event.get("inputs") or {}).get("test") == "published":
+              print("prefix=published")
+          else:
+              print("prefix=build")
           EOF
           cat "$GITHUB_OUTPUT"
 
@@ -174,8 +189,14 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: gh release download "$TAG" --pattern Africycle.apk --dir apk
       - name: Pick the APK to test
+        env:
+          PREFIX: ${{ needs.plan.outputs.prefix }}
         run: |
-          apk=$(ls apk/*.apk | head -1)
+          if [ "$PREFIX" = "published" ]; then
+            apk=africycle/frontend/downloads/Africycle.apk
+          else
+            apk=$(ls apk/*.apk | head -1)
+          fi
           echo "APK=$apk" >> "$GITHUB_ENV"
           echo "Testing $apk"
 
@@ -263,6 +284,10 @@ jobs:
           # Which certificates the site presents: Android 5 to 7.0 only trust the older roots
           chain=$(echo | timeout 30 openssl s_client -connect afri-cycle.onrender.com:443 -servername afri-cycle.onrender.com -showcerts 2>/dev/null \
             | grep -E "^ *[0-9]+ s:|^ *i:" | sed 's/^ *//' | tr '\n' ' ' || true)
+          # The APK that "Download the Android app" gives people right now
+          download=$(curl -sSL --max-time 180 -o live.apk -w "HTTP %{http_code}, %{content_type}, %{size_download} bytes" \
+            https://afri-cycle.onrender.com/download/android 2>&1 || true)
+          download_sha=$(sha256sum live.apk 2>/dev/null | cut -d' ' -f1)
           {
             echo "# Africycle on every Android version ($PREFIX, $(date -u +%Y-%m-%dT%H:%MZ), commit ${GITHUB_SHA::7})"
             echo
@@ -271,6 +296,8 @@ jobs:
             echo "Website /.well-known/assetlinks.json: \`$links\`"
             echo
             echo "Website certificate chain: \`$chain\`"
+            echo
+            echo "Website /download/android: \`$download\`, SHA-256 \`${download_sha:-none}\`"
             echo
             echo "| Emulator | Result | On screen |"
             echo "|---|---|---|"

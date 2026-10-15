@@ -136,16 +136,16 @@ To check layouts while developing, use the device toolbar in Chrome's developer 
 
 **Installing on a phone:**
 
-1. On the phone, open the website and tap **Download the Android app**, or open the [newest release](https://github.com/kamtchoumkevyn-gif/Afri-Cycle/releases/latest).
+1. On the phone, open the website and tap **Download the Android app** (`/download/android`).
 2. Open `Africycle.apk`.
 3. If Android asks, allow the browser to install apps (*Install unknown apps*).
 4. If Play Protect says it doesn't know the app, choose to install anyway.
 
-**Building and testing:** `.github/workflows/android.yml` runs on every change to `android/`.
+**Building and testing:** `.github/workflows/android.yml` runs on every change to `android/` or to `frontend/downloads/`.
 
 - It builds the app and runs Android's checks (lint).
-- It installs the app on an emulator of every Android version from 5.0 to the newest. There it opens the app, follows an Africycle link, and tries the security probes.
-- It attaches each screenshot and report, and the overall `*-devices.md` table, to the **android-ci** pre-release.
+- It installs the app on an emulator of every Android version from 5.0 to the newest. There it opens the app, follows an Africycle link, and tries the security probes. When a change replaces `frontend/downloads/Africycle.apk`, the emulators test that file, the one people download.
+- It attaches each screenshot and report, and the overall `*-devices.md` table, to the **android-ci** pre-release. The table also records what the live site gives: `/health`, `assetlinks.json`, and the SHA-256 of the APK behind **Download the Android app**.
 
 To build on a computer, open `android/` in Android Studio, or run `./gradlew assembleRelease` there. `android/tools/make_icons.py` remakes the icons from the website's logo.
 
@@ -156,25 +156,29 @@ Android only lets an app be updated by an APK signed with the same key, and the 
 - `africycle-release.p12` (alias `africycle`) and its password were handed to the project owner. Keep two copies outside this repository, for example on a USB key and in a password manager. `.gitignore` keeps `.p12`, `.jks` and `.keystore` files out of commits, and a test checks it.
 - Its SHA-256 fingerprint is `D9:A1:78:5C:AC:65:DB:3D:A3:79:6A:DF:09:D3:1C:D2:3B:05:68:CB:30:E9:89:24:30:94:0A:B8:4C:B3:08:6D`. This is the default of `ANDROID_CERT_SHA256` in `backend/app.py`.
 
-**To let GitHub sign and publish new versions:**
+**Where the download comes from:** `/download/android` serves `frontend/downloads/Africycle.apk`, the signed APK kept on the site. Version 1.0.0 there has SHA-256 `d7c7712158a40f1bcb7c90104107fbeca0e86b3ae03fa6b02ab88b17b0054419`; a test checks that it is signed with the key above. Without that file, or when `ANDROID_APK_URL` is set, the link goes to `ANDROID_APK_URL`, which by default is the newest GitHub release's `Africycle.apk`.
 
-1. In the repository's *Settings > Secrets and variables > Actions*, add two secrets:
-   - `ANDROID_KEYSTORE_BASE64`: the key file as text. Get it with `base64 -w0 africycle-release.p12`, or in PowerShell with `[Convert]::ToBase64String([IO.File]::ReadAllBytes("africycle-release.p12"))`.
-   - `ANDROID_KEYSTORE_PASSWORD`: its password.
-2. Open *Actions > Android app > Run workflow* and enter a version such as `1.0.1`. The workflow builds, signs and tests that version, then publishes it as the newest release, which the download link serves.
+**To release a new version:**
 
-Without the secrets, the workflow builds `Africycle-unsigned.apk`. Sign it with `apksigner` from Android's build tools, check it, then attach `Africycle.apk` to a new GitHub release named `android-v<version>`:
+1. Build it. Either:
+   - In the repository's *Settings > Secrets and variables > Actions*, add two secrets once:
+     - `ANDROID_KEYSTORE_BASE64`: the key file as text. Get it with `base64 -w0 africycle-release.p12`, or in PowerShell with `[Convert]::ToBase64String([IO.File]::ReadAllBytes("africycle-release.p12"))`.
+     - `ANDROID_KEYSTORE_PASSWORD`: its password.
 
-```
-apksigner sign --ks africycle-release.p12 --ks-key-alias africycle --min-sdk-version 21 --out Africycle.apk Africycle-unsigned.apk
-apksigner verify --print-certs Africycle.apk
-```
+     Then open *Actions > Android app > Run workflow* and enter a version such as `1.0.1`. The workflow builds, signs and tests it, and publishes it as a GitHub release.
+   - Or, without the secrets, run the workflow and take `Africycle-unsigned.apk` from the **android-ci** pre-release. Sign it with `apksigner` from Android's build tools and check it:
+
+     ```
+     apksigner sign --ks africycle-release.p12 --ks-key-alias africycle --min-sdk-version 21 --out Africycle.apk Africycle-unsigned.apk
+     apksigner verify --print-certs Africycle.apk
+     ```
+2. Replace `frontend/downloads/Africycle.apk` with the new `Africycle.apk` and push. Or delete that file so the link serves the newest GitHub release.
 
 Environment variables on the server, all optional:
 
 - `ANDROID_CERT_SHA256`: the key fingerprints `assetlinks.json` names, separated by commas.
 - `ANDROID_PACKAGE`: the app's package name.
-- `ANDROID_APK_URL`: where `/download/android` leads.
+- `ANDROID_APK_URL`: where `/download/android` leads instead of the copy on the site.
 
 If the app is ever published on Google Play with Play App Signing, add the fingerprint Play shows (*Test and release > App integrity*) to `ANDROID_CERT_SHA256`. Otherwise copies installed from Play show an address bar.
 
@@ -226,6 +230,7 @@ africycle/
                        i18n.js for the language: picks it, translates, formats numbers
     fonts/             Archivo ExtraBold for headings (SIL Open Font License)
     icons/             app icons and favicon
+    downloads/         Africycle.apk, the signed Android app that /download/android serves
     vendor/leaflet/    the map library, served from the site itself
     assets/            Africycle_logo.jpg
 ```
@@ -243,7 +248,7 @@ All routes except `/register`, `/login`, and `/health` need the header `Authoriz
 | GET | /me | logged in | Own account, guardian status, and number of supervised children |
 | GET | /health | anyone | `status` and which `database` is in use |
 | GET | /.well-known/assetlinks.json | anyone | Names the Android app and its signing key, so Chrome opens it full screen |
-| GET | /download/android | anyone | Redirects to the newest Android app (APK) |
+| GET | /download/android | anyone | The Android app (APK): the copy in `frontend/downloads/`, or a redirect to `ANDROID_APK_URL` |
 | GET | /material-categories | logged in | List materials for dropdowns |
 | GET, POST | /buyer/profile | buyer | Read or save location and working hours |
 | GET | /buyer/prices | buyer | List own prices, with photoId |

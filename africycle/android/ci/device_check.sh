@@ -92,6 +92,7 @@ app_message_visible() {
 }
 
 shown=""
+text=""
 deadline=$((SECONDS + 180))
 while [ $SECONDS -lt $deadline ]; do
   sleep 5
@@ -108,8 +109,18 @@ done
 sleep 3
 timeout 60 adb exec-out screencap -p > "$OUT/$LABEL.png"
 say "on screen: ${shown:-nothing recognisable after 3 minutes}"
-say "top activity: $(top_activity)"
+top=$(top_activity)
+say "top activity: $top"
 [ -z "$shown" ] && problem "Africycle did not appear"
+# In Chrome, the site shows full screen only when assetlinks.json names the key this APK is
+# signed with: the release key yes, the throwaway key of test builds no (an address bar shows)
+if echo "$top" | grep -q "com.android.chrome"; then
+  if echo "$text" | grep -q -E "^Close tab$|^Connection is secure"; then
+    say "full screen: no, Chrome shows its address bar (the website doesn't name this APK's signing key)"
+  else
+    say "full screen: yes, no address bar (the website names this APK's signing key)"
+  fi
+fi
 webview_major=$(shell dumpsys package com.android.webview | grep -m1 versionName | grep -o "[0-9]\+" | head -1)
 if echo "$shown" | grep -q "Android System WebView" || { echo "$shown" | grep -q "own message" && [ -n "$webview_major" ] && [ "$webview_major" -lt 55 ]; }; then
   say "note: this phone's WebView ($webview_major) is too old for the website; the app asks to update it (as designed)"

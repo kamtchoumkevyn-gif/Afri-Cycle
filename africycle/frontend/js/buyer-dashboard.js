@@ -186,7 +186,7 @@ AfriI18n.whenReady(function () {
     showMessage(pageMsg, t("Preparing your photo..."), "info");
     let photo;
     try {
-      photo = await shrinkPhoto(file);
+      photo = await AfriReceipt.shrinkPhoto(file, MAX_UPLOAD_BYTES);
     } catch (err) {
       showMessage(pageMsg, t("That file couldn't be read as a photo. Choose a JPG or PNG photo, or take a new one with the camera."), "error");
       return;
@@ -207,39 +207,6 @@ AfriI18n.whenReady(function () {
       serverError();
     }
   });
-
-  function readImage(file) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const image = new Image();
-      image.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(image);
-      };
-      image.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error("not an image"));
-      };
-      image.src = url;
-    });
-  }
-
-  // Phone photos are several MB; shrink to a JPEG small enough for slow connections
-  async function shrinkPhoto(file) {
-    const image = await readImage(file);
-    let side = 1024;
-    for (let attempt = 0; attempt < 6; attempt++) {
-      const scale = Math.min(1, side / Math.max(image.naturalWidth, image.naturalHeight));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
-      if ((dataUrl.length - dataUrl.indexOf(",") - 1) * 0.75 <= MAX_UPLOAD_BYTES) return dataUrl;
-      side = Math.round(side * 0.75);
-    }
-    throw new Error("photo too large");
-  }
 
   // ---- Collectors on their way (list + live map) ----
 
@@ -408,7 +375,40 @@ AfriI18n.whenReady(function () {
     }
   });
 
-  // ---- Record a purchase ----
+  // ---- Record a purchase, with photos of the material for its receipt ----
+
+  const purchasePhotoList = document.getElementById("purchasePhotoList");
+  const purchaseCameraBtn = document.getElementById("purchaseCameraBtn");
+  let purchasePhotos = []; // shrunk photos (data URLs), uploaded once the purchase is recorded
+
+  function renderPurchasePhotos() {
+    purchasePhotoList.innerHTML = purchasePhotos.map((photo, index) => `
+      <figure class="purchase-photo">
+        <img src="${photo}" alt="${escapeHtml(t("Photo {number} of the material", { number: index + 1 }))}">
+        <button class="photo-remove" type="button" data-remove-purchase-photo="${index}" aria-label="${escapeHtml(t("Remove"))}">&times;</button>
+      </figure>`).join("");
+    purchaseCameraBtn.hidden = purchasePhotos.length >= AfriReceipt.MAX_PHOTOS;
+  }
+
+  purchaseCameraBtn.addEventListener("click", async () => {
+    let photo;
+    try {
+      photo = await AfriReceipt.takePhoto();
+    } catch (err) {
+      showMessage(pageMsg, t("That file couldn't be read as a photo. Choose a JPG or PNG photo, or take a new one with the camera."), "error");
+      return;
+    }
+    if (!photo || purchasePhotos.length >= AfriReceipt.MAX_PHOTOS) return;
+    purchasePhotos.push(photo);
+    renderPurchasePhotos();
+  });
+
+  purchasePhotoList.addEventListener("click", (event) => {
+    const remove = event.target.closest("[data-remove-purchase-photo]");
+    if (!remove) return;
+    purchasePhotos.splice(Number(remove.dataset.removePurchasePhoto), 1);
+    renderPurchasePhotos();
+  });
 
   function updateTotal() {
     const weight = Number(document.getElementById("weightInput").value);
@@ -440,9 +440,25 @@ AfriI18n.whenReady(function () {
         showMessage(pageMsg, data.message || t("Purchase not recorded."), "error");
         return;
       }
-      showMessage(pageMsg, t("Purchase recorded."), "success");
+      const photos = purchasePhotos;
+      purchasePhotos = [];
       transactionForm.reset();
       totalPreview.textContent = "";
+      renderPurchasePhotos();
+      let saved = 0;
+      if (photos.length) {
+        showMessage(pageMsg, t("Purchase recorded. Saving the photos..."), "info");
+        for (const photo of photos) {
+          if ((await AfriReceipt.uploadPhoto(data.transactionId, photo)).ok) saved += 1;
+        }
+      }
+      if (saved < photos.length) {
+        showMessage(pageMsg, t("Purchase recorded, but a photo was not saved. Open its receipt to add it again."), "error");
+      } else if (saved > 0) {
+        showMessage(pageMsg, t("Purchase recorded. Photos saved: {count}.", { count: AfriI18n.formatNumber(saved) }), "success");
+      } else {
+        showMessage(pageMsg, t("Purchase recorded."), "success");
+      }
       loadHistory();
     } catch (err) {
       serverError();
@@ -464,12 +480,14 @@ AfriI18n.whenReady(function () {
               <td data-label="${t("Weight")}">${AfriI18n.formatUnit(row.weightKg, "kilogram", 2)}</td>
               <td data-label="${t("Total")}"><strong>${formatMoney(row.totalAmount)}</strong></td>
               <td data-label="${t("Date")}">${formatDate(row.createdAt)}</td>
+              <td data-label="${t("Receipt")}">${AfriReceipt.button(row.id, row.photoCount)}</td>
             </tr>`).join("")
-        : `<tr><td colspan="5" class="empty-row">${t("No purchases recorded yet.")}</td></tr>`;
+        : `<tr><td colspan="6" class="empty-row">${t("No purchases recorded yet.")}</td></tr>`;
     } catch (err) {
-      historyBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("History could not be loaded.")}</td></tr>`;
+      historyBody.innerHTML = `<tr><td colspan="6" class="empty-row">${t("History could not be loaded.")}</td></tr>`;
     }
   }
+  AfriReceipt.onChange(loadHistory); // photo counts change when photos are added on a receipt
 
   checkAccount();
   loadMaterials().catch(serverError);

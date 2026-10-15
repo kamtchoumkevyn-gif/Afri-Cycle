@@ -8,6 +8,9 @@ from auth_utils import get_user_from_token
 from models.buyer_price import get_price_for_buyer_and_category, set_price as set_price_model
 from models.material_photo import delete_photo, get_photo, save_photo
 from models.transaction import create_transaction
+from models.material_category import get_category_by_id
+from models.receipt import PHOTO_COUNT
+from models.user import get_user_by_id
 from models.buyer_profile import (
     create_buyer_profile, get_buyer_profile_by_user_id,
     update_buyer_location, update_working_hours
@@ -214,6 +217,14 @@ def log_transaction():
     if not weight_kg or price_per_kg is None:
         return jsonify({"message": _("Enter a weight above 0 kg, and a price from 0 to 1,000,000 FCFA per kg")}), 400
 
+    # A receipt names a real collector (not the buyer) and a real material
+    seller = get_user_by_id(seller_id) if isinstance(seller_id, int) and not isinstance(seller_id, bool) else None
+    known_material = (isinstance(material_category_id, int) and not isinstance(material_category_id, bool)
+                      and get_category_by_id(material_category_id))
+    if (not seller or seller["id"] == payload["userId"] or seller.get("role") not in ("seller", "both")
+            or not known_material):
+        return jsonify({"message": _("Choose the collector and material, then enter weight and price.")}), 400
+
     transaction_id = create_transaction(
         seller_id, payload["userId"], material_category_id,
         weight_kg, price_per_kg, photo_url
@@ -230,8 +241,8 @@ def transaction_history():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        """
-        SELECT t.*, u.name AS sellerName, m.name AS materialName
+        f"""
+        SELECT t.*, u.name AS sellerName, m.name AS materialName, {PHOTO_COUNT}
         FROM transactions t
         JOIN users u ON u.id = t.sellerId
         LEFT JOIN material_category m ON m.id = t.materialCategoryId

@@ -217,8 +217,9 @@ AfriI18n.whenReady(function () {
             <td data-label="${t("Weight")}">${AfriI18n.formatUnit(sale.weightKg, "kilogram", 2)}</td>
             <td data-label="${t("Total")}"><strong>${formatMoney(sale.totalAmount)}</strong></td>
             <td data-label="${t("Date")}">${formatDate(sale.createdAt)}</td>
+            <td data-label="${t("Receipt")}">${AfriReceipt.button(sale.id, sale.photoCount)}</td>
           </tr>`).join("")
-      : `<tr><td colspan="5" class="empty-row">${t("No sales recorded yet.")}</td></tr>`;
+      : `<tr><td colspan="6" class="empty-row">${t("No sales recorded yet.")}</td></tr>`;
   }
 
   // ---- Messages (read-only) ----

@@ -21,16 +21,56 @@ FRONTEND = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
 TEXTS = i18n_strings.all_texts()
 CODES = i18n_strings.catalog_codes()
 
-# Sentences that tell people which button to tap name it exactly as the button reads
+# Sentences that tell people which button to tap name it exactly as the button reads (the
+# voice guide's too: someone who can't read listens for the same words on the button)
 BUTTONS_IN_SENTENCES = {
-    'Buyer notified. The map below shows the way; tap "I\'m leaving now" when you set off.': "I'm leaving now",
-    'You\'re at {name}\'s buying point. Tap "I\'ve arrived".': "I've arrived",
-    '{name} is {distance} away by road, about {time} by motorbike or car. Tap "I\'m coming" to be guided there.': "I'm coming",
-    '{name} is {distance} away by road, about {time} on foot. Tap "I\'m coming" to be guided there.': "I'm coming",
-    'No conversations yet. Open one from a buyer or delivery with "Message".': "Message",
-    "Notifications weren't allowed. Tap Turn on to try again.": "Turn on",
-    "Choose a material and tap Find buyers.": "Find buyers",
-    "{name} is {distance} away in a straight line. Tap Route for the way by road.": "Route",
+    'Buyer notified. The map below shows the way; tap "I\'m leaving now" when you set off.': ("I'm leaving now",),
+    'You\'re at {name}\'s buying point. Tap "I\'ve arrived".': ("I've arrived",),
+    '{name} is {distance} away by road, about {time} by motorbike or car. Tap "I\'m coming" to be guided there.': ("I'm coming",),
+    '{name} is {distance} away by road, about {time} on foot. Tap "I\'m coming" to be guided there.': ("I'm coming",),
+    'No conversations yet. Open one from a buyer or delivery with "Message".': ("Message",),
+    "Notifications weren't allowed. Tap Turn on to try again.": ("Turn on",),
+    "Choose a material and tap Find buyers.": ("Find buyers",),
+    "{name} is {distance} away in a straight line. Tap Route for the way by road.": ("Route",),
+    # The voice guide
+    "Welcome to Africycle. It helps you sell your scrap, water or organic waste to the buyer who pays the best price near you. If you have an account, touch the green button, Log in. If you are new, touch Create an account.":
+        ("Log in", "Create an account"),
+    "Log in. Choose your country and type your phone number. Choose who you are: seller, buyer or parent. Type your password, then touch the green button, Log in.":
+        ("Log in",),
+    "Create your account. Type your name, choose your country and type your phone number. If you are under 18, tick the box and give your parent's details. Choose what you will do, type a password twice, then touch Create account.":
+        ("Create account",),
+    "Find a buyer. Choose the material you are carrying, then touch the green button, Find buyers. The buyers near you appear on the map and in the list, the best price first. Touch a buyer to see their prices.":
+        ("Find buyers",),
+    "Your trip to the buyer. The map shows the way. When you set off, touch I'm leaving now. When you get there, touch I've arrived. You can also call the buyer or send a message.":
+        ("I'm leaving now", "I've arrived"),
+    "Your sales: what buyers recorded buying from you. Touch Receipt to see the weight, the price, the total and the photos.":
+        ("Receipt",),
+    "Your prices. Choose a material, type your price for one kilo, then touch Save price. Then add a photo of the material: collectors touch it to tell you they are coming.":
+        ("Save price",),
+    "Collectors coming to you. The map shows where they are. When a collector has arrived and you have weighed the material, touch Record purchase.":
+        ("Record purchase",),
+    "Record a purchase. Choose the collector and the material. Type the weight in kilos and the price for one kilo. Touch Take a photo to add pictures of what you bought. Then touch Record purchase.":
+        ("Take a photo", "Record purchase"),
+    "Your purchases. Touch Receipt to see a receipt and its photos, or to add a photo.":
+        ("Receipt",),
+    "This is the receipt: who sold, what, how many kilos, the price per kilo and the total paid. Below are the photos of the material. Touch Take a photo to add one.":
+        ("Take a photo",),
+    "The conversation. The newest message is at the bottom. Write your message in the box, then touch Send.":
+        ("Send",),
+    "The voice guide studio. Choose a language. For each sentence, touch Record and say it in that language, then touch Stop, listen, and touch Save.":
+        ("Record", "Stop", "Save"),
+    "You are offline. Africycle needs the internet. Check your mobile data or Wi-Fi, then touch Try again.":
+        ("Try again",),
+    "To hear each button before you use it, turn on Hear before you tap.":
+        ("Hear before you tap",),
+    "Hear before you tap is on. Touch anything once to hear it. Touch a button a second time to use it.":
+        ("Hear before you tap",),
+    "Hear before you tap is off. Buttons work with one touch again.":
+        ("Hear before you tap",),
+    "There is no voice for this language on this phone yet. Choose a language you understand under Voice.":
+        ("Voice",),
+    "Recording... Touch Stop when you have finished.":
+        ("Stop",),
 }
 
 
@@ -84,8 +124,9 @@ def test_translations_are_plain_text(code):
 @pytest.mark.parametrize("code", CODES)
 def test_sentences_name_the_buttons_exactly(code):
     catalog = i18n_strings.load(code)
-    for sentence, button in BUTTONS_IN_SENTENCES.items():
-        assert catalog[button].lower() in catalog[sentence].lower(), (sentence, catalog[button])
+    for sentence, buttons in BUTTONS_IN_SENTENCES.items():
+        for button in buttons:
+            assert catalog[button].lower() in catalog[sentence].lower(), (sentence, catalog[button])
 
 
 def test_language_menus_offer_exactly_the_translated_languages():

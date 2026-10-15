@@ -135,6 +135,31 @@ SCHEMA = [
         value TEXT NOT NULL
     )
     """,
+    # Photos of the material on a purchase's receipt (models/receipt.py)
+    """
+    CREATE TABLE IF NOT EXISTS transaction_photos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transactionId INTEGER NOT NULL,
+        mimeType TEXT NOT NULL,
+        imageData TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (transactionId) REFERENCES transactions(id)
+    )
+    """,
+    # The voice guide in people's own voices: one recording per sentence and language
+    # (models/guide_recording.py)
+    """
+    CREATE TABLE IF NOT EXISTS guide_recordings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        language TEXT NOT NULL,
+        textKey TEXT NOT NULL,
+        mimeType TEXT NOT NULL,
+        audioData TEXT NOT NULL,
+        recordedBy INTEGER,
+        createdAt TEXT NOT NULL,
+        UNIQUE (language, textKey)
+    )
+    """,
 ]
 
 # The tables of the first release, before photos, notifications and settings were added

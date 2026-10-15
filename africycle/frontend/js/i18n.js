@@ -226,6 +226,24 @@ const AfriI18n = (function () {
     if (shown) translatePage();
   });
 
+  // The English text behind text shown in this language ("Se connecter" -> "Log in"), or
+  // null when it isn't one of the translated texts. The voice guide uses it to find the
+  // recording of what was touched.
+  let reverse = null;
+  let reverseSize = -1;
+  function englishOf(text) {
+    if (language === "en") return text;
+    const keys = Object.keys(strings);
+    if (!reverse || reverseSize !== keys.length) {
+      reverse = new Map();
+      keys.forEach((key) => {
+        if (!reverse.has(strings[key])) reverse.set(strings[key], key);
+      });
+      reverseSize = keys.length;
+    }
+    return reverse.get(text) || (Object.prototype.hasOwnProperty.call(strings, text) ? text : null);
+  }
+
   // Runs fn once the page is translated (straight away on English pages)
   function whenReady(fn) {
     ready.then(fn);
@@ -301,7 +319,7 @@ const AfriI18n = (function () {
   }
 
   return {
-    LANGUAGES, language, t, whenReady, locale, formatNumber, formatUnit, formatDateTime, formatAgo,
+    LANGUAGES, language, t, englishOf, whenReady, locale, formatNumber, formatUnit, formatDateTime, formatAgo,
     isRightToLeft: Boolean(current.rtl)
   };
 })();

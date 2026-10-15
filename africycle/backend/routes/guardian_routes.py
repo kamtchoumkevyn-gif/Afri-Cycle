@@ -10,6 +10,7 @@ from flask import Blueprint, jsonify
 from auth_utils import get_user_from_token
 from database.db import get_connection
 from models.chat import get_conversation, get_conversations_for_user
+from models.receipt import PHOTO_COUNT
 from models.user import get_user_by_id
 import phones
 from i18n import _
@@ -130,8 +131,8 @@ def child_activity(child_id):
     )
     deliveries = [dict(row) for row in cursor.fetchall()]
     cursor.execute(
-        """
-        SELECT t.*, b.name AS buyerName, m.name AS materialName
+        f"""
+        SELECT t.*, b.name AS buyerName, m.name AS materialName, {PHOTO_COUNT}
         FROM transactions t
         JOIN users b ON b.id = t.buyerId
         LEFT JOIN material_category m ON m.id = t.materialCategoryId

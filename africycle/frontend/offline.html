@@ -14,7 +14,7 @@
 <!-- Shown by the service worker when there's no connection and the page asked for isn't
      saved on the device. Absolute paths, because it can stand in for any address. -->
 <body class="auth-body">
-  <main class="auth-card landing-card">
+  <main class="auth-card landing-card" data-guide="offline">
     <img src="/assets/Africycle_logo.jpg" alt="Africycle logo" class="auth-logo">
     <h1 class="auth-title">You're offline</h1>
     <p class="auth-subtitle">Africycle needs a connection to find buyers, share your location and send messages. Check your mobile data or Wi-Fi, then try again.</p>
@@ -22,5 +22,6 @@
       <a href="/" class="btn btn-primary btn-block">Try again</a>
     </div>
   </main>
+  <script src="/js/guide.js"></script>
 </body>
 </html>

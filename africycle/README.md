@@ -51,8 +51,9 @@ Tests use a temporary database, so they never touch your real data. To run the s
 3. Tap **Route** on a buyer's pin to see the way there by road. Then tap the buyer's **photo** (or **I'm coming**). The buyer is told at once that you are on your way, and your phone shares its location while the trip is in transit.
 4. The seller's dashboard now shows **Your trip**: a map with the road route to the buyer, the next turn ("In 300 m, turn left onto Rue Joss"), and the distance and time left. It follows you as you move and works out a new way if you leave the route. Choose **On foot** or **Motorbike or car**. The trip map stays, even after a reload or closing the app, until you tap **I've arrived**; **Google Maps** opens the same destination there.
 5. On the buyer's dashboard, **Collectors on their way** shows a map with the seller moving towards their pin.
-6. When the seller marks **arrived**, the buyer can mark the delivery **completed** and record the purchase.
-7. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS` to see stats and flag accounts.
+6. When the seller marks **arrived**, the buyer can mark the delivery **completed** and record the purchase, with photos of the material (**Take a photo**). **Receipt** in the purchase history shows it, and the seller finds it under **Your sales**.
+7. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS` to see stats, flag accounts, and record the voice guide.
+8. On any page, touch the round speaker button at the bottom to hear what to do there (see [Voice guide](#voice-guide)).
 
 Location only works on `localhost` or over HTTPS, which browsers require.
 
@@ -74,6 +75,15 @@ People sign up and log in with a phone number from any of the 11 countries of Ce
 - **Existing accounts:** the first start after this update turns the Cameroon numbers already saved into +237 numbers (`database/upgrades.py`). Everyone logs in exactly as before.
 
 `frontend/js/phone.js` lists the same countries as `backend/phones.py`. After changing the list, or updating `phonenumbers`, run `python tools/phone_list.py` in `backend/` to refresh the pages' copy; a test fails until it matches.
+
+### Receipts with photos
+
+Each purchase gets a receipt that both sides can check later.
+
+- **Taking the photos:** while recording a purchase, the buyer taps **Take a photo** (up to 3). The phone's camera opens, and each photo is made smaller on the phone before it is sent.
+- **The receipt:** **Receipt** beside each purchase in **Purchase history** shows who sold, what, the weight, the price per kg, the total paid in cash, the date and the photos, with how many photos there are on the button. The buyer can add photos there later, up to 3, or remove one.
+- **Who sees it:** the seller sees the same receipts under **Your sales**, and a child seller's guardian sees them in the child's sales. They can look but not change anything. Nobody else can open a receipt.
+- **Storage:** the photos are kept in the database, like the price photos, so they survive restarts on Render's free plan.
 
 ### Children and guardians
 
@@ -104,6 +114,34 @@ Translations are the files in `frontend/i18n/`, one per language (`fr.json`, `sw
 - **To add a language:** run `python tools/i18n_strings.py --new > ../frontend/i18n/<code>.json` in `backend/` and translate it. Then add the language to the lists at the top of `frontend/js/i18n.js` and `frontend/js/compat.js`.
 
 The African-language translations are first drafts. Have native speakers check them before relying on them, especially Sängö, Fulfulde, Lingála, Ikirundi, Afaan Oromoo, Igbo and Pidgin. A correction only touches that language's file.
+
+## Voice guide
+
+For people who can't read, or read with difficulty. Every page has a round speaker button at the bottom (bottom left, or bottom right in Arabic). It pulses on the first visit until someone touches it.
+
+- **Touch the speaker button** at any step: it says what the part of the page in view is for and what to do there, in the app's language. An open window, such as a receipt or a buyer's prices, comes first. It also opens a panel with **Listen again**, **Stop**, **Hear before you tap**, **Speak slowly** and **Voice**.
+- **Hear before you tap:** when it is on, the first touch on anything says it, and the second touch uses it.
+  - A button says its name, and a text is read.
+  - A box to fill says what to type, and a checkbox says whether it is ticked.
+  - A list to choose from opens as big spoken choices, with pictures for the materials, and each language is said in its own voice.
+  - Something new that appears, such as the trip map or a receipt, explains itself.
+  - The setting stays on from page to page on that phone.
+- **The words match the screen:** sentences name each button exactly as it reads, in every language, so people can listen for the same words on the button. A test checks it.
+
+**Where the voice comes from,** in this order:
+
+1. **A recording by the team** in that language (see below).
+2. **The phone's own voice** for the language. Phones usually have one for English, French, Spanish, Portuguese, Arabic and Chinese, and often for Kiswahili, Afrikaans, Amharic and Hausa, depending on the phone. Pidgin is read by an English voice.
+3. **Otherwise,** a language the phone does have a voice for. The guide tries the phone's own languages first, then French, then English, and the person can choose another under **Voice**. The panel shows the words as they are said.
+
+**Recording the guide in a real voice:** phones have no voice for Fulfulde, Sängö, Lingála, Yorùbá, Igbo, isiZulu, Somali, Ikinyarwanda, Ikirundi or Afaan Oromoo. On the admin page, **Voice guide recordings** fixes that.
+
+- It lists every sentence of the guide (about 60), written in the chosen language with the English below.
+- For each one, tap **Record**, say it, tap **Stop**, **Listen**, then **Save**. Recording a sentence again replaces it.
+- It needs a microphone, in Chrome or Safari, on a phone or a computer.
+- Recordings are kept in the database, up to 30 seconds and 600 KB each. Everyone using that language hears them at once, with no app update.
+
+The recorder can say a sentence in natural words where the written translation sounds wrong; then correct that language's file in `frontend/i18n/` to match.
 
 ## Phones, tablets and computers
 
@@ -198,7 +236,7 @@ africycle/
     config.py          secret key, admin phone list, token lifetime
     extensions.py      rate limiter
     auth_utils.py      reads the logged-in user from the JWT
-    database/db.py     SQLite or Postgres connection and all 10 tables
+    database/db.py     SQLite or Postgres connection and all 12 tables
     database/upgrades.py  one-time changes to saved data (e.g. numbers to +237...)
     models/            one file per table: database functions only
     routes/            API endpoints grouped by feature
@@ -227,7 +265,9 @@ africycle/
     js/                shared scripts (see below), one script per page, map.js for the maps,
                        notify.js for unread counts, pop-ups and phone notifications,
                        phone.js for the country list and how numbers are shown,
-                       i18n.js for the language: picks it, translates, formats numbers
+                       i18n.js for the language: picks it, translates, formats numbers,
+                       guide.js for the voice guide, receipt.js for receipts and their photos,
+                       studio.js for recording the voice guide (admin page)
     fonts/             Archivo ExtraBold for headings (SIL Open Font License)
     icons/             app icons and favicon
     downloads/         Africycle.apk, the signed Android app that /download/android serves
@@ -239,7 +279,7 @@ Every page loads `js/i18n.js` first, in `<head>`: it picks the language, transla
 
 ## API reference
 
-All routes except `/register`, `/login`, and `/health` need the header `Authorization: Bearer <token>`. Phone numbers come back in international form, e.g. `+237677123456`. Messages and directions come in the language named in the `Accept-Language` header (e.g. `fr`, `sw`), and in English otherwise.
+Routes marked *anyone* need no login; all others need the header `Authorization: Bearer <token>`. Phone numbers come back in international form, e.g. `+237677123456`. Messages and directions come in the language named in the `Accept-Language` header (e.g. `fr`, `sw`), and in English otherwise.
 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
@@ -256,8 +296,13 @@ All routes except `/register`, `/login`, and `/health` need the header `Authoriz
 | POST | /buyer/material-photo | buyer | Upload a reference photo for a priced material (materialCategoryId, image as a data URL, 400 KB max) |
 | DELETE | /buyer/material-photo/<materialId> | buyer | Remove that photo |
 | GET | /photos/<id> | logged in | The photo itself |
-| POST | /buyer/log-transaction | buyer | Record a cash purchase |
-| GET | /buyer/transaction-history | buyer | List own purchases |
+| POST | /buyer/log-transaction | buyer | Record a cash purchase (sellerId: a collector, materialCategoryId, weightKg, pricePerKg); answers with its `transactionId` |
+| GET | /buyer/transaction-history | buyer | List own purchases, with `photoCount` |
+| GET | /receipts/<id> | the buyer, the seller, the seller's guardian, admin | A purchase's receipt: names, material, weight, price, total, date and `photoIds`; `canAddPhotos` for the buyer |
+| POST | /receipts/<id>/photos | the buyer who recorded it | Add a photo of the material (image as a data URL, 400 KB max, 3 per receipt) |
+| DELETE | /receipts/<id>/photos/<photoId> | the buyer who recorded it | Remove that photo |
+| GET | /receipt-photos/<id> | those who can see the receipt | The photo itself |
+| GET | /seller/sales | seller | Purchases buyers recorded from you, with `photoCount` |
 | GET | /seller/nearby-buyers | seller | Buyers within a radius, highest price first, with their coordinates |
 | GET | /seller/buyer-profile/<id> | seller | A buyer's hours, prices, and photos |
 | GET | /seller/contact-buyer/<id> | seller | A buyer's phone number |
@@ -279,6 +324,11 @@ All routes except `/register`, `/login`, and `/health` need the header `Authoriz
 | GET | /guardian/children/<id>/messages/<userId> | the child's guardian | One of the child's conversations, read only |
 | GET | /admin/stats, /admin/activity-stats, /admin/users, /admin/flagged-accounts | admin | Platform overview |
 | POST | /admin/flag-account/<id>, /admin/unflag-account/<id> | admin | Account review |
+| GET | /guide/recordings/<language> | anyone | The voice guide's sentences recorded in that language: id, text (the English sentence) and mimeType |
+| GET | /guide/recorded-languages | anyone | How many sentences are recorded in each language |
+| GET | /guide/audio/<id> | anyone | A recording |
+| POST | /admin/guide-recordings | admin | Save a recording (language, text: the English sentence, audio as a data URL: WebM, Ogg, MP4, MP3, AAC or WAV, 600 KB max); replaces that sentence's old one |
+| DELETE | /admin/guide-recordings/<id> | admin | Remove a recording |
 
 ## Deploy on Render
 

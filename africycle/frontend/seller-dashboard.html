@@ -35,7 +35,7 @@
     </nav>
   </header>
 
-  <main class="dashboard-main">
+  <main class="dashboard-main" data-guide="seller.page">
     <h1 class="page-heading" id="greeting">Sell your materials</h1>
     <p class="page-intro">Pick what you are carrying, then find the buyers near you who pay the most.</p>
 
@@ -43,7 +43,7 @@
     <p id="pageMsg" class="msg" role="status" hidden></p>
 
     <!-- Shown while a delivery is pending or in transit, even after a reload: the way to the buyer -->
-    <section class="panel trip-panel" id="tripPanel" aria-labelledby="tripHeading" hidden>
+    <section class="panel trip-panel" id="tripPanel" aria-labelledby="tripHeading" data-guide="seller.trip" hidden>
       <h2 id="tripHeading">Your trip to <span id="tripBuyerName"></span></h2>
       <p class="trip-summary" id="tripSummary" aria-live="polite">Finding your position...</p>
       <div class="trip-next" id="tripNext" aria-live="polite" hidden>
@@ -72,7 +72,7 @@
       <p class="map-credit" id="tripCredit" hidden></p>
     </section>
 
-    <section class="panel" aria-labelledby="findHeading">
+    <section class="panel" aria-labelledby="findHeading" data-guide="seller.find">
       <h2 id="findHeading">Find a buyer</h2>
       <p class="panel-hint">We use your location to show the buyers around you on the map. Your position updates as you move.</p>
       <div class="form-row">
@@ -110,7 +110,7 @@
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="tripsHeading">
+    <section class="panel" aria-labelledby="tripsHeading" data-guide="seller.deliveries">
       <h2 id="tripsHeading">Your deliveries</h2>
       <p class="panel-hint" id="sharingHint">Your location is shared with the buyer only while a delivery is active.</p>
       <div class="table-wrap">
@@ -124,10 +124,25 @@
         </table>
       </div>
     </section>
+
+    <section class="panel" aria-labelledby="salesHeading" data-guide="seller.sales">
+      <h2 id="salesHeading">Your sales</h2>
+      <p class="panel-hint">What buyers recorded buying from you. Each receipt shows the weight, the price, and the buyer's photos of the material.</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Buyer</th><th>Material</th><th>Weight</th><th>Total</th><th>Date</th><th>Receipt</th></tr>
+          </thead>
+          <tbody id="salesBody">
+            <tr><td colspan="6" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <div id="buyerModal" class="modal-overlay" hidden>
-    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalName">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalName" data-guide="seller.buyer">
       <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">&times;</button>
       <h3 id="modalName"></h3>
       <p class="modal-meta" id="modalMeta"></p>
@@ -149,8 +164,10 @@
   <script src="js/auth.js"></script>
   <script src="js/map.js"></script>
   <script src="js/phone.js"></script>
+  <script src="js/receipt.js"></script>
   <script src="js/seller-dashboard.js"></script>
   <script src="js/notify.js"></script>
+  <script src="js/guide.js"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>

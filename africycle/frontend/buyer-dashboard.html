@@ -35,13 +35,13 @@
     </nav>
   </header>
 
-  <main class="dashboard-main">
+  <main class="dashboard-main" data-guide="buyer.page">
     <h1 class="page-heading">Buy materials</h1>
     <p class="page-intro">Set your location and prices so collectors nearby can find you.</p>
 
     <p id="pageMsg" class="msg" role="status" hidden></p>
 
-    <section class="panel" aria-labelledby="locationHeading">
+    <section class="panel" aria-labelledby="locationHeading" data-guide="buyer.location">
       <h2 id="locationHeading">Your buying point</h2>
       <p class="panel-hint" id="locationStatus">Collectors only see you once your location is saved.</p>
       <div class="form-row">
@@ -53,7 +53,7 @@
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="pricesHeading">
+    <section class="panel" aria-labelledby="pricesHeading" data-guide="buyer.prices">
       <h2 id="pricesHeading">Your prices</h2>
       <p class="panel-hint">Collectors see the highest prices first. Add a photo of each material you buy: collectors tap it to tell you they're coming with it.</p>
       <form id="priceForm" class="form-row">
@@ -80,7 +80,7 @@
       <input type="file" id="photoInput" accept="image/*" hidden>
     </section>
 
-    <section class="panel" aria-labelledby="incomingHeading">
+    <section class="panel" aria-labelledby="incomingHeading" data-guide="buyer.incoming">
       <h2 id="incomingHeading">Collectors on their way</h2>
       <p class="panel-hint">This list refreshes on its own. While a collector is on the way, the map shows where they are, updated every 10 seconds.</p>
       <div id="buyerMap" class="map-box" role="region" aria-label="Map of collectors coming to you" hidden></div>
@@ -97,7 +97,7 @@
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="logHeading">
+    <section class="panel" aria-labelledby="logHeading" data-guide="buyer.record">
       <h2 id="logHeading">Record a purchase</h2>
       <p class="panel-hint">Payment stays in cash. This record is your proof of a fair, traceable purchase.</p>
       <form id="transactionForm" class="form-row">
@@ -121,20 +121,28 @@
           <label for="txPriceInput">Price per kg (FCFA)</label>
           <input type="number" id="txPriceInput" inputmode="numeric" min="1" step="1" required>
         </div>
+        <div class="purchase-photos">
+          <p class="field-label" id="purchasePhotosLabel">Photos of the material (up to 3)</p>
+          <div class="purchase-photo-list" id="purchasePhotoList" aria-labelledby="purchasePhotosLabel"></div>
+          <button type="button" id="purchaseCameraBtn" class="btn btn-secondary">
+            <svg class="btn-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>Take a photo</span>
+          </button>
+        </div>
         <button type="submit" class="btn btn-primary">Record purchase</button>
       </form>
       <p class="panel-hint" id="totalPreview"></p>
     </section>
 
-    <section class="panel" aria-labelledby="historyHeading">
+    <section class="panel" aria-labelledby="historyHeading" data-guide="buyer.history">
       <h2 id="historyHeading">Purchase history</h2>
       <div class="table-wrap">
         <table class="data-table">
           <thead>
-            <tr><th>Collector</th><th>Material</th><th>Weight</th><th>Total</th><th>Date</th></tr>
+            <tr><th>Collector</th><th>Material</th><th>Weight</th><th>Total</th><th>Date</th><th>Receipt</th></tr>
           </thead>
           <tbody id="historyBody">
-            <tr><td colspan="5" class="empty-row">Loading...</td></tr>
+            <tr><td colspan="6" class="empty-row">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -147,8 +155,10 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/map.js"></script>
+  <script src="js/receipt.js"></script>
   <script src="js/buyer-dashboard.js"></script>
   <script src="js/notify.js"></script>
+  <script src="js/guide.js"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>

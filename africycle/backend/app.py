@@ -23,6 +23,8 @@ from routes.material_routes import material_bp
 from routes.guardian_routes import guardian_bp
 from routes.directions_routes import directions_bp
 from routes.push_routes import push_bp
+from routes.receipt_routes import receipt_bp
+from routes.guide_routes import guide_bp
 
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
 
@@ -44,7 +46,7 @@ CORS(app)
 limiter.init_app(app)
 
 for blueprint in (auth_bp, buyer_bp, seller_bp, notification_bp, admin_bp, chat_bp,
-                  material_bp, guardian_bp, directions_bp, push_bp):
+                  material_bp, guardian_bp, directions_bp, push_bp, receipt_bp, guide_bp):
     app.register_blueprint(blueprint)
 
 # Create tables and starter categories on startup (safe to run repeatedly)
@@ -55,15 +57,17 @@ seed_default_categories()
 # injected <script> or onerror="..." can't run. Fonts, styles and the map library
 # (frontend/vendor) all come from this site too; the one outside source is
 # OpenStreetMap's map tiles. blob: lets pages show material photos fetched with the
-# login token. The sha256 value allows the small inline <script> at the bottom of
-# index.html; if you edit that script, the browser console prints the new hash to
-# paste here. Adding another outside library? Add its domain here.
+# login token, and the voice guide's recording studio play a recording back before
+# saving it (media-src). The sha256 value allows the small inline <script> at the
+# bottom of index.html; if you edit that script, the browser console prints the new
+# hash to paste here. Adding another outside library? Add its domain here.
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
     "script-src 'self' 'sha256-WIQm8E+nKtoHRkpBpRcJ+6e8TN00KPKyhiQH/kvOHQA='",
     "style-src 'self'",
     "font-src 'self'",
     "img-src 'self' data: blob: https://tile.openstreetmap.org",
+    "media-src 'self' blob:",
     "connect-src 'self'",
     "worker-src 'self'",
     "manifest-src 'self'",

@@ -998,3 +998,243 @@
 .map-pin-label {
   unicode-bidi: plaintext;
 }
+
+/* ---- Receipts: a recorded purchase with photos of the material (js/receipt.js) ---- */
+
+.btn .btn-icon {
+  flex: none;
+  margin-right: 6px;
+}
+
+.receipt-btn {
+  white-space: nowrap;
+}
+
+.photo-count {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--green-dark);
+  background-color: var(--green-tint);
+  border-radius: 999px;
+}
+
+.photo-count .btn-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+}
+
+.receipt-lines {
+  margin: 0 0 16px;
+}
+
+.receipt-lines > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.receipt-lines dt {
+  flex: none;
+  max-width: 50%;
+  margin-right: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.receipt-lines dd {
+  min-width: 0;
+  text-align: right;
+}
+
+.receipt-lines .receipt-total {
+  font-size: 18px;
+  color: var(--green-dark);
+  border-bottom: 2px solid var(--green);
+}
+
+.receipt-photos-heading {
+  margin: 4px 0 0;
+  font-size: 16px;
+  color: var(--navy);
+}
+
+.receipt-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.receipt-photo img,
+.purchase-photo img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  background-color: var(--page);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: zoom-in;
+}
+
+@supports (aspect-ratio: 1 / 1) {
+  .receipt-photo img,
+  .purchase-photo img {
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+}
+
+.receipt-photos .panel-hint {
+  grid-column: 1 / -1;
+}
+
+/* A photo tapped on a receipt, as big as the screen allows; a tap closes it */
+.photo-viewer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.88);
+}
+
+.photo-viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.photo-viewer .modal-close {
+  color: #ffffff;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Recording a purchase: the photos taken so far, then the camera button */
+.purchase-photos {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.purchase-photo-list {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -4px;
+}
+
+.purchase-photo-list:empty {
+  display: none;
+}
+
+.purchase-photo {
+  position: relative;
+  width: 84px;
+  margin: 0 4px 10px;
+}
+
+.photo-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  line-height: 1;
+  color: #ffffff;
+  background-color: var(--danger);
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .photo-remove {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+[dir="rtl"] .btn .btn-icon {
+  margin-right: 0;
+  margin-left: 6px;
+}
+
+[dir="rtl"] .photo-count {
+  margin-left: 0;
+  margin-right: 8px;
+}
+
+[dir="rtl"] .photo-count .btn-icon {
+  margin-right: 0;
+  margin-left: 4px;
+}
+
+[dir="rtl"] .receipt-lines dt {
+  margin-right: 0;
+  margin-left: 12px;
+}
+
+[dir="rtl"] .receipt-lines dd {
+  text-align: left;
+}
+
+[dir="rtl"] .photo-remove {
+  right: auto;
+  left: -8px;
+}
+
+/* ---- Voice guide studio (admin page, js/studio.js) ---- */
+
+.studio-progress {
+  margin: 12px 0 4px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.studio-list {
+  list-style: none;
+  margin: 8px 0 0;
+}
+
+.studio-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.studio-item.studio-recording {
+  background-color: var(--danger-tint);
+  box-shadow: 0 0 0 8px var(--danger-tint);
+}
+
+.studio-sentence {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.studio-english {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.studio-item .row-actions {
+  align-items: center;
+  margin-top: 8px;
+}

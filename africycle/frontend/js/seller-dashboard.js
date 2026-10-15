@@ -766,11 +766,39 @@ AfriI18n.whenReady(function () {
     }
   });
 
+  // ---- Sales: the purchases buyers recorded, with their receipts ----
+
+  const salesBody = document.getElementById("salesBody");
+
+  async function loadSales() {
+    try {
+      const response = await authFetch("/seller/sales");
+      const data = await readJson(response);
+      if (!response.ok) throw new Error(data.message);
+      const rows = data.sales || [];
+      salesBody.innerHTML = rows.length
+        ? rows.map((row) => `
+            <tr>
+              <td data-label="${t("Buyer")}">${escapeHtml(row.buyerName)}</td>
+              <td data-label="${t("Material")}">${escapeHtml(materialName(row.materialName))}</td>
+              <td data-label="${t("Weight")}">${AfriI18n.formatUnit(row.weightKg, "kilogram", 2)}</td>
+              <td data-label="${t("Total")}"><strong>${formatMoney(row.totalAmount)}</strong></td>
+              <td data-label="${t("Date")}">${formatDate(row.createdAt)}</td>
+              <td data-label="${t("Receipt")}">${AfriReceipt.button(row.id, row.photoCount)}</td>
+            </tr>`).join("")
+        : `<tr><td colspan="6" class="empty-row">${t("No sales recorded yet.")}</td></tr>`;
+    } catch (err) {
+      salesBody.innerHTML = `<tr><td colspan="6" class="empty-row">${t("Sales could not be loaded.")}</td></tr>`;
+    }
+  }
+
   checkAccount();
   loadMaterials().catch(() => {
     showMessage(pageMsg, t("Can't reach the server. Check your connection, then reload the page."), "error");
   });
   loadDeliveries();
+  loadSales();
   setInterval(shareLocation, LOCATION_PING_MS);
   setInterval(loadDeliveries, 30000);
+  setInterval(loadSales, 60000); // a buyer may record the purchase a little after the delivery
 });

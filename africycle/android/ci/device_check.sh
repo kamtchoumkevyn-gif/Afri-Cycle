@@ -83,29 +83,64 @@ top_activity() {
 }
 
 # ---- 2. Open it from its icon and wait for Africycle (the free server may take a minute to wake) ----
+# The emulator's own internet comes first: a test without it says nothing about the app.
+# (Android 6 and newer mark a network that reaches the internet as VALIDATED.)
+network_ready() {
+  [ "$API" -lt 23 ] || shell dumpsys connectivity | grep -q "VALIDATED"
+}
+wait_for_network() {
+  local until=$((SECONDS + 120))
+  while [ $SECONDS -lt $until ]; do
+    network_ready && return 0
+    sleep 5
+  done
+  return 1
+}
+if wait_for_network; then say "network: ready"; else say "network: not confirmed after 2 minutes"; fi
+
 timeout 30 adb logcat -c
-say "start: $(shell am start -W -n $PKG/.LauncherActivity | grep -E 'Status|Activity:|TotalTime' | tr '\n' ' ')"
+open_app() {
+  say "start: $(shell am start -W -n $PKG/.LauncherActivity | grep -E 'Status|Activity:|TotalTime' | tr '\n' ' ')"
+}
 # The built-in screen's own message (no connection, or WebView too old), seen in the view
 # list when uiautomator can't read the screen (Android 5)
 app_message_visible() {
   shell dumpsys activity top | grep -q -E "\{[0-9a-f]+ V[^}]*app:id/message\}"
 }
+wait_for_africycle() {
+  shown=""
+  text=""
+  local deadline=$((SECONDS + 180))
+  while [ $SECONDS -lt $deadline ]; do
+    sleep 5
+    text=$(screen_text)
+    if echo "$text" | grep -q -E "Log in|Create an account|Android System WebView|reach the server"; then
+      shown=$(echo "$text" | head -20 | tr '\n' '|')
+      return
+    fi
+    if app_message_visible; then
+      shown="the app's own message (screen not readable here; see the screenshot)"
+      return
+    fi
+  done
+}
+# The phone itself offline: Chrome's "You're offline" page, or the app's "Can't reach the server"
+looks_offline() {
+  echo "$text" | grep -q -i -E "re offline|t be reached|ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED|reach the server"
+}
 
-shown=""
-text=""
-deadline=$((SECONDS + 180))
-while [ $SECONDS -lt $deadline ]; do
-  sleep 5
-  text=$(screen_text)
-  if echo "$text" | grep -q -E "Log in|Create an account|Android System WebView|reach the server"; then
-    shown=$(echo "$text" | head -20 | tr '\n' '|')
-    break
-  fi
-  if app_message_visible; then
-    shown="the app's own message (screen not readable here; see the screenshot)"
-    break
-  fi
-done
+open_app
+wait_for_africycle
+if looks_offline; then
+  # Usually an emulator that lost its internet, not the app: once it is back, open the app
+  # again. (A website that is really down fails the second time too, and is reported.)
+  say "note: the page was offline; opening the app again once the emulator's internet is back"
+  if wait_for_network; then say "network: back"; else say "network: still not confirmed"; fi
+  shell am force-stop com.android.chrome > /dev/null
+  shell am force-stop $PKG > /dev/null
+  open_app
+  wait_for_africycle
+fi
 sleep 3
 timeout 60 adb exec-out screencap -p > "$OUT/$LABEL.png"
 say "on screen: ${shown:-nothing recognisable after 3 minutes}"

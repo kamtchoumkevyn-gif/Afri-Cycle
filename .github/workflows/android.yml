@@ -59,7 +59,16 @@ jobs:
             --notes "Made by .github/workflows/android.yml on every change to the Android app: test APKs, Android's checks and emulator screenshots for each Android version. Not for download: the app is in the newest release."
       - name: Every Android version from 5.0 (API 21) that has an emulator
         id: matrix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
         run: |
+          # The files this push changed. (GitHub's push event no longer lists them, so ask.)
+          : > changed.txt
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ -n "${BEFORE//0/}" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/compare/$BEFORE...$AFTER" --jq '.files[].filename' > changed.txt || true
+          fi
           SDKMANAGER=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
           "$SDKMANAGER" --list --channel=0 2>/dev/null | grep -o "system-images;android-[0-9]*;[a-z_]*;x86[_64]*" | sort -u > images.txt
           python3 - <<'EOF' >> "$GITHUB_OUTPUT"
@@ -79,7 +88,7 @@ jobs:
           # Which APK to test: a GitHub release's; the one the website gives, when this push
           # changed it (or when asked); otherwise the one built from this commit
           event = json.load(open(os.environ["GITHUB_EVENT_PATH"]))
-          changed = {path for commit in event.get("commits") or [] for path in commit.get("added", []) + commit.get("modified", [])}
+          changed = set(open("changed.txt").read().split())
           if os.environ["GITHUB_EVENT_NAME"] == "release":
               print("prefix=release")
           elif "africycle/frontend/downloads/Africycle.apk" in changed or (event.get("inputs") or {}).get("test") == "published":

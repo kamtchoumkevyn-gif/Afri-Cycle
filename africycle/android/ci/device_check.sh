@@ -107,6 +107,16 @@ open_app() {
 app_message_visible() {
   shell dumpsys activity top | grep -q -E "\{[0-9a-f]+ V[^}]*app:id/message\}"
 }
+# Emulators on a busy test machine sometimes say another app (often the home screen) "isn't
+# responding". That box covers the screen: answer "Wait", as a person would.
+answer_wait() {
+  local bounds
+  bounds=$(shell cat /sdcard/africycle-window.xml | grep -o 'text="Wait"[^>]*bounds="[^"]*"' \
+    | grep -o 'bounds="[^"]*"' | head -1 | tr -c '0-9' ' ')
+  set -- $bounds
+  [ $# -eq 4 ] || return 1
+  shell input tap $((($1 + $3) / 2)) $((($2 + $4) / 2)) > /dev/null
+}
 wait_for_africycle() {
   shown=""
   text=""
@@ -114,6 +124,10 @@ wait_for_africycle() {
   while [ $SECONDS -lt $deadline ]; do
     sleep 5
     text=$(screen_text)
+    if echo "$text" | grep -q -E "isn.{1,3}t responding" && answer_wait; then
+      say "note: Android said another app wasn't responding ($(echo "$text" | grep -m1 -E "isn.{1,3}t responding")); answered Wait"
+      continue
+    fi
     if echo "$text" | grep -q -E "Log in|Create an account|Android System WebView|reach the server"; then
       shown=$(echo "$text" | head -20 | tr '\n' '|')
       return

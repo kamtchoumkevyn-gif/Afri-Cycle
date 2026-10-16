@@ -1,0 +1,58 @@
+# Checks the live website after each change to the app: waits for Render to deploy the
+# new version (the live js/guide.js and sw.js match this commit's), then checks that the
+# server, the database and the voice guide's files answer. The results show as notes on
+# the run (Actions > Live site check). Also runs by hand: Run workflow.
+name: Live site check
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "africycle/backend/**"
+      - "africycle/frontend/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-check
+  cancel-in-progress: true
+
+env:
+  SITE: https://afri-cycle.onrender.com
+
+jobs:
+  check:
+    name: Live site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Wait for the new version, then check it
+        run: |
+          expected=$(sha256sum africycle/frontend/js/guide.js | cut -d' ' -f1)
+          deployed=no
+          # Render takes a few minutes to build; a sleeping free server takes a minute to wake
+          for attempt in $(seq 1 60); do
+            live=$(curl -fsS --max-time 90 "$SITE/js/guide.js" | sha256sum | cut -d' ' -f1 || true)
+            if [ "$live" = "$expected" ]; then deployed=yes; break; fi
+            sleep 30
+          done
+          if [ "$deployed" = yes ]; then
+            echo "::notice title=Deployed::The live site runs this commit's version ($GITHUB_SHA)"
+          else
+            echo "::warning title=Not deployed yet::After 30 minutes the live site still runs an older version. Open Render > the service > Events, and press Manual Deploy if the last deploy failed or never started."
+          fi
+          health=$(curl -sS --max-time 90 "$SITE/health" || echo "no answer")
+          echo "::notice title=Health::$health"
+          build=$(curl -sS --max-time 60 "$SITE/sw.js" | grep -o 'const BUILD = "[0-9a-f]*"' || echo "no BUILD")
+          echo "::notice title=Service worker::$build"
+          for path in voices/names.json voices/ff/index.json voices/sg/index.json voices/ln/index.json i18n/ff.json download/android; do
+            answer=$(curl -sS -o /dev/null --max-time 60 -w "%{http_code} %{content_type} %{size_download} bytes" "$SITE/$path" || echo "no answer")
+            echo "::notice title=/$path::$answer"
+          done
+          clip=$(python3 -c "import json; m=json.load(open('africycle/frontend/voices/ff/index.json')); print(next(iter(m['clips'].values())))")
+          answer=$(curl -sS -D - -o /dev/null --max-time 60 "$SITE/voices/ff/$clip.ogg" | tr -d '\r' | grep -iE "^(HTTP|content-type|cache-control)" | paste -sd ' ')
+          echo "::notice title=A Fulfulde clip::$answer"
+          [ "$deployed" = yes ]

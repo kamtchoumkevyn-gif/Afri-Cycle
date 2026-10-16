@@ -95,7 +95,7 @@ def kind_of(model):
 # guide.js has the same pattern; tests/test_voice_guide.py checks they match.
 PIECE_BREAK = r"\{\w+\}|[0-9]+(?:[., ][0-9]{3})*(?:[.,][0-9]+)?"
 _BREAK = re.compile(PIECE_BREAK)
-_BIDI_MARKS = re.compile("[‎‏⁦-⁩]")  # invisible marks around names in Arabic
+_BIDI_MARKS = re.compile("[\u200e\u200f\u2066-\u2069]")  # invisible marks around names in Arabic
 
 
 def clean(text):

@@ -334,8 +334,8 @@ const AfriGuide = (function () {
     captionEl.hidden = !text;
   }
 
-  // Whether there is anything to say in a piece of text (letters, not just "·" or "(")
-  const NOTHING_TO_SAY = /^[\s0-9\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e -¿ -⁯　-〿！-／]*$/;
+  // Whether there is anything to say in a piece of text (letters, not just "\u00b7" or "(")
+  const NOTHING_TO_SAY = /^[\s0-9\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e\u00a0-\u00bf\u2000-\u206f\u3000-\u303f\uff01-\uff0f]*$/;
   function hasLetters(text) {
     return !NOTHING_TO_SAY.test(text);
   }
@@ -589,7 +589,7 @@ const AfriGuide = (function () {
 
   // Single spaces, without the invisible marks that keep names the right way round in Arabic
   function clean(text) {
-    return String(text == null ? "" : text).replace(/[‎‏⁦-⁩]/g, "").replace(/\s+/g, " ").trim();
+    return String(text == null ? "" : text).replace(/[\u200e\u200f\u2066-\u2069]/g, "").replace(/\s+/g, " ").trim();
   }
 
   // An English key for text shown in the page's language, so recordings can say it
@@ -938,7 +938,7 @@ const AfriGuide = (function () {
     // The computer voice's makers are credited, as its licence asks
     const credit = panel.querySelector(".guide-credit");
     credit.hidden = !(await clipsFor(language)).size || !clipCredits[language];
-    credit.textContent = `${t("Computer voice")}: ${clipCredits[language] || ""}`;
+    credit.textContent = `${t("Computer voice")}: \u2068${clipCredits[language] || ""}\u2069`; // kept left to right in Arabic
   }
 
   function openPanel() {
@@ -1036,15 +1036,24 @@ const AfriGuide = (function () {
   // The page's messages (class "msg"): "Wrong phone number or password", "Purchase
   // recorded."... Progress ("Loading...") isn't said: what follows it is.
   const PROGRESS = /(\.\.\.|…)$/;
+  let lastActionAt = 0; // the person's last touch or key
   function watchMessages() {
+    ["pointerdown", "keydown"].forEach((kind) => document.addEventListener(kind, () => {
+      lastActionAt = Date.now();
+    }, true));
     const lastSaid = new WeakMap(); // message -> { text, at }
     const check = (message) => {
       if (!prefs.aloud || inGuide(message) || !visible(message)) return;
       const text = clean(message.textContent);
       if (!text || PROGRESS.test(text)) return;
       const last = lastSaid.get(message);
-      if (last && last.text === text && Date.now() - last.at < 2000) return; // one change, seen three times
-      lastSaid.set(message, { text, at: Date.now() });
+      const now = Date.now();
+      if (last && last.text === text) {
+        if (now - last.at < 2000) return; // one change, seen three times
+        // The same message again by itself (a list refreshing while offline): not every time
+        if (now - lastActionAt > 10000 && now - last.at < 120000) return;
+      }
+      lastSaid.set(message, { text, at: now });
       announce([part(text)]);
     };
     new MutationObserver((changes) => {
@@ -1122,8 +1131,11 @@ const AfriGuide = (function () {
     stop,
     explainScreen,
     openPicker,
+    // The sentences to record in the studio: whole ones (a sentence with a {name} in it
+    // changes each time, so the computer voice says it in pieces instead)
     sentences: () => Object.keys(GUIDES).map((stage) => GUIDES[stage]())
-      .concat(Object.keys(SAY).map((name) => SAY[name]), LABELS),
+      .concat(Object.keys(SAY).map((name) => SAY[name]), LABELS)
+      .filter((text) => !/\{\w+\}/.test(text)),
     voiceFor,
     hasVoice: (code) => Boolean(voiceFor(code)),
     voicesReady

@@ -251,7 +251,7 @@ const AfriI18n = (function () {
   let templates = null;
   let templatesSize = -1;
   function plain(text) {
-    return String(text).replace(/[‎‏⁦-⁩]/g, "").replace(/\s+/g, " ").trim();
+    return String(text).replace(/[\u200e\u200f\u2066-\u2069]/g, "").replace(/\s+/g, " ").trim();
   }
   function parse(text) {
     if (language === "en") return null;

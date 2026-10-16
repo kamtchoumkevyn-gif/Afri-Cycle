@@ -119,22 +119,28 @@ The African-language translations are first drafts. Have native speakers check t
 
 For people who can't read, or read with difficulty. Every page has a round speaker button at the bottom (bottom left, or bottom right in Arabic). It pulses on the first visit until someone touches it.
 
-- **Touch the speaker button** at any step: it says what the part of the page in view is for and what to do there, in the app's language. An open window, such as a receipt or a buyer's prices, comes first. It also opens a panel with **Listen again**, **Stop**, **Hear before you tap**, **Speak slowly** and **Voice**.
+- **Touch the speaker button** at any step: it says what the part of the page in view is for and what to do there, in the app's language. An open window, such as a receipt or a buyer's prices, comes first. It also opens a panel with **Listen again**, **Stop**, **Hear before you tap**, **Read messages and directions aloud**, **Speak slowly** and **Voice**.
 - **Hear before you tap:** when it is on, the first touch on anything says it, and the second touch uses it.
   - A button says its name, and a text is read.
   - A box to fill says what to type, and a checkbox says whether it is ticked.
   - A list to choose from opens as big spoken choices, with pictures for the materials, and each language is said in its own voice.
   - Something new that appears, such as the trip map or a receipt, explains itself.
   - The setting stays on from page to page on that phone.
+- **Read messages and directions aloud:** what appears by itself is said as it appears.
+  - The page's messages, such as a wrong password or "Purchase recorded".
+  - A new chat message: "Message from Jean", then the message.
+  - On a trip to a buyer, each turn when it becomes the next one ("In 300 m, turn left onto..."), again just before it, and the arrival.
+  - Turning on **Hear before you tap** turns this on too, since someone who can't read the buttons can't read the messages either. It stays on from page to page on that phone.
 - **The words match the screen:** sentences name each button exactly as it reads, in every language, so people can listen for the same words on the button. A test checks it.
 
 **Where the voice comes from,** in this order:
 
 1. **A recording by the team** in that language (see below).
 2. **The phone's own voice** for the language. Phones usually have one for English, French, Spanish, Portuguese, Arabic and Chinese, and often for Kiswahili, Afrikaans, Amharic and Hausa, depending on the phone. Pidgin is read by an English voice.
-3. **Otherwise,** a language the phone does have a voice for. The guide tries the phone's own languages first, then French, then English, and the person can choose another under **Voice**. The panel shows the words as they are said.
+3. **Africycle's computer voice** for the language (see [Computer voices](#computer-voices)): every text of the app, in 17 languages, including Fulfulde, Sängö and Lingála. Names, numbers and typed messages in between are read by a voice the phone has, as in 4.
+4. **Otherwise,** a language the phone does have a voice for. The guide tries the phone's own languages first, then French, then English, and the person can choose another under **Voice**. The panel shows the words as they are said. This is what Chinese, Igbo, isiZulu and Afrikaans get on a phone without a voice for them: no open computer voice speaks them yet.
 
-**Recording the guide in a real voice:** phones have no voice for Fulfulde, Sängö, Lingála, Yorùbá, Igbo, isiZulu, Somali, Ikinyarwanda, Ikirundi or Afaan Oromoo. On the admin page, **Voice guide recordings** fixes that.
+**Recording the guide in a real voice:** the computer voices are understandable but sound like machines, and most of them may not be used to earn money (see below). Native speakers' recordings sound better and replace them at once. On the admin page, **Voice guide recordings** is for this.
 
 - It lists every sentence of the guide (about 60), written in the chosen language with the English below.
 - For each one, tap **Record**, say it, tap **Stop**, **Listen**, then **Save**. Recording a sentence again replaces it.
@@ -142,6 +148,18 @@ For people who can't read, or read with difficulty. Every page has a round speak
 - Recordings are kept in the database, up to 30 seconds and 600 KB each. Everyone using that language hears them at once, with no app update.
 
 The recorder can say a sentence in natural words where the written translation sounds wrong; then correct that language's file in `frontend/i18n/` to match.
+
+### Computer voices
+
+`frontend/voices/` holds a short recording (a clip) of every text of the app in 17 languages: English, French, Spanish, Portuguese, Arabic, Kiswahili, Hausa, Yorùbá, Amharic, Somali, Afaan Oromoo, Ikinyarwanda, Ikirundi, Lingála, Sängö, Fulfulde and Pidgin. They are made by computer from the translation files, with open text-to-speech models.
+
+- **When they are used:** only when the phone has no voice of its own for the language, and no team recording of that sentence exists. A text built around a name or a number ("Jean is 2 km away") is said in pieces: the clip of each fixed part, and the name or number in between by a voice the phone has.
+- **Size:** about 3 MB per language and 9,500 small files in all, but a phone only downloads the clips it plays (a few KB each), keeps them, and can play them offline afterwards. Clips never change, so browsers keep them for a year.
+- **Making them:** GitHub does it (`.github/workflows/voices.yml`, running `backend/tools/voice_clips.py`) whenever a translation file changes, and commits the new clips. Only new or changed texts are made again, in a few minutes. **Actions > Voice guide clips > Run workflow** makes them by hand, for some languages or all.
+- **Which voice, and its licence:** each language's `voices/<code>/index.json` names it, and the guide's panel credits it.
+  - **Lingála:** Coqui TTS's Open.Bible voice, trained on recordings by Biblica, **CC BY-SA 4.0**: free to use, even commercially, with this credit.
+  - **The 16 others:** Meta's MMS models, **CC BY-NC 4.0**: free for this student project, but **not for earning money**. Before Africycle charges anyone, replace them: record the sentences in the studio (a recording always comes first), or switch the language to a commercially licensed voice in `MODELS` in `voice_clips.py`. Coqui also has Open.Bible voices for Hausa and Yorùbá (`tts_models/hau/openbible/vits`, `tts_models/yor/openbible/vits`).
+- **Igbo, isiZulu, Afrikaans and Chinese** have no open computer voice yet, so they rely on the phone's voice or the language chosen under **Voice**.
 
 ## Phones, tablets and computers
 
@@ -248,6 +266,7 @@ africycle/
     tools/phone_list.py   copies the country list to frontend/js/phone.js
     tools/i18n_strings.py lists every text to translate and checks each language
     tools/android_strings.py  copies the translations into the Android app
+    tools/voice_clips.py  makes the voice guide's computer voices (run by GitHub, see "Computer voices")
     tests/             pytest suite (conftest.py sets up a fresh test DB)
   android/             the Android app (see "Android app"): Gradle project, package cm.africycle.app
     app/src/main/java/cm/africycle/app/  LauncherActivity (opens the site full screen),
@@ -262,6 +281,7 @@ africycle/
     sw.js              keeps the app's files on the phone (the server fills in its file list)
     css/               base.css (shared), auth.css, dashboard.css
     i18n/              translations, one file per language (fr.json, sw.json...)
+    voices/            the voice guide's computer voices: per language, index.json and the clips
     js/                shared scripts (see below), one script per page, map.js for the maps,
                        notify.js for unread counts, pop-ups and phone notifications,
                        phone.js for the country list and how numbers are shown,

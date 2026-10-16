@@ -177,10 +177,10 @@ def test_texts_are_cut_at_numbers_and_placeholders():
     assert pieces("Log in") == ["Log in"]
     assert pieces("Price per kg: {price}") == ["Price per kg:"]
     assert pieces("{name} is {distance} away in a straight line.") == ["is", "away in a straight line."]
-    assert pieces("Prix : 1 250 FCFA") == ["Prix :", "FCFA"]   # French spaces, a number
+    assert pieces("Prix\u00a0: 1\u202f250 FCFA") == ["Prix :", "FCFA"]   # French spaces, a number
     assert pieces("Up to 1,000,000 FCFA per kg") == ["Up to", "FCFA per kg"]
-    assert pieces("⁨Jean⁩ arrive") == ["Jean arrive"]          # marks around names in Arabic
-    assert pieces("{name}") == [] and pieces(" · ") == []
+    assert pieces("\u2068Jean\u2069 arrive") == ["Jean arrive"]          # marks around names in Arabic
+    assert pieces("{name}") == [] and pieces(" \u00b7 ") == []
 
 
 def test_every_language_of_the_app_has_a_voice_plan():

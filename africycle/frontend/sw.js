@@ -38,14 +38,16 @@ self.addEventListener("fetch", (event) => {
   const path = url.pathname === "/" ? "/index.html" : url.pathname;
   const isPage = request.mode === "navigate";
   // A language's translations are kept once used, so the app opens in that language offline
-  // too. Only the languages a phone uses are downloaded, not all of them.
-  const isTranslation = /^\/i18n\/[\w-]+\.json$/.test(path);
+  // too. Only the languages a phone uses are downloaded, not all of them. The same for the
+  // voice guide's computer voice: each clip is kept once heard.
+  const isTranslation = /^\/i18n\/[\w-]+\.json$/.test(path) || /^\/voices\/[\w/.-]+\.(json|ogg)$/.test(path);
   if (!isPage && !isTranslation && !FILES.includes(path)) return; // API calls and photos go straight to the server
 
+  // (A clip is fetched whole, without the "Range" a sound player asks with, so it can be kept)
   event.respondWith(
-    caches.open(CACHE).then((cache) => cache.match(path).then((saved) => saved || fetch(request)
+    caches.open(CACHE).then((cache) => cache.match(path).then((saved) => saved || fetch(isTranslation ? path : request)
       .then((response) => {
-        if (isTranslation && response.ok) cache.put(path, response.clone());
+        if (isTranslation && response.status === 200) cache.put(path, response.clone());
         return response;
       })
       .catch(() => (isPage

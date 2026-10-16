@@ -244,6 +244,44 @@ const AfriI18n = (function () {
     return reverse.get(text) || (Object.prototype.hasOwnProperty.call(strings, text) ? text : null);
   }
 
+  // Which translated sentence a shown text was made from, and its values:
+  // "Jean est à 2 km à vol d'oiseau." -> { key: "{name} is {distance} away in a straight
+  // line.", values: { name: "Jean", distance: "2 km" } }, or null. The voice guide uses it
+  // to say the sentence's words with its recordings and the values with a voice.
+  let templates = null;
+  let templatesSize = -1;
+  function plain(text) {
+    return String(text).replace(/[‎‏⁦-⁩]/g, "").replace(/\s+/g, " ").trim();
+  }
+  function parse(text) {
+    if (language === "en") return null;
+    if (!templates || templatesSize !== Object.keys(strings).length) {
+      templatesSize = Object.keys(strings).length;
+      templates = Object.keys(strings).filter((key) => /\{\w+\}/.test(strings[key])).map((key) => {
+        const names = [];
+        const pattern = plain(strings[key]).split(/(\{\w+\})/).map((segment) => {
+          const name = segment.match(/^\{(\w+)\}$/);
+          if (!name) return segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          names.push(name[1]);
+          return "(.+?)";
+        }).join("");
+        return { key, names, pattern: new RegExp(`^${pattern}$`), fixed: plain(strings[key].replace(/\{\w+\}/g, "")).length };
+      }).filter((item) => item.fixed > 1).sort((a, b) => b.fixed - a.fixed); // the most precise first
+    }
+    const shown = plain(text);
+    for (const item of templates) {
+      const found = shown.match(item.pattern);
+      if (found) {
+        const values = {};
+        item.names.forEach((name, index) => {
+          values[name] = found[index + 1];
+        });
+        return { key: item.key, values };
+      }
+    }
+    return null;
+  }
+
   // Runs fn once the page is translated (straight away on English pages)
   function whenReady(fn) {
     ready.then(fn);
@@ -319,7 +357,7 @@ const AfriI18n = (function () {
   }
 
   return {
-    LANGUAGES, language, t, englishOf, whenReady, locale, formatNumber, formatUnit, formatDateTime, formatAgo,
+    LANGUAGES, language, t, englishOf, parse, whenReady, locale, formatNumber, formatUnit, formatDateTime, formatAgo,
     isRightToLeft: Boolean(current.rtl)
   };
 })();

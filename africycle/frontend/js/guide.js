@@ -8,15 +8,23 @@
 //   to fill in, a price, a message...); a second touch on a button uses it. Menus open
 //   as a spoken list of big choices. When a new part appears (a trip to a buyer, a
 //   receipt), it is said straight away.
+// - "Read messages and directions aloud": what appears by itself is said as it appears:
+//   the page's messages ("Wrong password", "Purchase recorded"), new chat messages and,
+//   on a trip to a buyer, each turn of the way. Turning on Hear before you tap turns it
+//   on too.
 //
 // Where the voice comes from, best first:
 //   1. A recording of that sentence in that language, made by the team in the studio on
-//      the admin page (backend/routes/guide_routes.py). Phones have no voice for many of
-//      Africa's languages, so this is how Fulfulde, Sango or Lingala are heard.
+//      the admin page (backend/routes/guide_routes.py): a real person's voice.
 //   2. The phone's own voice for the language (Android's speech service has English,
 //      French, Arabic, Spanish, Portuguese, Chinese, Swahili, Afrikaans, Amharic, Hausa).
 //      Pidgin is read by an English voice: its words are English-based.
-//   3. Otherwise, a language the person understands, chosen under Voice in the guide
+//   3. Africycle's computer voice for the language: a clip of every text of the app,
+//      made with Meta's MMS speech models (frontend/voices, backend/tools/voice_clips.py).
+//      This is how Fulfulde, Sango, Lingala and the others are heard on phones that have
+//      no voice for them. Names, numbers and typed messages have no clip: a voice the
+//      phone does have says those (as in 4).
+//   4. Otherwise, a language the person understands, chosen under Voice in the guide
 //      (by default one of the phone's languages, or French, or English).
 
 const AfriGuide = (function () {
@@ -24,6 +32,9 @@ const AfriGuide = (function () {
   const STAND_IN_VOICES = { wes: "en" };
   const ARMED_FOR_MS = 8000; // a second touch within 8 seconds uses the button
   const NO_VOICE = "none";
+  // Where shown text is cut for the computer voice's clips: a {placeholder} or a number.
+  // The same pattern as PIECE_BREAK in backend/tools/voice_clips.py (a test checks).
+  const PIECE_BREAK = /\{\w+\}|[0-9](?:[0-9., ]*[0-9])?/g;
 
   // Each text below is written t("English") so the translation tools find it, but kept
   // in English here: recordings are looked up by the English text, then the guide says
@@ -66,6 +77,9 @@ const AfriGuide = (function () {
     tapOn: t("Hear before you tap is on. Touch anything once to hear it. Touch a button a second time to use it."),
     tapOff: t("Hear before you tap is off. Buttons work with one touch again."),
     tapHint: t("To hear each button before you use it, turn on Hear before you tap."),
+    aloudOn: t("Messages and directions will be read aloud."),
+    aloudOff: t("Messages and directions won't be read aloud."),
+    newMessage: t("Message from {name}"),
     slowOn: t("I will speak slowly."),
     slowOff: t("I will speak at the normal speed."),
     again: t("Touch it again to use it."),
@@ -86,7 +100,7 @@ const AfriGuide = (function () {
 
   // ---- Preferences (kept on this phone) ----
 
-  const prefs = { tap: false, slow: false, listen: "", opened: false };
+  const prefs = { tap: false, aloud: false, slow: false, listen: "", opened: false };
   try {
     Object.assign(prefs, JSON.parse(localStorage.getItem(PREFS_KEY) || "{}"));
   } catch (err) {
@@ -172,6 +186,42 @@ const AfriGuide = (function () {
         .catch(() => ({}));
     }
     return recordedLanguages;
+  }
+
+  // Africycle's computer voice: frontend/voices/<code>/index.json lists the clip of each
+  // text the app shows in that language ({ clips: { "text": "id" } }). The clips are Opus
+  // sound, which every Android phone plays; a browser that can't gets the other voices.
+  const playsClips = (function () {
+    try {
+      return document.createElement("audio").canPlayType('audio/ogg; codecs="opus"') !== "";
+    } catch (err) {
+      return false;
+    }
+  })();
+  const clipSets = {}; // language -> Promise of Map(text -> clip address)
+  const clipCredits = {}; // language -> who made its computer voice, and the licence
+  function clipsFor(code) {
+    if (!clipSets[code]) {
+      clipSets[code] = !playsClips ? Promise.resolve(new Map()) : fetch(`${fileBase}voices/${code}/index.json`)
+        .then((response) => (response.ok ? response.json() : {}))
+        .then((data) => {
+          const clips = (data && data.clips) || {};
+          clipCredits[code] = (data && data.credit) || "";
+          return new Map(Object.keys(clips).map((text) => [text, `${fileBase}voices/${code}/${clips[text]}.ogg`]));
+        })
+        .catch(() => new Map());
+    }
+    return clipSets[code];
+  }
+
+  let nameClips = null; // Promise of { code: the clip of that language's name, said in it }
+  function languageNameClips() {
+    if (!nameClips) {
+      nameClips = !playsClips ? Promise.resolve({}) : fetch(`${fileBase}voices/names.json`)
+        .then((response) => (response.ok ? response.json() : {}))
+        .catch(() => ({}));
+    }
+    return nameClips;
   }
 
   // Other languages' translations, for the language the person chose to listen in
@@ -284,13 +334,120 @@ const AfriGuide = (function () {
     captionEl.hidden = !text;
   }
 
+  // Whether there is anything to say in a piece of text (letters, not just "·" or "(")
+  const NOTHING_TO_SAY = /^[\s0-9\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e -¿ -⁯　-〿！-／]*$/;
+  function hasLetters(text) {
+    return !NOTHING_TO_SAY.test(text);
+  }
+
+  // A number as the app's language writes it ("1 250,5"), the way another language's
+  // voice reads it ("1250.5" in English)
+  function spokenNumber(text, code) {
+    const sample = clean(AfriI18n.formatNumber(12345.5, { minimumFractionDigits: 1, maximumFractionDigits: 1 }));
+    const decimal = (sample.match(/345(\D)5$/) || [])[1] || ".";
+    let plain = "";
+    for (const ch of clean(text)) {
+      if (ch >= "0" && ch <= "9") plain += ch;
+      else if (ch === decimal) plain += ".";
+    }
+    const value = Number(plain);
+    if (!plain || !isFinite(value)) return text;
+    try {
+      return value.toLocaleString(code, { useGrouping: false, maximumFractionDigits: 3 });
+    } catch (err) {
+      return plain;
+    }
+  }
+
+  // The computer voice's clips that say a text in this language: [{ clip, text }], with
+  // [{ other }] for the names and numbers between them (said by another voice). Null when
+  // no clip fits at all.
+  async function clipSteps(text, key, values) {
+    const clips = await clipsFor(language);
+    if (!clips.size) return null;
+    const whole = clean(text);
+    if (clips.has(whole)) return [{ clip: clips.get(whole), text: whole }];
+    const steps = [];
+    if (key && values) {
+      // "{name} is {distance} away": the clip of each fixed piece, the values between
+      clean(AfriI18n.t(key)).split(/(\{\w+\})/).forEach((segment) => {
+        const name = (segment.match(/^\{(\w+)\}$/) || [])[1];
+        addClipSteps(steps, clips, name ? (name in values ? String(values[name]) : "") : segment);
+      });
+    } else {
+      addClipSteps(steps, clips, whole);
+    }
+    return steps.some((step) => step.clip) ? steps : null;
+  }
+
+  function addClipSteps(steps, clips, text) {
+    const shown = clean(text);
+    if (!shown) return;
+    if (clips.has(shown)) {
+      steps.push({ clip: clips.get(shown), text: shown });
+      return;
+    }
+    const addPiece = (piece) => {
+      const trimmed = piece.trim();
+      if (!trimmed || !hasLetters(trimmed)) return;
+      steps.push(clips.has(trimmed) ? { clip: clips.get(trimmed), text: trimmed } : { other: trimmed });
+    };
+    let last = 0;
+    shown.replace(PIECE_BREAK, (match, offset) => {
+      addPiece(shown.slice(last, offset));
+      if (/[0-9]/.test(match)) steps.push({ other: match, number: true });
+      last = offset + match.length;
+      return match;
+    });
+    addPiece(shown.slice(last));
+  }
+
+  // Plays the clips one after the other; names and numbers in the voice of a language the
+  // phone has. "failed" when the first clip can't be played (offline, say).
+  async function playSteps(steps, myTurn) {
+    steps.slice(1).forEach((step) => {
+      if (step.clip) fetch(step.clip).catch(() => {}); // ready when its turn comes
+    });
+    let helper; // { code, voice } for names and numbers, looked up once
+    let played = 0;
+    for (const step of steps) {
+      if (myTurn !== turn) return "stopped";
+      let result = "skipped";
+      if (step.clip) {
+        result = await play(step.clip, myTurn);
+        if (result === "failed" && played === 0) return "failed";
+      } else {
+        if (helper === undefined) {
+          const code = listeningLanguage();
+          helper = code ? { code, voice: voiceFor(code) } : null;
+        }
+        if (helper) {
+          const words = step.number ? spokenNumber(step.other, helper.code) : step.other;
+          result = await sayWithVoice(words, helper.voice, myTurn);
+        }
+      }
+      if (result === "blocked" || result === "stopped") return result;
+      if (result === "done") played += 1;
+    }
+    return "done";
+  }
+
   // One thing to say: { key } an English text (said in the person's language, recorded
   // when possible), or { text } already in their language (a name, a price, a message)
   async function sayOne(part, myTurn) {
-    const key = part.key || null;
-    const text = part.text != null ? part.text : AfriI18n.t(key, part.values);
-    if (!text) return "done";
-    if (key && !part.values) {
+    let key = part.key || null;
+    let values = part.values || null;
+    const text = part.text != null ? part.text : AfriI18n.t(key, values);
+    if (!text || !clean(text)) return "done";
+    if (!key) {
+      // Text built from a translated sentence ("Jean is 2 km away"): which one, and the values
+      const parsed = AfriI18n.parse(text);
+      if (parsed) {
+        key = parsed.key;
+        values = parsed.values;
+      }
+    }
+    if (key && !values) {
       const recording = (await recordingsFor(language)).get(key);
       if (recording) {
         showCaption(text, language);
@@ -304,17 +461,30 @@ const AfriGuide = (function () {
       showCaption(text, language);
       return sayWithVoice(text, own, myTurn);
     }
-    // No voice for this language on this phone: say it in the language chosen to listen in
+    // No voice for this language on this phone: Africycle's computer voice
+    const steps = await clipSteps(text, key, values);
+    if (steps) {
+      showCaption(text, language);
+      const result = await playSteps(steps, myTurn);
+      if (result !== "failed") return result;
+    }
+    // Nor that: say it in the language chosen to listen in
     const other = listeningLanguage();
-    if (!other) return NO_VOICE;
+    if (!other) return (await clipsFor(language)).size ? "skipped" : NO_VOICE; // a name with no voice: shown only
     let otherText = text;
     if (key) {
       const catalog = await catalogFor(other);
       otherText = (catalog[key] || key);
-      if (part.values) {
-        otherText = otherText.replace(/\{(\w+)\}/g, (whole, name) => (name in part.values ? part.values[name] : whole));
+      if (values) {
+        otherText = otherText.replace(/\{(\w+)\}/g, (whole, name) => {
+          if (!(name in values)) return whole;
+          const shown = clean(values[name]);
+          const english = AfriI18n.englishOf(shown); // a material's name: in that language too
+          if (english && english !== shown) return catalog[english] || english;
+          return shown.replace(PIECE_BREAK, (match) => (/[0-9]/.test(match) ? spokenNumber(match, other) : match));
+        });
       }
-      const recording = !part.values && (await recordingsFor(other)).get(key);
+      const recording = !values && (await recordingsFor(other)).get(key);
       if (recording) {
         showCaption(otherText, other);
         const result = await play(recording, myTurn);
@@ -417,8 +587,9 @@ const AfriGuide = (function () {
   const CONTROLS = "a[href], button, input, select, textarea, summary, label, [role='button'], [role='switch']";
   const TEXTS = "td, th, li, p, h1, h2, h3, h4, dt, dd, legend, figcaption, .bubble, .stat, .status, .badge, .trip-next, .modal-meta, .map-status";
 
+  // Single spaces, without the invisible marks that keep names the right way round in Arabic
   function clean(text) {
-    return String(text || "").replace(/\s+/g, " ").trim();
+    return String(text == null ? "" : text).replace(/[‎‏⁦-⁩]/g, "").replace(/\s+/g, " ").trim();
   }
 
   // An English key for text shown in the page's language, so recordings can say it
@@ -620,16 +791,21 @@ const AfriGuide = (function () {
     return div.innerHTML;
   }
 
-  // A language in the list is said in its own voice when the phone has one
-  function sayOption(choice) {
+  // A language in the list is said in its own voice: the phone's, else the computer
+  // voice's clip of its name
+  async function sayOption(choice) {
     const code = choice.dataset.lang;
-    const voice = code && voiceFor(code);
-    if (voice && code !== language) {
-      stop();
-      const myTurn = turn;
-      showCaption(choice.textContent, code);
-      sayWithVoice(clean(choice.textContent), voice, myTurn);
-      return;
+    if (code && code !== language) {
+      const voice = voiceFor(code);
+      const clip = voice ? null : (await languageNameClips())[code];
+      if (voice || clip) {
+        stop();
+        const myTurn = turn;
+        showCaption(choice.textContent, code);
+        if (voice) sayWithVoice(clean(choice.textContent), voice, myTurn);
+        else play(`${fileBase}${clip}`, myTurn);
+        return;
+      }
     }
     say([part(choice.textContent)].filter(Boolean));
   }
@@ -684,6 +860,7 @@ const AfriGuide = (function () {
     stop: '<rect x="6" y="6" width="12" height="12" rx="1"/>',
     hand: '<path d="M9 11V5a1.5 1.5 0 0 1 3 0v6"/><path d="M12 10V3.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 10.5V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7h-.5a6.5 6.5 0 0 1-5.6-3.2L3 14.2a1.5 1.5 0 0 1 2.6-1.5L9 16"/>',
     slow: '<path d="M4 16c0-4.4 3.6-8 8-8s8 3.6 8 8z"/><path d="M8 16l-1.5 3M16 16l1.5 3"/><path d="M20 14h1.5a1.5 1.5 0 0 0 0-3H20"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
     globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'
   };
 
@@ -735,11 +912,13 @@ const AfriGuide = (function () {
         <button type="button" class="guide-close" data-guide-action="close" aria-label="${escapeText(t("Close"))}">&times;</button>
       </div>
       ${switchButton("tap", "hand", t("Hear before you tap"), prefs.tap)}
+      ${switchButton("aloud", "bell", t("Read messages and directions aloud"), prefs.aloud)}
       ${switchButton("slow", "slow", t("Speak slowly"), prefs.slow)}
       <button type="button" class="guide-switch-row guide-voice" data-guide-action="voice" hidden>
         ${icon("globe")}<span class="guide-row-text"></span>
       </button>
-      <p class="guide-caption" aria-live="polite" hidden></p>`;
+      <p class="guide-caption" aria-live="polite" hidden></p>
+      <p class="guide-credit" hidden></p>`;
     document.body.appendChild(panel);
     captionEl = panel.querySelector(".guide-caption");
     panel.addEventListener("click", onPanel);
@@ -756,6 +935,10 @@ const AfriGuide = (function () {
     const other = listeningLanguage();
     row.hidden = false;
     row.querySelector(".guide-row-text").textContent = t("Voice: {language}", { language: other ? languageName(other) : "-" });
+    // The computer voice's makers are credited, as its licence asks
+    const credit = panel.querySelector(".guide-credit");
+    credit.hidden = !(await clipsFor(language)).size || !clipCredits[language];
+    credit.textContent = `${t("Computer voice")}: ${clipCredits[language] || ""}`;
   }
 
   function openPanel() {
@@ -783,6 +966,12 @@ const AfriGuide = (function () {
     disarm();
   }
 
+  function setAloud(on) {
+    prefs.aloud = on;
+    savePrefs();
+    setSwitch("aloud", on);
+  }
+
   async function chooseVoice() {
     const counts = await languagesWithRecordings();
     const choices = AfriI18n.LANGUAGES
@@ -808,7 +997,13 @@ const AfriGuide = (function () {
       closePanel();
     } else if (action === "tap") {
       setTap(!prefs.tap);
-      say([{ key: prefs.tap ? SAY.tapOn : SAY.tapOff }]);
+      // Someone who needs to hear the buttons needs to hear the messages too
+      const alsoAloud = prefs.tap && !prefs.aloud;
+      if (alsoAloud) setAloud(true);
+      say([{ key: prefs.tap ? SAY.tapOn : SAY.tapOff }].concat(alsoAloud ? [{ key: SAY.aloudOn }] : []));
+    } else if (action === "aloud") {
+      setAloud(!prefs.aloud);
+      say([{ key: prefs.aloud ? SAY.aloudOn : SAY.aloudOff }]);
     } else if (action === "slow") {
       prefs.slow = !prefs.slow;
       savePrefs();
@@ -817,6 +1012,52 @@ const AfriGuide = (function () {
     } else if (action === "voice") {
       chooseVoice();
     }
+  }
+
+  // ---- What appears by itself, read aloud ----
+
+  let news = [];
+  let newsTimer = null;
+
+  // Says something new (a message on the page, a chat message, the next turn on a trip)
+  // when "Read messages and directions aloud" is on. Things that arrive together are said
+  // together. parts: [{ key, values }] for the app's sentences, [{ text }] for the rest.
+  function announce(parts) {
+    if (!prefs.aloud) return;
+    news = news.concat((parts || []).filter(Boolean));
+    clearTimeout(newsTimer);
+    newsTimer = setTimeout(() => {
+      const said = news;
+      news = [];
+      if (said.length) say(said);
+    }, 250);
+  }
+
+  // The page's messages (class "msg"): "Wrong phone number or password", "Purchase
+  // recorded."... Progress ("Loading...") isn't said: what follows it is.
+  const PROGRESS = /(\.\.\.|…)$/;
+  function watchMessages() {
+    const lastSaid = new WeakMap(); // message -> { text, at }
+    const check = (message) => {
+      if (!prefs.aloud || inGuide(message) || !visible(message)) return;
+      const text = clean(message.textContent);
+      if (!text || PROGRESS.test(text)) return;
+      const last = lastSaid.get(message);
+      if (last && last.text === text && Date.now() - last.at < 2000) return; // one change, seen three times
+      lastSaid.set(message, { text, at: Date.now() });
+      announce([part(text)]);
+    };
+    new MutationObserver((changes) => {
+      const changed = new Set();
+      changes.forEach((change) => {
+        const element = change.target.nodeType === 1 ? change.target : change.target.parentElement;
+        const message = element && element.closest(".msg, [role='alert']");
+        if (message) changed.add(message);
+      });
+      changed.forEach(check);
+    }).observe(document.body, {
+      subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["hidden", "class"]
+    });
   }
 
   // ---- New parts of the page, said as they appear ----
@@ -854,7 +1095,11 @@ const AfriGuide = (function () {
       }
     });
     watchStages();
+    watchMessages();
     recordingsFor(language); // ready before the first touch
+    voicesReady.then(() => {
+      if (!voiceFor(language)) clipsFor(language); // the computer voice, ready too
+    });
     // With Hear before you tap on, each page explains itself as it opens. Browsers may
     // want a touch first: the speaker button then waits, ringing.
     if (prefs.tap) {
@@ -872,6 +1117,8 @@ const AfriGuide = (function () {
 
   return {
     say: (keys) => say(keys.map((key) => ({ key }))),
+    announce,
+    newMessage: (name, text) => announce([{ key: SAY.newMessage, values: { name } }, { text }]),
     stop,
     explainScreen,
     openPicker,

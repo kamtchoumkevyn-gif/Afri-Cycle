@@ -361,6 +361,10 @@ AfriI18n.whenReady(function () {
   let routeAskedAt = 0;
   let routeLoading = false;
   let following = true;
+  const NEAR_TURN_KM = 0.05;    // a turn this close is said again, as it is reached
+  let saidStep = null;          // the next turn, once said aloud
+  let saidNearStep = null;      // the turn, once said as it is reached
+  let saidArrival = null;       // the trip whose arrival was said
 
   tripPanel.querySelectorAll("[data-mode]").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.mode === travelMode));
@@ -548,8 +552,37 @@ AfriI18n.whenReady(function () {
         " " + (routeLoading ? t("Working out the way by road...") : tripRouteError);
     }
 
+    speakTheWay(straightKm, info);
+
     if (following && tripMap && trip.status === "in transit") {
       tripMap.setView(myPosition, Math.max(tripMap.getZoom(), 16));
+    }
+  }
+
+  // On the way, the turns are said aloud for people who can't read them (js/guide.js,
+  // "Read messages and directions aloud"): each turn when it becomes the next one ("In
+  // 300 m, turn left onto..."), again just before it, and the arrival.
+  function speakTheWay(straightKm, info) {
+    if (typeof AfriGuide === "undefined" || !trip || trip.status !== "in transit") return;
+    if (straightKm <= ARRIVED_KM) {
+      if (saidArrival !== trip.id) {
+        saidArrival = trip.id;
+        AfriGuide.announce([{ key: "You're at {name}'s buying point. Tap \"I've arrived\".", values: { name: trip.buyerName } }]);
+      }
+      return;
+    }
+    if (!info || !info.next) return;
+    const step = info.next;
+    const turn = step.type === "arrive"
+      ? { key: "Arrive at {name}'s buying point", values: { name: trip.buyerName } }
+      : { text: step.text };
+    if (saidStep !== step) {
+      saidStep = step;
+      if (info.nextKm <= NEAR_TURN_KM) saidNearStep = step; // already there: once is enough
+      AfriGuide.announce([{ key: "In {distance}", values: { distance: AfriMap.formatDistance(info.nextKm) } }, turn]);
+    } else if (info.nextKm <= NEAR_TURN_KM && saidNearStep !== step) {
+      saidNearStep = step;
+      AfriGuide.announce([turn]);
     }
   }
 

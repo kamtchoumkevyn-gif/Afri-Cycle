@@ -81,6 +81,8 @@ const AfricycleAlerts = (function () {
     popup.appendChild(open);
     document.body.appendChild(popup);
     popupTimer = setTimeout(hidePopup, 10000);
+    // Said aloud for people who can't read it, when they asked for that (js/guide.js)
+    if (typeof AfriGuide !== "undefined") AfriGuide.newMessage(message.senderName, message.messageText);
   }
 
   function hidePopup() {

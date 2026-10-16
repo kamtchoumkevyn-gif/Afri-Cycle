@@ -95,7 +95,13 @@ AfriI18n.whenReady(function () {
       showSupervisionNotice(data);
       const messages = data.messages || [];
       if (messages.length === lastRenderedCount) return; // nothing new
+      const before = lastRenderedCount;
       lastRenderedCount = messages.length;
+      // A message just received in the open conversation: said aloud when asked for (js/guide.js)
+      if (before >= 0 && typeof AfriGuide !== "undefined") {
+        messages.slice(before).filter((m) => m.senderId !== user.userId)
+          .forEach((m) => AfriGuide.newMessage(data.otherUserName, m.messageText));
+      }
 
       threadEl.innerHTML = messages.length
         ? messages.map((m) => `

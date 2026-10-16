@@ -1,12 +1,12 @@
 # Computer voices for the voice guide (africycle/backend/tools/voice_clips.py): a short
-# recording of each of the app's texts, in every language Meta's MMS text-to-speech models
-# speak, for phones that have no voice of their own for that language (Fulfulde, Sango,
+# recording of each of the app's texts, in every language an open text-to-speech model
+# speaks (Coqui's Open.Bible voices, Meta's MMS models), for phones that have no voice of their own for that language (Fulfulde, Sango,
 # Lingala...). Runs whenever the translations change; only new or changed texts are made
 # again. The clips are committed to africycle/frontend/voices/ on the same branch, and the
 # website serves them from there. (The voice-clips branch is for trying changes first.)
 #
-# The MMS models are CC BY-NC 4.0: fine for this student project, not for selling. See the
-# "Voice guide" part of README.md.
+# Most of these voices (the MMS ones) are CC BY-NC 4.0: fine for this student project, not
+# for selling. See the "Voice guide" part of README.md.
 name: Voice guide clips
 
 on:
@@ -63,17 +63,22 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Text-to-speech tools
+        env:
+          MODELS: ${{ matrix.models }}
         run: |
           command -v ffmpeg > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null; }
           python3 -m venv "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install -q --index-url https://download.pytorch.org/whl/cpu torch
+          "$RUNNER_TEMP/venv/bin/pip" install -q --index-url https://download.pytorch.org/whl/cpu torch torchaudio
           "$RUNNER_TEMP/venv/bin/pip" install -q "transformers>=4.44,<5" uroman numpy
+          case "$MODELS" in
+            *coqui:*) "$RUNNER_TEMP/venv/bin/pip" install -q --extra-index-url https://download.pytorch.org/whl/cpu coqui-tts || true ;;
+          esac
       - name: Make the clips
         env:
           CODE: ${{ matrix.code }}
-          MODEL: ${{ matrix.model }}
+          MODELS: ${{ matrix.models }}
         run: |
-          "$RUNNER_TEMP/venv/bin/python" africycle/backend/tools/voice_clips.py make "$CODE" "$MODEL" > result.json
+          "$RUNNER_TEMP/venv/bin/python" africycle/backend/tools/voice_clips.py make "$CODE" $MODELS > result.json
           python3 - <<'EOF'
           import json
           r = json.load(open("result.json"))
@@ -123,7 +128,7 @@ jobs:
             exit 0
           fi
           git commit -q -m "Voice guide: computer voices for the latest texts" \
-            -m "Made by .github/workflows/voices.yml with Meta's MMS text-to-speech models (CC BY-NC 4.0)."
+            -m "Made by .github/workflows/voices.yml (each language's index.json names its voice and licence)."
           for attempt in 1 2 3; do
             git push origin "HEAD:$GITHUB_REF" && exit 0
             git pull -q --rebase origin "$GITHUB_REF_NAME"

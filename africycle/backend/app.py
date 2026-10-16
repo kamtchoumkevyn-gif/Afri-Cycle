@@ -248,6 +248,7 @@ def download_android_app():
 # so a deploy shows up straight away.
 LONG_CACHE_FOLDERS = ("vendor/", "fonts/", "icons/", "assets/")
 LONG_CACHE_SECONDS = 30 * 24 * 60 * 60
+VOICE_CLIP_SECONDS = 365 * 24 * 60 * 60
 
 
 @app.route("/")
@@ -259,6 +260,11 @@ def serve_index():
 # (e.g. /../backend/.env gets a 404), so this can't leak backend files.
 @app.route("/<path:filename>")
 def serve_frontend(filename):
+    if filename.startswith("voices/") and filename.endswith(".ogg"):
+        # The voice guide's clips are named after what they say: a clip never changes
+        response = send_from_directory(FRONTEND_DIR, filename, max_age=VOICE_CLIP_SECONDS)
+        response.headers["Cache-Control"] = f"public, max-age={VOICE_CLIP_SECONDS}, immutable"
+        return response
     max_age = LONG_CACHE_SECONDS if filename.startswith(LONG_CACHE_FOLDERS) else 0
     return send_from_directory(FRONTEND_DIR, filename, max_age=max_age)
 

@@ -71,7 +71,7 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install -q --index-url https://download.pytorch.org/whl/cpu torch torchaudio
           "$RUNNER_TEMP/venv/bin/pip" install -q "transformers>=4.44,<5" uroman numpy
           case "$MODELS" in
-            *coqui:*) "$RUNNER_TEMP/venv/bin/pip" install -q --extra-index-url https://download.pytorch.org/whl/cpu coqui-tts || true ;;
+            *coqui:*) "$RUNNER_TEMP/venv/bin/pip" install -q --extra-index-url https://download.pytorch.org/whl/cpu "coqui-tts[codec]" || true ;;
           esac
       - name: Make the clips
         env:

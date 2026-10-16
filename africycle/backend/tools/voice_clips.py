@@ -90,9 +90,10 @@ def kind_of(model):
     return "coqui" if model.startswith("coqui:") else "mms"
 
 
-# Where a shown text is cut into pieces: a {placeholder}, or a number ("1 250", "3.5").
+# Where a shown text is cut into pieces: a {placeholder}, or a number ("1 250", "3,5",
+# "1,000,000"; in a date, each part).
 # guide.js has the same pattern; tests/test_voice_guide.py checks they match.
-PIECE_BREAK = r"\{\w+\}|[0-9](?:[0-9., ]*[0-9])?"
+PIECE_BREAK = r"\{\w+\}|[0-9]+(?:[., ][0-9]{3})*(?:[.,][0-9]+)?"
 _BREAK = re.compile(PIECE_BREAK)
 _BIDI_MARKS = re.compile("[‎‏⁦-⁩]")  # invisible marks around names in Arabic
 

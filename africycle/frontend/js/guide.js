@@ -34,7 +34,7 @@ const AfriGuide = (function () {
   const NO_VOICE = "none";
   // Where shown text is cut for the computer voice's clips: a {placeholder} or a number.
   // The same pattern as PIECE_BREAK in backend/tools/voice_clips.py (a test checks).
-  const PIECE_BREAK = /\{\w+\}|[0-9](?:[0-9., ]*[0-9])?/g;
+  const PIECE_BREAK = /\{\w+\}|[0-9]+(?:[., ][0-9]{3})*(?:[.,][0-9]+)?/g;
 
   // Each text below is written t("English") so the translation tools find it, but kept
   // in English here: recordings are looked up by the English text, then the guide says
@@ -471,7 +471,7 @@ const AfriGuide = (function () {
     // Nor that: say it in the language chosen to listen in
     const other = listeningLanguage();
     if (!other) return (await clipsFor(language)).size ? "skipped" : NO_VOICE; // a name with no voice: shown only
-    let otherText = text;
+    let otherText = clean(text).replace(PIECE_BREAK, (match) => (/[0-9]/.test(match) ? spokenNumber(match, other) : match));
     if (key) {
       const catalog = await catalogFor(other);
       otherText = (catalog[key] || key);

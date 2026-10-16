@@ -260,13 +260,13 @@ def _coqui_speaker(model):
     return speak
 
 
-def _speaker(models):
-    """(model, speak) for the first of these models that loads and speaks."""
+def _speaker(models, sample):
+    """(model, speak) for the first of these models that loads and can say the sample."""
     for model in models:
         try:
             speak = (_coqui_speaker if kind_of(model) == "coqui" else _mms_speaker)(model)
-            if speak("Africycle") is not None:
-                return model, speak
+            speak(sample)
+            return model, speak
         except Exception as err:  # noqa: BLE001 - any failure: try the next model
             print(f"{model} does not work here: {err!r}", file=sys.stderr)
     raise SystemExit("None of these models works: " + " ".join(models))
@@ -299,7 +299,7 @@ def make(code, models):
     folder = os.path.join(VOICES, code)
     os.makedirs(folder, exist_ok=True)
     old = read_manifest(code) or {}
-    model, speak = _speaker(models)
+    model, speak = _speaker(models, language_names()[code])
     old_clips = old.get("clips", {}) if old.get("model") == model else {}
     clips, seconds, missing = {}, 0.0, []
     started = time.time()

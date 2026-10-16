@@ -78,7 +78,12 @@ jobs:
           CODE: ${{ matrix.code }}
           MODELS: ${{ matrix.models }}
         run: |
-          "$RUNNER_TEMP/venv/bin/python" africycle/backend/tools/voice_clips.py make "$CODE" $MODELS > result.json
+          if ! "$RUNNER_TEMP/venv/bin/python" africycle/backend/tools/voice_clips.py make "$CODE" $MODELS > result.json 2> make.log; then
+            tail -n 40 make.log
+            echo "::error title=Clips ($CODE) failed::$(tail -c 1800 make.log | tr '\n' ' ')"
+            exit 1
+          fi
+          grep "does not work here" make.log | cut -c 1-900 | sed 's/^/::warning title=Model skipped ('"$CODE"')::/' || true
           python3 - <<'EOF'
           import json
           r = json.load(open("result.json"))

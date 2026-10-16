@@ -1,0 +1,131 @@
+# Computer voices for the voice guide (africycle/backend/tools/voice_clips.py): a short
+# recording of each of the app's texts, in every language Meta's MMS text-to-speech models
+# speak, for phones that have no voice of their own for that language (Fulfulde, Sango,
+# Lingala...). Runs whenever the translations change; only new or changed texts are made
+# again. The clips are committed to africycle/frontend/voices/ on the same branch, and the
+# website serves them from there. (The voice-clips branch is for trying changes first.)
+#
+# The MMS models are CC BY-NC 4.0: fine for this student project, not for selling. See the
+# "Voice guide" part of README.md.
+name: Voice guide clips
+
+on:
+  push:
+    branches: [master, voice-clips]
+    paths:
+      - "africycle/frontend/i18n/**"
+      - "africycle/frontend/js/i18n.js"
+      - "africycle/backend/tools/voice_clips.py"
+      - ".github/workflows/voices.yml"
+  workflow_dispatch:
+    inputs:
+      languages:
+        description: "Language codes to make, separated by spaces (empty: every language)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write # to commit the clips
+
+concurrency:
+  group: voices-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan (languages with a voice model)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Ask Hugging Face which languages have an MMS model
+        id: plan
+        env:
+          LANGUAGES: ${{ github.event.inputs.languages }}
+        run: |
+          python3 africycle/backend/tools/voice_clips.py plan $LANGUAGES > plan.json 2> plan.txt
+          cat plan.txt
+          echo "::notice title=Voice models::$(paste -sd ';' plan.txt)"
+          echo "matrix=$(cat plan.json)" >> "$GITHUB_OUTPUT"
+
+  make:
+    name: Clips (${{ matrix.code }})
+    needs: plan
+    if: needs.plan.outputs.matrix != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Text-to-speech tools
+        run: |
+          command -v ffmpeg > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null; }
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q --index-url https://download.pytorch.org/whl/cpu torch
+          "$RUNNER_TEMP/venv/bin/pip" install -q "transformers>=4.44,<5" uroman numpy
+      - name: Make the clips
+        env:
+          CODE: ${{ matrix.code }}
+          MODEL: ${{ matrix.model }}
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" africycle/backend/tools/voice_clips.py make "$CODE" "$MODEL" > result.json
+          python3 - <<'EOF'
+          import json
+          r = json.load(open("result.json"))
+          note = f"{r['clips']} clips, {r['kilobytes']} KB, {r['new_seconds']} s of new speech in {r['minutes']} min, {r['model']}"
+          print(f"::notice title=Voice clips ({r['code']})::{note}")
+          if r["missing"]:
+              print(f"::warning title=No clip ({r['code']})::" + " | ".join(r["missing"])[:3000])
+          EOF
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: voices-${{ matrix.code }}
+          path: africycle/frontend/voices/${{ matrix.code }}
+          retention-days: 3
+          if-no-files-found: error
+
+  commit:
+    name: Commit the clips
+    needs: [plan, make]
+    if: always() && needs.plan.result == 'success' && needs.plan.outputs.matrix != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: voices-*
+          path: ${{ runner.temp }}/voices
+      - name: Put the new clips in place and check them
+        run: |
+          mkdir -p africycle/frontend/voices
+          for made in "$RUNNER_TEMP"/voices/voices-*; do
+            [ -d "$made" ] || continue
+            code="${made##*/voices-}"
+            rm -rf "africycle/frontend/voices/$code"
+            cp -r "$made" "africycle/frontend/voices/$code"
+          done
+          python3 africycle/backend/tools/voice_clips.py names > /dev/null
+          python3 africycle/backend/tools/voice_clips.py check
+          echo "::notice title=Voice clips (all)::$(du -sh africycle/frontend/voices | cut -f1) in $(find africycle/frontend/voices -name '*.ogg' | wc -l) clips"
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A africycle/frontend/voices
+          if git diff --cached --quiet; then
+            echo "::notice title=Voice clips::Nothing new to commit"
+            exit 0
+          fi
+          git commit -q -m "Voice guide: computer voices for the latest texts" \
+            -m "Made by .github/workflows/voices.yml with Meta's MMS text-to-speech models (CC BY-NC 4.0)."
+          for attempt in 1 2 3; do
+            git push origin "HEAD:$GITHUB_REF" && exit 0
+            git pull -q --rebase origin "$GITHUB_REF_NAME"
+          done
+          exit 1

@@ -20,7 +20,7 @@ receipt_bp = Blueprint("receipt_bp", __name__)
 def may_see(payload, receipt):
     """Whether this logged-in user is one of the people a receipt is for."""
     user_id = payload["userId"]
-    if user_id in (receipt["buyerId"], receipt["sellerId"]) or payload.get("role") == "admin":
+    if user_id in (receipt["buyerId"], receipt["sellerId"]) or (payload.get("role") == "admin" and payload.get("twoStep")):
         return True
     seller = get_user_by_id(receipt["sellerId"])
     return bool(seller and seller.get("isMinor") and seller.get("guardianStatus") == "approved"

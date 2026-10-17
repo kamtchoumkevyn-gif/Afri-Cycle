@@ -24,3 +24,4 @@ class Config:
     ]
 
     JWT_EXPIRY_HOURS = 24
+    ADMIN_JWT_EXPIRY_HOURS = 8  # admins log in again each working day

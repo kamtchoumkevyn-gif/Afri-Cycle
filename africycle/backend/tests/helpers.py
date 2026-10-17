@@ -2,18 +2,27 @@ import jwt
 from datetime import datetime, timedelta
 import phones
 from config import Config
+from database.db import get_connection
 from models.user import create_user
 from models.material_category import create_material_category
 from models.buyer_profile import create_buyer_profile
 from models.buyer_price import set_price
 
 
-def make_token(user_id, role):
+def make_token(user_id, role, two_step=True):
+    """A login token. An admin's counts as logged in with the two-step code (and their
+    account gets two-step login turned on), unless two_step=False."""
     payload = {
         "userId": user_id,
         "role": role,
         "exp": datetime.utcnow() + timedelta(hours=1),
     }
+    if role == "admin" and two_step:
+        payload["mfa"] = True
+        conn = get_connection()
+        conn.cursor().execute("UPDATE users SET totpEnabled = 1 WHERE id = ?", (user_id,))
+        conn.commit()
+        conn.close()
     return jwt.encode(payload, Config.SECRET_KEY, algorithm="HS256")
 
 

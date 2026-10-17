@@ -50,6 +50,11 @@
       <label for="password">Password</label>
       <input type="password" id="password" autocomplete="current-password" required>
 
+      <div id="codeField" hidden>
+        <label for="twoStepCode">Code from your authenticator app</label>
+        <input type="text" id="twoStepCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" translate="no">
+      </div>
+
       <label class="checkbox-label">
         <input type="checkbox" id="rememberMe">
         Stay logged in on this device

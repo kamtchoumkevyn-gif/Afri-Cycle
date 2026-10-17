@@ -7,6 +7,8 @@ AfriI18n.whenReady(function () {
   const btnSpinner = document.getElementById("btnSpinner");
   const formMsg = document.getElementById("formMsg");
   const phoneCountry = document.getElementById("phoneCountry");
+  const codeField = document.getElementById("codeField");
+  const codeInput = document.getElementById("twoStepCode");
 
   const existingUser = currentUser();
   if (existingUser) {
@@ -40,9 +42,20 @@ AfriI18n.whenReady(function () {
     try {
       const response = await apiFetch("/login", {
         method: "POST",
-        body: JSON.stringify({ phoneNumber, country: phoneCountry.value, password, role })
+        body: JSON.stringify({ phoneNumber, country: phoneCountry.value, password, role,
+          code: codeField.hidden ? undefined : codeInput.value.trim() })
       });
       const data = await readJson(response);
+
+      // Admins with two-step login on: show the code box, then log in again with the code
+      if (response.status === 401 && data.code === "two_step_required") {
+        codeField.hidden = false;
+        codeInput.value = "";
+        showMessage(formMsg, data.message, "error");
+        setLoading(false);
+        codeInput.focus();
+        return;
+      }
 
       if (!response.ok) {
         const text = response.status === 429

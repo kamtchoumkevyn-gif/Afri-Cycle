@@ -1238,3 +1238,14 @@ body.modal-open {
   align-items: center;
   margin-top: 8px;
 }
+
+/* Admin two-step login setup: the key wraps so all of it shows on a phone */
+.setup-key-label { font-weight: 600; margin: 12px 0 4px; }
+.setup-key {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 1.05rem; letter-spacing: 0.04em; line-height: 1.6;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--page); color: var(--ink); word-break: break-word; user-select: all;
+  direction: ltr; text-align: left;
+}
+.setup-key-button { margin-top: 12px; }

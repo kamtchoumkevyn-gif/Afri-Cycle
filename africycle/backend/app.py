@@ -36,6 +36,14 @@ mimetypes.add_type("application/vnd.android.package-archive", ".apk")  # phones 
 
 app = Flask(__name__, static_folder=None)
 app.config.from_object(Config)
+# On Render, every request reaches the app through Render's proxy, so without this the
+# app would see the proxy's address for everyone: the login limit (5 a minute) would
+# then be shared by all users, and one person could lock everybody out. Render adds the
+# real address in X-Forwarded-For. Only trusted where Render sets RENDER=true; elsewhere
+# anyone could fake that header.
+if os.environ.get("RENDER"):
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 # Requests over 1 MB are refused (413). Photos are shrunk to well under this first.
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024
 

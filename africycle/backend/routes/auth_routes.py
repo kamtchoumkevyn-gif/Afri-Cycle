@@ -3,10 +3,12 @@ from i18n import N_, _
 import jwt
 from datetime import datetime, timedelta
 import phones
+import totp
 from config import Config
 from extensions import limiter
-from auth_utils import get_user_from_token
+from auth_utils import client_ip, get_user_from_token
 from database.db import get_connection
+from models.admin_action import log_action
 from models.user import (check_password, create_user, find_user_by_phone, find_users_by_phones,
                          get_user_by_id)
 
@@ -20,6 +22,7 @@ GUARDIAN_RELATIONS = ("mother", "father", "grandparent", "aunt or uncle", "older
 
 
 @auth_bp.route("/register", methods=["POST"])
+@limiter.limit("10 per hour")  # stops one connection from creating accounts by the hundred
 def register():
     data = request.get_json() or {}
     name = data.get("name")
@@ -137,6 +140,9 @@ def login():
                  if check_password(str(password), account["passwordHash"])), None)
     if not user:
         return jsonify({"message": _("Invalid phone number or password")}), 401
+    if user.get("isFlagged"):
+        return jsonify({"message": _("This account has been suspended. Contact Africycle."),
+                        "code": "suspended"}), 403
 
     # Optional role from the login form; a "both" account may enter as seller or buyer
     selected_role = data.get("role")
@@ -145,12 +151,35 @@ def login():
             return jsonify({"message": _("This account is registered as {role}. Choose that role to log in.",
                                          role=_(ROLE_NAMES.get(user["role"], user["role"])))}), 403
 
+    # Admins with two-step login on also type the code from their authenticator app
+    two_step = False
+    if user["role"] == "admin" and user.get("totpEnabled"):
+        if not str(data.get("code") or "").strip():
+            return jsonify({"message": _("Enter the 6-digit code from your authenticator app"),
+                            "code": "two_step_required"}), 401
+        step = totp.check(totp.unseal(user.get("totpSecret") or ""), data.get("code"), user.get("totpLastStep"))
+        if step is None:
+            log_action(user["id"], "wrong_code", ip_address=client_ip())
+            return jsonify({"message": _("That code is wrong or has expired. Type the newest code from the app."),
+                            "code": "two_step_required"}), 401
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET totpLastStep = ? WHERE id = ?", (step, user["id"]))
+        conn.commit()
+        conn.close()
+        two_step = True
+
+    hours = Config.ADMIN_JWT_EXPIRY_HOURS if user["role"] == "admin" else Config.JWT_EXPIRY_HOURS
     payload = {
         "userId": user["id"],
         "role": user["role"],
+        "mfa": two_step,
         "iat": datetime.utcnow(),
-        "exp": datetime.utcnow() + timedelta(hours=Config.JWT_EXPIRY_HOURS)
+        "exp": datetime.utcnow() + timedelta(hours=hours)
     }
+    if user["role"] == "admin":
+        log_action(user["id"], "login", details="with code" if two_step else "password only",
+                   ip_address=client_ip())
     token = jwt.encode(payload, Config.SECRET_KEY, algorithm="HS256")
 
     return jsonify({

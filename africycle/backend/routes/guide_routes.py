@@ -13,7 +13,9 @@ import i18n
 from i18n import _
 from models.guide_recording import (counts_by_language, delete_recording, get_recording, list_recordings,
                                     save_recording)
-from routes.admin_routes import require_admin
+from auth_utils import client_ip
+from models.admin_action import log_action
+from routes.admin_routes import admin_or_error
 
 guide_bp = Blueprint("guide_bp", __name__)
 
@@ -87,9 +89,9 @@ def recording_audio(recording_id):
 
 @guide_bp.route("/admin/guide-recordings", methods=["POST"])
 def add_recording():
-    payload = require_admin()
-    if not payload:
-        return jsonify({"message": _("Unauthorized")}), 401
+    payload, error = admin_or_error()
+    if error:
+        return error
     data = request.get_json(silent=True) or {}
     language = data.get("language")
     text = data.get("text")
@@ -102,13 +104,18 @@ def add_recording():
         return jsonify({"message": raw}), 400
     recording_id = save_recording(language, text.strip(), mime_type,
                                   base64.b64encode(raw).decode("ascii"), payload["userId"])
+    log_action(payload["userId"], "recording_saved", details=f"{language}: {text.strip()[:200]}",
+               ip_address=client_ip())
     return jsonify({"message": _("Recording saved"), "id": recording_id}), 201
 
 
 @guide_bp.route("/admin/guide-recordings/<int:recording_id>", methods=["DELETE"])
 def remove_recording(recording_id):
-    if not require_admin():
-        return jsonify({"message": _("Unauthorized")}), 401
+    payload, error = admin_or_error()
+    if error:
+        return error
     if not delete_recording(recording_id):
         return jsonify({"message": _("Recording not found")}), 404
+    log_action(payload["userId"], "recording_deleted", details=f"recording {recording_id}",
+               ip_address=client_ip())
     return jsonify({"message": _("Recording removed")}), 200

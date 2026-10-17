@@ -38,6 +38,18 @@
 
     <p id="pageMsg" class="msg" role="status" hidden></p>
 
+    <section class="panel" id="twoStepPanel" aria-labelledby="twoStepHeading" hidden>
+      <h2 id="twoStepHeading">Protect your admin account</h2>
+      <p class="panel-hint">Install an authenticator app on your phone, such as Google Authenticator or Microsoft Authenticator. In the app, add an account with this setup key, then type the 6-digit code it shows. From then on, logging in as admin asks for the app's newest code.</p>
+      <p><a id="twoStepLink" class="btn btn-quiet" href="#">Open in the authenticator app</a></p>
+      <p class="setup-key-label" id="twoStepKeyLabel">Setup key</p>
+      <p class="setup-key" id="twoStepKey" aria-labelledby="twoStepKeyLabel" translate="no"></p>
+      <label for="twoStepCode">Code from your authenticator app</label>
+      <input type="text" id="twoStepCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" translate="no">
+      <button class="btn btn-primary setup-key-button" id="twoStepBtn" type="button">Turn on two-step login</button>
+      <p class="msg" id="twoStepMsg" role="status" hidden></p>
+    </section>
+
     <section class="stats" aria-label="User counts">
       <div class="stat"><span class="stat-value" id="statTotal">-</span><span class="stat-label">Users</span></div>
       <div class="stat"><span class="stat-value" id="statSellers">-</span><span class="stat-label">Sellers</span></div>
@@ -70,6 +82,21 @@
             <tr><th>Name</th><th>Phone</th><th>Role</th><th>Status</th><th></th></tr>
           </thead>
           <tbody id="usersBody">
+            <tr><td colspan="5" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="actionsHeading">
+      <h2 id="actionsHeading">Admin activity</h2>
+      <p class="panel-hint">Every admin login, flag and change, newest first. Nobody can edit or delete this list.</p>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>When</th><th>Admin</th><th>Action</th><th>Account</th><th>Details</th></tr>
+          </thead>
+          <tbody id="actionsBody">
             <tr><td colspan="5" class="empty-row">Loading...</td></tr>
           </tbody>
         </table>

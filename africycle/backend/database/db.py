@@ -160,6 +160,19 @@ SCHEMA = [
         UNIQUE (language, textKey)
     )
     """,
+    # What admins did, and when: logins, flags, two-step login changes, voice
+    # recordings (models/admin_action.py). Nothing here is ever changed or deleted.
+    """
+    CREATE TABLE IF NOT EXISTS admin_actions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        adminId INTEGER NOT NULL,
+        action TEXT NOT NULL,
+        targetUserId INTEGER,
+        details TEXT,
+        ipAddress TEXT,
+        createdAt TEXT NOT NULL
+    )
+    """,
 ]
 
 # The tables of the first release, before photos, notifications and settings were added
@@ -180,6 +193,11 @@ ADDED_COLUMNS = {
         ("guardianStatus", "TEXT"),      # pending, approved or declined; empty for adults
         ("guardianId", "INTEGER"),       # the guardian account that approved the child
         ("guardianApprovedAt", "TEXT"),
+        # Admins' two-step login (totp.py): the authenticator app's secret, encrypted;
+        # whether it's on; and the last code's time step, so no code works twice
+        ("totpSecret", "TEXT"),
+        ("totpEnabled", "INTEGER DEFAULT 0"),
+        ("totpLastStep", "INTEGER"),
     ],
     "notifications": [
         ("locationUpdatedAt", "TEXT"),

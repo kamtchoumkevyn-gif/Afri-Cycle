@@ -6,18 +6,37 @@ from i18n import _
 
 
 def get_user_from_token():
-    """Pulls the JWT from the Authorization header and returns its payload, or None."""
+    """The logged-in account's token payload, or None.
+
+    The token is checked against the account as it is now, not as it was at login: a
+    deleted or flagged (suspended) account is logged out at once, and the role comes
+    from the database, so a token can't keep a role the account no longer has."""
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):
         return None
 
     token = auth_header.split(" ")[1]
     try:
-        return jwt.decode(token, Config.SECRET_KEY, algorithms=["HS256"])
-    except jwt.ExpiredSignatureError:
+        payload = jwt.decode(token, Config.SECRET_KEY, algorithms=["HS256"])
+    except jwt.InvalidTokenError:  # also covers an expired token
         return None
-    except jwt.InvalidTokenError:
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT role, isFlagged, totpEnabled FROM users WHERE id = ?", (payload.get("userId"),))
+    row = cursor.fetchone()
+    conn.close()
+    if not row or row["isFlagged"]:
         return None
+    payload["role"] = row["role"]
+    # Admin tools need the second step: a code from the authenticator app at this login
+    payload["twoStep"] = bool(row["totpEnabled"]) and payload.get("mfa") is True
+    return payload
+
+
+def client_ip():
+    """The address the request came from (behind Render's proxy, see app.py)."""
+    return request.remote_addr
 
 
 def guardian_block(user_id):

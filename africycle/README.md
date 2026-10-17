@@ -52,7 +52,7 @@ Tests use a temporary database, so they never touch your real data. To run the s
 4. The seller's dashboard now shows **Your trip**: a map with the road route to the buyer, the next turn ("In 300 m, turn left onto Rue Joss"), and the distance and time left. It follows you as you move and works out a new way if you leave the route. Choose **On foot** or **Motorbike or car**. The trip map stays, even after a reload or closing the app, until you tap **I've arrived**; **Google Maps** opens the same destination there.
 5. On the buyer's dashboard, **Collectors on their way** shows a map with the seller moving towards their pin.
 6. When the seller marks **arrived**, the buyer can mark the delivery **completed** and record the purchase, with photos of the material (**Take a photo**). **Receipt** in the purchase history shows it, and the seller finds it under **Your sales**.
-7. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS` to see stats, flag accounts, and record the voice guide.
+7. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS`. The first time, the admin page asks to turn on two-step login with an authenticator app (see [Security](#security)); then it shows stats, accounts to flag, the admin activity log and the voice guide studio.
 8. On any page, touch the round speaker button at the bottom to hear what to do there (see [Voice guide](#voice-guide)).
 
 Location only works on `localhost` or over HTTPS, which browsers require.
@@ -93,6 +93,17 @@ People under 18 can sell scrap with a parent or guardian watching over the accou
 2. The child can log in, but can't search for buyers, notify them, or send messages until their guardian approves.
 3. The guardian registers with the phone number the child typed, choosing **Supervise my child's account**, and logs in to approve or decline. A guardian who already has a buyer or seller account with that number finds the same page under **My children**.
 4. After approval, the guardian sees the child's trips on a map, their deliveries and sales, and can read their conversations. Buyers see an **Under 18** badge, and both sides of a chat are told the guardian can read it.
+
+## Security
+
+- **Passwords** are stored as bcrypt hashes. Logging in is limited to 5 tries a minute and creating accounts to 10 an hour from one connection. On Render, the app reads each person's real address from Render's proxy (`app.py`), so one person can't use up everyone's tries.
+- **Logins** last 24 hours, 8 for admins. Every request checks the account as it is now, so a flagged account is logged out at once and the role always comes from the database, never from the token alone.
+- **Flagged accounts are suspended:** they can't log in or use the app until an admin removes the flag. Admin accounts can't be flagged, so admins can't lock each other out.
+- **Admins log in in two steps:** password, then the 6-digit code from an authenticator app (Google Authenticator, Microsoft Authenticator or similar; `backend/totp.py`, RFC 6238). The first admin login shows a setup key to add to the app; the admin tools stay closed until a code from it is confirmed. Each code works once. The key is stored encrypted with a key made from `JWT_SECRET_KEY`.
+- **Lost phone:** another admin taps **Reset two-step login** on that admin's row, and the admin sets it up again at the next login. If no other admin can, run this in Neon's SQL Editor with the admin's number: `UPDATE users SET "totpEnabled" = 0, "totpSecret" = NULL, "totpLastStep" = NULL WHERE "phoneNumber" = '+237699999999';`. Changing `JWT_SECRET_KEY` makes every saved key unreadable, so all admins would need that reset.
+- **Admin activity log:** every admin login, wrong code, flag, removed flag, two-step change and voice recording change is saved with the time and address, and shown on the admin page. Nothing in the app edits or deletes it.
+- **Register each number in `ADMIN_PHONE_NUMBERS` straight away.** Phone numbers aren't confirmed by SMS, so whoever registers a listed number first becomes that admin. Remove numbers from the list once their admin accounts exist. The same goes for guardians: whoever registers with the number a child gave can approve the child. SMS codes would close both gaps, at a cost per message.
+- **Pages** only run the site's own scripts (Content-Security-Policy), everything users type is escaped before it is shown, and database queries always use placeholders.
 
 ## Languages
 
@@ -253,8 +264,9 @@ africycle/
     app.py             starts Flask, registers routes, serves the frontend
     config.py          secret key, admin phone list, token lifetime
     extensions.py      rate limiter
-    auth_utils.py      reads the logged-in user from the JWT
-    database/db.py     SQLite or Postgres connection and all 12 tables
+    auth_utils.py      reads the logged-in user from the JWT, checked against the account
+    totp.py            admins' two-step login codes (authenticator apps)
+    database/db.py     SQLite or Postgres connection and all 13 tables
     database/upgrades.py  one-time changes to saved data (e.g. numbers to +237...)
     models/            one file per table: database functions only
     routes/            API endpoints grouped by feature
@@ -304,7 +316,7 @@ Routes marked *anyone* need no login; all others need the header `Authorization:
 | Method | Path | Who | Purpose |
 |---|---|---|---|
 | POST | /register | anyone | Create an account (name, phoneNumber, `country`, password, role: seller, buyer, both, guardian, or admin). `country` is an ISO code from the list (CM, AO, BI, CF, TD, CG, CD, GQ, GA, RW, ST), CM if left out. Under 18: add `isMinor: true`, guardianName, guardianPhone, `guardianCountry` (the child's if left out), guardianRelation |
-| POST | /login | anyone | Get a token (phoneNumber, optional `country`, password, optional role) |
+| POST | /login | anyone | Get a token (phoneNumber, optional `country`, password, optional role). Admins with two-step login on also send `code`; without it the answer is 401 with `code: "two_step_required"`. A flagged account gets 403 with `code: "suspended"` |
 | GET | /me | logged in | Own account, guardian status, and number of supervised children |
 | GET | /health | anyone | `status` and which `database` is in use |
 | GET | /.well-known/assetlinks.json | anyone | Names the Android app and its signing key, so Chrome opens it full screen |
@@ -342,8 +354,12 @@ Routes marked *anyone* need no login; all others need the header `Authorization:
 | POST | /guardian/children/<id>/approve, /guardian/children/<id>/decline | guardian named by the child | Let the child trade, or not |
 | GET | /guardian/children/<id>/activity | the child's guardian | The child's deliveries, sales, and conversations |
 | GET | /guardian/children/<id>/messages/<userId> | the child's guardian | One of the child's conversations, read only |
-| GET | /admin/stats, /admin/activity-stats, /admin/users, /admin/flagged-accounts | admin | Platform overview |
-| POST | /admin/flag-account/<id>, /admin/unflag-account/<id> | admin | Account review |
+| GET | /admin/stats, /admin/activity-stats, /admin/users, /admin/flagged-accounts | admin | Platform overview. All admin routes answer 403 with `code: "two_step_setup"` until the admin turns on two-step login |
+| POST | /admin/flag-account/<id>, /admin/unflag-account/<id> | admin | Account review (a flagged account can't log in; admins can't be flagged) |
+| GET | /admin/actions | admin | The newest 200 admin actions |
+| POST | /admin/two-step/setup | admin, before two-step login is on | A new authenticator key: `secret` and an `otpauth://` `link` |
+| POST | /admin/two-step/enable | admin, before two-step login is on | Turn it on with a `code` from the app; returns a new `token` |
+| POST | /admin/two-step/reset/<id> | admin | Turn another admin's two-step login off (a lost phone) |
 | GET | /guide/recordings/<language> | anyone | The voice guide's sentences recorded in that language: id, text (the English sentence) and mimeType |
 | GET | /guide/recorded-languages | anyone | How many sentences are recorded in each language |
 | GET | /guide/audio/<id> | anyone | A recording |

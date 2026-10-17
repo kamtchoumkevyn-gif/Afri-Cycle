@@ -18,10 +18,88 @@ AfriI18n.whenReady(function () {
     showMessage(pageMsg, t("Can't reach the server. Check your connection, then try again."), "error");
   }
 
+  // ---- Two-step login: admins turn it on before the admin tools open ----
+
+  const twoStepPanel = document.getElementById("twoStepPanel");
+  const twoStepMsg = document.getElementById("twoStepMsg");
+
+  async function showTwoStepSetup() {
+    // Only the setup panel shows until two-step login is on
+    document.querySelectorAll("main > section").forEach((section) => {
+      section.hidden = section !== twoStepPanel;
+    });
+    twoStepPanel.hidden = false;
+    try {
+      const response = await authFetch("/admin/two-step/setup", { method: "POST" });
+      const data = await readJson(response);
+      if (!response.ok) {
+        showMessage(twoStepMsg, data.message || t("Can't reach the server. Check your connection, then try again."), "error");
+        return;
+      }
+      // Groups of 4 letters are easier to copy into the app
+      document.getElementById("twoStepKey").textContent = data.secret.replace(/(.{4})/g, "$1 ").trim();
+      document.getElementById("twoStepLink").href = data.link;
+    } catch (err) {
+      showMessage(twoStepMsg, t("Can't reach the server. Check your connection, then try again."), "error");
+    }
+  }
+
+  document.getElementById("twoStepBtn").addEventListener("click", async () => {
+    const code = document.getElementById("twoStepCode").value.trim();
+    try {
+      const response = await authFetch("/admin/two-step/enable", { method: "POST", body: JSON.stringify({ code }) });
+      const data = await readJson(response);
+      if (!response.ok) {
+        showMessage(twoStepMsg, data.message || t("Done."), "error");
+        return;
+      }
+      // The new login counts the code; keep it where the old one was kept
+      saveToken(data.token, Boolean(keptStore.getItem(TOKEN_KEY)));
+      window.location.reload();
+    } catch (err) {
+      showMessage(twoStepMsg, t("Can't reach the server. Check your connection, then try again."), "error");
+    }
+  });
+
+  // What each logged action is called on the page
+  const ACTION_NAMES = {
+    login: t("Logged in"), wrong_code: t("Wrong two-step code"), flag: t("Flagged an account"),
+    unflag: t("Removed a flag"), two_step_on: t("Turned on two-step login"),
+    two_step_reset: t("Reset two-step login"), recording_saved: t("Saved a voice recording"),
+    recording_deleted: t("Deleted a voice recording")
+  };
+  const actionsBody = document.getElementById("actionsBody");
+
+  async function loadActions() {
+    try {
+      const response = await authFetch("/admin/actions");
+      const data = await readJson(response);
+      if (!response.ok) throw new Error(data.message);
+      const actions = data.actions || [];
+      actionsBody.innerHTML = actions.length
+        ? actions.map((a) => `
+            <tr>
+              <td data-label="${t("When")}">${formatDate(a.createdAt)}</td>
+              <td data-label="${t("Admin")}"><bdi>${escapeHtml(a.adminName || "")}</bdi></td>
+              <td data-label="${t("Action")}">${escapeHtml(ACTION_NAMES[a.action] || a.action)}</td>
+              <td data-label="${t("Account")}"><bdi>${escapeHtml(a.targetName || "")}</bdi></td>
+              <td data-label="${t("Details")}"><small dir="auto">${escapeHtml(a.details || "")}</small>${a.ipAddress
+                ? ` <small translate="no">${escapeHtml(a.ipAddress)}</small>` : ""}</td>
+            </tr>`).join("")
+        : `<tr><td colspan="5" class="empty-row">${t("No admin activity yet.")}</td></tr>`;
+    } catch (err) {
+      actionsBody.innerHTML = `<tr><td colspan="5" class="empty-row">${t("Admin activity could not be loaded.")}</td></tr>`;
+    }
+  }
+
   async function loadStats() {
     try {
       const response = await authFetch("/admin/stats");
       const data = await readJson(response);
+      if (response.status === 403 && data.code === "two_step_setup") {
+        showTwoStepSetup();
+        return false;
+      }
       if (!response.ok) {
         showMessage(pageMsg, data.message || t("Stats could not be loaded."), "error");
         return;
@@ -33,6 +111,7 @@ AfriI18n.whenReady(function () {
     } catch (err) {
       serverError();
     }
+    return true;
   }
 
   async function loadActivity() {
@@ -85,7 +164,9 @@ AfriI18n.whenReady(function () {
         ? `<span class="status status-flagged" title="${escapeHtml(u.flagReason || "")}">${t("Flagged")}</span>`
         : `<span class="status status-completed">${t("Active")}</span>`;
       let action = "";
-      if (!isSelf && u.role !== "admin") {
+      if (!isSelf && u.role === "admin" && u.totpEnabled) {
+        action = `<button class="btn btn-quiet" type="button" data-reset="${u.userId}">${t("Reset two-step login")}</button>`;
+      } else if (!isSelf && u.role !== "admin") {
         action = u.isFlagged
           ? `<button class="btn btn-quiet" type="button" data-unflag="${u.userId}">${t("Remove flag")}</button>`
           : `<button class="btn btn-danger" type="button" data-flag="${u.userId}">${t("Flag")}</button>`;
@@ -108,11 +189,15 @@ AfriI18n.whenReady(function () {
   usersBody.addEventListener("click", async (event) => {
     const flagBtn = event.target.closest("button[data-flag]");
     const unflagBtn = event.target.closest("button[data-unflag]");
-    if (!flagBtn && !unflagBtn) return;
+    const resetBtn = event.target.closest("button[data-reset]");
+    if (!flagBtn && !unflagBtn && !resetBtn) return;
 
     let path;
     let body = {};
-    if (flagBtn) {
+    if (resetBtn) {
+      if (!window.confirm(t("Reset two-step login for this admin? They will set it up again at their next login."))) return;
+      path = `/admin/two-step/reset/${resetBtn.dataset.reset}`;
+    } else if (flagBtn) {
       const reason = window.prompt(t("Why are you flagging this account?"));
       if (reason === null) return; // cancelled
       path = `/admin/flag-account/${flagBtn.dataset.flag}`;
@@ -126,12 +211,16 @@ AfriI18n.whenReady(function () {
       const data = await readJson(response);
       showMessage(pageMsg, data.message || t("Done."), response.ok ? "success" : "error");
       loadUsers();
+      loadActions();
     } catch (err) {
       serverError();
     }
   });
 
-  loadStats();
-  loadActivity();
-  loadUsers();
+  loadStats().then((ready) => {
+    if (!ready) return; // two-step login isn't on yet: only its setup shows
+    loadActivity();
+    loadUsers();
+    loadActions();
+  });
 });

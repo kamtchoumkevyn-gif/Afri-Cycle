@@ -84,9 +84,43 @@ AfriI18n.whenReady(function () {
         ? t("Your guardian declined this account, so it can't be used to sell.")
         : t("Your guardian {name} ({phone}) needs to approve your account before you can sell. Ask them to log in to Africycle with that phone number.",
           { name: me.guardianName, phone: AfriPhone.format(me.guardianPhone) });
+      if (me.guardianStatus === "pending") showApprovalCode(me.approvalCode, me.approvalCodeBlocked);
     }
     guardianBanner.hidden = false;
   }
+
+  // The code the guardian types to approve this child: phone numbers aren't confirmed,
+  // so the number alone doesn't prove who is approving. After too many wrong codes the
+  // child asks for a new one.
+  const approvalCodeBox = document.getElementById("approvalCodeBox");
+  const newCodeBtn = document.getElementById("newCodeBtn");
+
+  function showApprovalCode(code, blocked) {
+    approvalCodeBox.hidden = false;
+    document.getElementById("approvalCodeLabel").hidden = blocked;
+    // Two groups of 3 digits are easier to read out and type
+    document.getElementById("approvalCode").textContent = blocked || !code ? "" : code.replace(/^(\d{3})(\d{3})$/, "$1 $2");
+    document.getElementById("approvalCode").hidden = blocked;
+    document.getElementById("approvalBlocked").hidden = !blocked;
+    newCodeBtn.hidden = !blocked;
+  }
+
+  newCodeBtn.addEventListener("click", async () => {
+    newCodeBtn.disabled = true;
+    try {
+      const response = await authFetch("/me/approval-code", { method: "POST" });
+      const data = await readJson(response);
+      if (!response.ok) {
+        showMessage(pageMsg, data.message || t("That didn't work. Try again."), "error");
+        return;
+      }
+      showApprovalCode(data.approvalCode, false);
+    } catch (err) {
+      serverError();
+    } finally {
+      newCodeBtn.disabled = false;
+    }
+  });
 
   // ---- Materials ----
 

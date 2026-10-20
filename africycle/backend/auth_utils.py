@@ -23,14 +23,17 @@ def get_user_from_token():
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT role, isFlagged, totpEnabled FROM users WHERE id = ?", (payload.get("userId"),))
+    cursor.execute("SELECT role, isFlagged, totpEnabled, adminApproved FROM users WHERE id = ?",
+                   (payload.get("userId"),))
     row = cursor.fetchone()
     conn.close()
     if not row or row["isFlagged"]:
         return None
     payload["role"] = row["role"]
+    # A new admin account needs another admin's approval before any admin tool opens
+    payload["adminApproved"] = row["role"] == "admin" and bool(row["adminApproved"])
     # Admin tools need the second step: a code from the authenticator app at this login
-    payload["twoStep"] = bool(row["totpEnabled"]) and payload.get("mfa") is True
+    payload["twoStep"] = payload["adminApproved"] and bool(row["totpEnabled"]) and payload.get("mfa") is True
     return payload
 
 

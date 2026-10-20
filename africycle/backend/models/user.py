@@ -1,5 +1,10 @@
+import secrets
+
 import bcrypt
 from database.db import get_connection
+
+# Wrong approval codes a guardian may type before the child needs a new code
+APPROVAL_CODE_TRIES = 5
 
 
 def hash_password(password):
@@ -10,9 +15,15 @@ def check_password(password, password_hash):
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
+def new_approval_code():
+    """6 digits, shown on a child's phone, that the guardian types to approve the child."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
 def create_user(phone_number, password, name, role, guardian=None):
     """guardian: for a child's account, a dict with the guardian's name, phone and
-    relation. Such an account can't trade until that guardian approves it."""
+    relation, and optionally the approval "code". Such an account can't trade until
+    that guardian approves it with the code."""
     password_hash = hash_password(password)
     conn = get_connection()
     cursor = conn.cursor()
@@ -20,11 +31,12 @@ def create_user(phone_number, password, name, role, guardian=None):
         cursor.execute(
             """
             INSERT INTO users (phoneNumber, passwordHash, name, role, isMinor,
-                               guardianName, guardianPhone, guardianRelation, guardianStatus)
-            VALUES (?, ?, ?, ?, 1, ?, ?, ?, 'pending')
+                               guardianName, guardianPhone, guardianRelation, guardianStatus,
+                               approvalCode)
+            VALUES (?, ?, ?, ?, 1, ?, ?, ?, 'pending', ?)
             """,
             (phone_number, password_hash, name, role,
-             guardian["name"], guardian["phone"], guardian["relation"])
+             guardian["name"], guardian["phone"], guardian["relation"], guardian.get("code"))
         )
     else:
         cursor.execute(
@@ -35,6 +47,33 @@ def create_user(phone_number, password, name, role, guardian=None):
     user_id = cursor.lastrowid
     conn.close()
     return user_id
+
+
+def approved_admin_exists():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE role = 'admin' AND adminApproved = 1 LIMIT 1")
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
+
+
+def approve_admin(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET adminApproved = 1 WHERE id = ? AND role = 'admin'", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def set_approval_code(user_id, code, tries=0):
+    """A child's approval code (None: none until the child asks for a new one)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET approvalCode = ?, approvalCodeTries = ? WHERE id = ?",
+                   (code, tries, user_id))
+    conn.commit()
+    conn.close()
 
 
 def get_user_by_id(user_id):

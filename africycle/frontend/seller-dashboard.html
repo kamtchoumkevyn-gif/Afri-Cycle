@@ -40,6 +40,12 @@
     <p class="page-intro">Pick what you are carrying, then find the buyers near you who pay the most.</p>
 
     <p id="guardianBanner" class="msg msg-info" role="status" hidden></p>
+    <div id="approvalCodeBox" class="approval-code-box" hidden>
+      <p id="approvalCodeLabel">Your guardian types this code to approve you:</p>
+      <p class="approval-code" id="approvalCode" aria-labelledby="approvalCodeLabel" translate="no"></p>
+      <p id="approvalBlocked" hidden>Too many wrong codes were typed for your account. Tap New code, then give the new code to your guardian.</p>
+      <button class="btn btn-primary" id="newCodeBtn" type="button" hidden>New code</button>
+    </div>
     <p id="pageMsg" class="msg" role="status" hidden></p>
 
     <!-- Shown while a delivery is pending or in transit, even after a reload: the way to the buyer -->

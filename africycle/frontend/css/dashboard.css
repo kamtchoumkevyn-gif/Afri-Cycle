@@ -1249,3 +1249,20 @@ body.modal-open {
   direction: ltr; text-align: left;
 }
 .setup-key-button { margin-top: 12px; }
+
+/* A child's approval code: big digits to read out to the guardian, and the box the
+   guardian types it in (guardian-dashboard.js) */
+.approval-code-box {
+  margin: 0 0 16px; padding: 12px 16px; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); background: var(--surface, #fff);
+}
+.approval-code-box p { margin: 0 0 8px; }
+.approval-code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 2rem; font-weight: 700; letter-spacing: 0.12em; color: var(--ink);
+  direction: ltr; text-align: left; user-select: all;
+}
+.code-input {
+  width: 8.5em; max-width: 100%; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  letter-spacing: 0.08em; direction: ltr;
+}

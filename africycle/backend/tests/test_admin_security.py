@@ -84,6 +84,7 @@ def test_a_flagged_account_is_logged_out_and_cannot_log_back_in(client):
 def test_admins_cannot_be_flagged(client):
     admin = new_user(ADMIN_PHONE, "admin", "Ada")
     other = new_user("699999998", "admin", "Bob")
+    make_token(other, "admin")  # approved by another admin
     response = client.post(f"/admin/flag-account/{other}", headers=auth_header(admin, "admin"), json={})
     assert response.status_code == 400
     response = client.post(f"/admin/flag-account/{admin}", headers=auth_header(admin, "admin"), json={})

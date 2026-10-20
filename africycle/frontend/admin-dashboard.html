@@ -37,6 +37,12 @@
     <p class="page-intro">Watch activity and review accounts that look suspicious.</p>
 
     <p id="pageMsg" class="msg" role="status" hidden></p>
+    <p id="secretWarning" class="msg msg-error" role="alert" hidden>The login secret (JWT_SECRET_KEY) is too short, so someone could forge logins. In Render, replace it with a random one of at least 32 characters, as the README's Security section explains.</p>
+
+    <section class="panel" id="approvalPanel" aria-labelledby="approvalHeading" hidden>
+      <h2 id="approvalHeading">Waiting for approval</h2>
+      <p class="panel-hint">Another admin must approve your admin account before you can use the admin tools. Ask them to open the admin page and tap Approve next to your name.</p>
+    </section>
 
     <section class="panel" id="twoStepPanel" aria-labelledby="twoStepHeading" hidden>
       <h2 id="twoStepHeading">Protect your admin account</h2>

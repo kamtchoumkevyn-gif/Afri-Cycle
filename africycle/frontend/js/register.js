@@ -84,10 +84,12 @@ AfriI18n.whenReady(function () {
         return;
       }
 
+      // A child sees the code their guardian will type to approve them (also on their page later)
+      const code = String(data.approvalCode || "").replace(/^(\d{3})(\d{3})$/, "$1 $2");
       showMessage(formMsg, isMinor
-        ? t("Account created. Ask your guardian to create their Africycle account with their phone number and approve you. Taking you to log in...")
+        ? t("Account created. Ask your guardian to create their Africycle account with their phone number. To approve you, they will type this code: {code}. You will also see it on your page. Taking you to log in...", { code })
         : t("Account created. Taking you to log in..."), "success");
-      setTimeout(() => window.location.replace("login.html"), isMinor ? 4000 : 1200);
+      setTimeout(() => window.location.replace("login.html"), isMinor ? 10000 : 1200);
     } catch (err) {
       showMessage(formMsg, t("Can't reach the server. Check your connection, then try again."), "error");
       setLoading(false);

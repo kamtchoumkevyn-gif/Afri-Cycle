@@ -9,8 +9,9 @@ from extensions import limiter
 from auth_utils import client_ip, get_user_from_token
 from database.db import get_connection
 from models.admin_action import log_action
-from models.user import (check_password, create_user, find_user_by_phone, find_users_by_phones,
-                         get_user_by_id)
+from models.user import (APPROVAL_CODE_TRIES, approve_admin, approved_admin_exists, check_password,
+                         create_user, find_user_by_phone, find_users_by_phones, get_user_by_id,
+                         new_approval_code, set_approval_code)
 
 
 auth_bp = Blueprint("auth_bp", __name__)
@@ -73,6 +74,9 @@ def register():
             return jsonify({"message": _("Your guardian's phone number must be different from yours")}), 400
         if guardian["relation"] not in GUARDIAN_RELATIONS:
             return jsonify({"message": _("Choose how your guardian is related to you")}), 400
+        # Shown on the child's phone; the guardian types it to approve. Phone numbers
+        # aren't confirmed, so the number alone doesn't prove who the guardian is.
+        guardian["code"] = new_approval_code()
 
     admin_numbers = {phones.stored_form(number) for number in Config.ADMIN_PHONE_NUMBERS}
     if role == "admin" and phone_number not in admin_numbers:
@@ -81,10 +85,18 @@ def register():
     if find_user_by_phone(phone_number):
         return jsonify({"message": _("An account with this phone number already exists")}), 400
 
+    # The first admin is let in straight away; any later one waits for an existing admin
+    # to approve it (whoever registers a listed number first could be anyone)
+    first_admin = role == "admin" and not approved_admin_exists()
     user_id = create_user(phone_number, password, name, role, guardian=guardian)
+    if first_admin:
+        approve_admin(user_id)
     message = (_("Account created. Your guardian must approve it before you can sell.")
                if guardian else _("Account created"))
-    return jsonify({"message": message, "userId": user_id}), 201
+    body = {"message": message, "userId": user_id}
+    if guardian:
+        body["approvalCode"] = guardian["code"]
+    return jsonify(body), 201
 
 
 @auth_bp.route("/me", methods=["GET"])
@@ -109,7 +121,7 @@ def me():
     children = cursor.fetchone()["count"]
     conn.close()
 
-    return jsonify({
+    body = {
         "userId": user["id"],
         "name": user["name"],
         "role": user["role"],
@@ -119,7 +131,19 @@ def me():
         "guardianName": user.get("guardianName"),
         "guardianPhone": user.get("guardianPhone"),
         "childrenCount": children,
-    }), 200
+    }
+    if user.get("isMinor") and user.get("guardianStatus") == "pending":
+        # The code the guardian types to approve: only the child sees it. Children who
+        # registered before codes existed get one now. After too many wrong codes there
+        # is none until the child asks for a new one (POST /me/approval-code).
+        code = user.get("approvalCode")
+        blocked = not code and (user.get("approvalCodeTries") or 0) >= APPROVAL_CODE_TRIES
+        if not code and not blocked:
+            code = new_approval_code()
+            set_approval_code(user["id"], code)
+        body["approvalCode"] = code
+        body["approvalCodeBlocked"] = blocked
+    return jsonify(body), 200
 
 
 @auth_bp.route("/login", methods=["POST"])

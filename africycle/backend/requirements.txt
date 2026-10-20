@@ -1,11 +1,11 @@
 flask>=3.0
-flask-cors>=4.0
+flask-cors>=6.0  # older versions match CORS paths wrongly (CVE-2024-6839, CVE-2024-6844)
 flask-limiter>=3.5
 bcrypt>=4.0
 pyjwt>=2.8
 python-dotenv>=1.0
 pytest>=8.0
-gunicorn>=21.2
+gunicorn>=22.0  # older versions allow request smuggling (CVE-2024-6827)
 psycopg[binary]>=3.2
 cryptography>=42
 phonenumberslite>=9.0.41

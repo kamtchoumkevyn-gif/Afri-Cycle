@@ -6,20 +6,29 @@ from config import Config
 from auth_utils import client_ip, get_user_from_token
 from database.db import get_connection
 from models.admin_action import log_action, recent_actions
-from models.user import get_user_by_id
+from models.user import approve_admin, get_user_by_id
 from i18n import _
 
 admin_bp = Blueprint("admin_bp", __name__)
 
 
-def admin_or_error():
-    """(payload, None) for an admin who logged in with the two-step code, else (None, response).
+def approval_error():
+    return jsonify({"message": _("Another admin must approve your admin account first."),
+                    "code": "admin_approval"}), 403
 
-    An admin who hasn't turned two-step login on yet gets 403 with code
-    "two_step_setup": the admin page then shows how to turn it on, and nothing else."""
+
+def admin_or_error():
+    """(payload, None) for an approved admin who logged in with the two-step code, else
+    (None, response).
+
+    A new admin account another admin hasn't approved yet gets 403 with code
+    "admin_approval"; an admin who hasn't turned two-step login on yet gets 403 with
+    code "two_step_setup". The admin page then shows what to do, and nothing else."""
     payload = get_user_from_token()
     if not payload or payload.get("role") != "admin":
         return None, (jsonify({"message": _("Unauthorized")}), 401)
+    if not payload.get("adminApproved"):
+        return None, approval_error()
     if not payload.get("twoStep"):
         return None, (jsonify({"message": _("Turn on two-step login to use the admin tools."),
                                "code": "two_step_setup"}), 403)
@@ -53,6 +62,9 @@ def user_counts():
         "transactionsToday": count(
             cursor, "SELECT COUNT(*) AS count FROM transactions WHERE createdAt >= ?", (today_start,)
         ),
+        # A short JWT_SECRET_KEY can be guessed, and with it anyone can make logins:
+        # the admin page warns until it is replaced (README, Security)
+        "weakSecret": len(Config.SECRET_KEY) < 32,
     }
     conn.close()
     return jsonify(stats), 200
@@ -108,7 +120,8 @@ def list_users():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id AS userId, name, phoneNumber, role, isFlagged, flagReason, isMinor, guardianStatus, totpEnabled "
+        "SELECT id AS userId, name, phoneNumber, role, isFlagged, flagReason, isMinor, guardianStatus, totpEnabled, "
+        "adminApproved "
         "FROM users ORDER BY id DESC"
     )
     users = [dict(row) for row in cursor.fetchall()]
@@ -155,8 +168,9 @@ def flag_account(user_id):
     target = get_user_by_id(user_id)
     if not target:
         return jsonify({"message": _("User not found")}), 404
-    # A flagged account can't log in, so admins can't lock each other (or themselves) out
-    if target["role"] == "admin":
+    # A flagged account can't log in, so admins can't lock each other (or themselves) out.
+    # An admin account still waiting for approval can be: it may not be who it claims.
+    if target["role"] == "admin" and target.get("adminApproved"):
         return jsonify({"message": _("Admin accounts can't be flagged")}), 400
 
     conn = get_connection()
@@ -191,6 +205,23 @@ def unflag_account(user_id):
     return jsonify({"message": _("Account unflagged")}), 200
 
 
+@admin_bp.route("/admin/approve-admin/<int:user_id>", methods=["POST"])
+def approve_admin_account(user_id):
+    """An admin lets a new admin account in. Until then it can log in but open nothing:
+    phone numbers aren't confirmed, so whoever registers a listed number first could be
+    anyone."""
+    admin, error = admin_or_error()
+    if error:
+        return error
+    target = get_user_by_id(user_id)
+    if (not target or target["role"] != "admin" or target.get("adminApproved")
+            or target.get("isFlagged")):
+        return jsonify({"message": _("No admin account is waiting for approval")}), 404
+    approve_admin(user_id)
+    log_action(admin["userId"], "admin_approved", user_id, ip_address=client_ip())
+    return jsonify({"message": _("Admin account approved")}), 200
+
+
 @admin_bp.route("/admin/actions", methods=["GET"])
 def admin_actions():
     """The newest admin actions, for the "Admin activity" table."""
@@ -203,20 +234,23 @@ def admin_actions():
 # ---- Two-step login (totp.py) ----
 
 def admin_without_second_step():
-    """The logged-in admin's account, whether or not the code was given yet, else None."""
+    """(account, None) for a logged-in, approved admin, whether or not the code was given
+    yet, else (None, response)."""
     payload = get_user_from_token()
     if not payload or payload.get("role") != "admin":
-        return None
-    return get_user_by_id(payload["userId"])
+        return None, (jsonify({"message": _("Unauthorized")}), 401)
+    if not payload.get("adminApproved"):
+        return None, approval_error()
+    return get_user_by_id(payload["userId"]), None
 
 
 @admin_bp.route("/admin/two-step/setup", methods=["POST"])
 def two_step_setup():
     """A new secret for the authenticator app. It only counts once a code from it is
     confirmed (/admin/two-step/enable), so asking again just gives a fresh one."""
-    user = admin_without_second_step()
-    if not user:
-        return jsonify({"message": _("Unauthorized")}), 401
+    user, error = admin_without_second_step()
+    if error:
+        return error
     if user.get("totpEnabled"):
         return jsonify({"message": _("Two-step login is already on")}), 400
     secret = totp.new_secret()
@@ -231,9 +265,9 @@ def two_step_setup():
 @admin_bp.route("/admin/two-step/enable", methods=["POST"])
 def two_step_enable():
     """Turns two-step login on once the app's code matches, and hands back a full admin login."""
-    user = admin_without_second_step()
-    if not user:
-        return jsonify({"message": _("Unauthorized")}), 401
+    user, error = admin_without_second_step()
+    if error:
+        return error
     if user.get("totpEnabled"):
         return jsonify({"message": _("Two-step login is already on")}), 400
     code = (request.get_json(silent=True) or {}).get("code")

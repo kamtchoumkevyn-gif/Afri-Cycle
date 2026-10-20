@@ -52,7 +52,7 @@ Tests use a temporary database, so they never touch your real data. To run the s
 4. The seller's dashboard now shows **Your trip**: a map with the road route to the buyer, the next turn ("In 300 m, turn left onto Rue Joss"), and the distance and time left. It follows you as you move and works out a new way if you leave the route. Choose **On foot** or **Motorbike or car**. The trip map stays, even after a reload or closing the app, until you tap **I've arrived**; **Google Maps** opens the same destination there.
 5. On the buyer's dashboard, **Collectors on their way** shows a map with the seller moving towards their pin.
 6. When the seller marks **arrived**, the buyer can mark the delivery **completed** and record the purchase, with photos of the material (**Take a photo**). **Receipt** in the purchase history shows it, and the seller finds it under **Your sales**.
-7. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS`. The first time, the admin page asks to turn on two-step login with an authenticator app (see [Security](#security)); then it shows stats, accounts to flag, the admin activity log and the voice guide studio.
+7. Register an **admin** with a phone number listed in `ADMIN_PHONE_NUMBERS`. The first admin is let in straight away; any later admin waits until an existing admin taps **Approve** on their row. The first time, the admin page asks to turn on two-step login with an authenticator app (see [Security](#security)); then it shows stats, accounts to flag, the admin activity log and the voice guide studio.
 8. On any page, touch the round speaker button at the bottom to hear what to do there (see [Voice guide](#voice-guide)).
 
 Location only works on `localhost` or over HTTPS, which browsers require.
@@ -90,8 +90,9 @@ Each purchase gets a receipt that both sides can check later.
 People under 18 can sell scrap with a parent or guardian watching over the account:
 
 1. On **Create account**, tick **I am under 18**, and fill in the parent or guardian's name, phone number, and relationship. Child accounts are seller accounts.
-2. The child can log in, but can't search for buyers, notify them, or send messages until their guardian approves.
-3. The guardian registers with the phone number the child typed, choosing **Supervise my child's account**, and logs in to approve or decline. A guardian who already has a buyer or seller account with that number finds the same page under **My children**.
+2. The child can log in, but can't search for buyers, notify them, or send messages until their guardian approves. Sign-up, and then the child's page, show a 6-digit **approval code**.
+3. The guardian registers with the phone number the child typed, choosing **Supervise my child's account**, logs in, types the code from the child's phone, and approves or declines. A guardian who already has a buyer or seller account with that number finds the same page under **My children**.
+   - The code proves the guardian is with the child: phone numbers aren't confirmed, so someone else could register the guardian's number first. After 5 wrong codes the code stops working; the child's page says so and offers **New code**.
 4. After approval, the guardian sees the child's trips on a map, their deliveries and sales, and can read their conversations. Buyers see an **Under 18** badge, and both sides of a chat are told the guardian can read it.
 
 ## Security
@@ -101,8 +102,13 @@ People under 18 can sell scrap with a parent or guardian watching over the accou
 - **Flagged accounts are suspended:** they can't log in or use the app until an admin removes the flag. Admin accounts can't be flagged, so admins can't lock each other out.
 - **Admins log in in two steps:** password, then the 6-digit code from an authenticator app (Google Authenticator, Microsoft Authenticator or similar; `backend/totp.py`, RFC 6238). The first admin login shows a setup key to add to the app; the admin tools stay closed until a code from it is confirmed. Each code works once. The key is stored encrypted with a key made from `JWT_SECRET_KEY`.
 - **Lost phone:** another admin taps **Reset two-step login** on that admin's row, and the admin sets it up again at the next login. If no other admin can, run this in Neon's SQL Editor with the admin's number: `UPDATE users SET "totpEnabled" = 0, "totpSecret" = NULL, "totpLastStep" = NULL WHERE "phoneNumber" = '+237699999999';`. Changing `JWT_SECRET_KEY` makes every saved key unreadable, so all admins would need that reset.
-- **Admin activity log:** every admin login, wrong code, flag, removed flag, two-step change and voice recording change is saved with the time and address, and shown on the admin page. Nothing in the app edits or deletes it.
-- **Register each number in `ADMIN_PHONE_NUMBERS` straight away.** Phone numbers aren't confirmed by SMS, so whoever registers a listed number first becomes that admin. Remove numbers from the list once their admin accounts exist. The same goes for guardians: whoever registers with the number a child gave can approve the child. SMS codes would close both gaps, at a cost per message.
+- **Admin activity log:** every admin login, wrong code, flag, removed flag, approved admin, two-step change and voice recording change is saved with the time and address, and shown on the admin page. Nothing in the app edits or deletes it.
+- **Phone numbers aren't confirmed by SMS**, so a number alone doesn't prove who someone is. Two rules make up for it where it matters most:
+  - **New admins need approval.** The first admin is let in at sign-up. After that, an account registered with a listed number opens no admin tool, not even the two-step setup, until an existing admin taps **Approve** on its row. Until then it can be flagged, in case it isn't who it claims to be. Admins from before this rule stayed approved. Still remove numbers from `ADMIN_PHONE_NUMBERS` once their admin accounts exist.
+  - **Guardians type the child's code.** Approving or declining a child needs the 6-digit code shown on the child's phone, so someone who registers the guardian's number first can't take over the child's account. 5 wrong codes stop the code until the child asks for a new one.
+  - Confirming every number by SMS would also stop people signing up with someone else's number, at a cost per message.
+- **The login secret:** `JWT_SECRET_KEY` signs every login, so anyone who knows or guesses it can log in as anyone. Use a random one of at least 32 characters (for example, the output of `python -c "import secrets; print(secrets.token_urlsafe(48))"`). The admin page shows a red warning while it is shorter. Changing it logs everyone out and makes every admin's saved two-step key unreadable, so reset two-step login for all admins in Neon's SQL Editor as described under **Lost phone**, then each admin sets it up again.
+- **Libraries:** `requirements.txt` asks for versions without the known security holes (flask-cors 6.0 or later, gunicorn 22.0 or later), and Render installs the newest versions at each build. The map library, Leaflet 1.9.3, is served from `frontend/vendor/leaflet`; its pop-ups show HTML as given (CVE-2025-69993, not fixed in any release), so the app escapes every name and text in them.
 - **Pages** only run the site's own scripts (Content-Security-Policy), everything users type is escaped before it is shown, and database queries always use placeholders.
 
 ## Languages
@@ -317,7 +323,8 @@ Routes marked *anyone* need no login; all others need the header `Authorization:
 |---|---|---|---|
 | POST | /register | anyone | Create an account (name, phoneNumber, `country`, password, role: seller, buyer, both, guardian, or admin). `country` is an ISO code from the list (CM, AO, BI, CF, TD, CG, CD, GQ, GA, RW, ST), CM if left out. Under 18: add `isMinor: true`, guardianName, guardianPhone, `guardianCountry` (the child's if left out), guardianRelation |
 | POST | /login | anyone | Get a token (phoneNumber, optional `country`, password, optional role). Admins with two-step login on also send `code`; without it the answer is 401 with `code: "two_step_required"`. A flagged account gets 403 with `code: "suspended"` |
-| GET | /me | logged in | Own account, guardian status, and number of supervised children |
+| GET | /me | logged in | Own account, guardian status, and number of supervised children. A child waiting for approval also gets `approvalCode` (the 6 digits the guardian types) and `approvalCodeBlocked` (true after 5 wrong codes) |
+| POST | /me/approval-code | a child waiting for approval | A new `approvalCode` (after too many wrong ones) |
 | GET | /health | anyone | `status` and which `database` is in use |
 | GET | /.well-known/assetlinks.json | anyone | Names the Android app and its signing key, so Chrome opens it full screen |
 | GET | /download/android | anyone | The Android app (APK): the copy in `frontend/downloads/`, or a redirect to `ANDROID_APK_URL` |
@@ -351,11 +358,12 @@ Routes marked *anyone* need no login; all others need the header `Authorization:
 | POST | /push/subscribe | logged in | Turn notifications on for this device (the browser's PushSubscription as JSON, plus `language`, the language its notifications should come in) |
 | DELETE | /push/subscribe | logged in | Turn them off for this device (`endpoint`) |
 | GET | /guardian/children | guardian named by the child | Children waiting for approval and children supervised |
-| POST | /guardian/children/<id>/approve, /guardian/children/<id>/decline | guardian named by the child | Let the child trade, or not |
+| POST | /guardian/children/<id>/approve, /guardian/children/<id>/decline | guardian named by the child | Let the child trade, or not. Body: `code`, the 6 digits shown on the child's phone; a wrong one answers 400 with `code: "approval_code"` |
 | GET | /guardian/children/<id>/activity | the child's guardian | The child's deliveries, sales, and conversations |
 | GET | /guardian/children/<id>/messages/<userId> | the child's guardian | One of the child's conversations, read only |
-| GET | /admin/stats, /admin/activity-stats, /admin/users, /admin/flagged-accounts | admin | Platform overview. All admin routes answer 403 with `code: "two_step_setup"` until the admin turns on two-step login |
-| POST | /admin/flag-account/<id>, /admin/unflag-account/<id> | admin | Account review (a flagged account can't log in; admins can't be flagged) |
+| GET | /admin/stats, /admin/activity-stats, /admin/users, /admin/flagged-accounts | admin | Platform overview; `/admin/stats` also says `weakSecret` when `JWT_SECRET_KEY` is shorter than 32 characters. All admin routes answer 403 with `code: "admin_approval"` until another admin approves a new admin account, then with `code: "two_step_setup"` until the admin turns on two-step login |
+| POST | /admin/approve-admin/<id> | admin | Let a new admin account in |
+| POST | /admin/flag-account/<id>, /admin/unflag-account/<id> | admin | Account review (a flagged account can't log in; approved admins can't be flagged) |
 | GET | /admin/actions | admin | The newest 200 admin actions |
 | POST | /admin/two-step/setup | admin, before two-step login is on | A new authenticator key: `secret` and an `otpauth://` `link` |
 | POST | /admin/two-step/enable | admin, before two-step login is on | Turn it on with a `code` from the app; returns a new `token` |

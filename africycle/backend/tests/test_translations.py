@@ -30,6 +30,13 @@ BUTTONS_IN_SENTENCES = {
     '{name} is {distance} away by road, about {time} on foot. Tap "I\'m coming" to be guided there.': ("I'm coming",),
     'No conversations yet. Open one from a buyer or delivery with "Message".': ("Message",),
     "Notifications weren't allowed. Tap Turn on to try again.": ("Turn on",),
+    "Children waiting for your approval. Type the code shown on your child's phone, then tap Approve. "
+    "Approve only a child you are responsible for.": ("Approve",),
+    "Another admin must approve your admin account before you can use the admin tools. Ask them to open the "
+    "admin page and tap Approve next to your name.": ("Approve",),
+    "Too many wrong codes were typed for your account. Tap New code, then give the new code to your guardian.":
+        ("New code",),
+    "Too many wrong codes. Ask {name} to open Africycle and tap New code, then type the new code.": ("New code",),
     "Choose a material and tap Find buyers.": ("Find buyers",),
     "{name} is {distance} away in a straight line. Tap Route for the way by road.": ("Route",),
     # The voice guide

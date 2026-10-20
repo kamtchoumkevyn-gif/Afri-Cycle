@@ -3,15 +3,23 @@
 A child registers with the guardian's phone number. Any adult account logged in
 with that number (a "guardian" account, or a buyer/seller who is also a parent)
 can approve or decline the child, then follow their deliveries, sales and messages.
+
+Phone numbers aren't confirmed, so someone else could register with the guardian's
+number first. To approve or decline, the guardian also types the 6-digit code shown
+on the child's phone. After 5 wrong codes the code stops working, and the child gets
+a new one from their own page.
 """
+import hmac
+import re
 from datetime import datetime
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from auth_utils import get_user_from_token
 from database.db import get_connection
+from extensions import limiter
 from models.chat import get_conversation, get_conversations_for_user
 from models.receipt import PHOTO_COUNT
-from models.user import get_user_by_id
+from models.user import APPROVAL_CODE_TRIES, get_user_by_id, new_approval_code, set_approval_code
 import phones
 from i18n import _
 
@@ -68,41 +76,91 @@ def list_children():
 
 
 def set_child_status(child_id, status, guardian_id=None):
+    """Approved or declined; either way the approval code is used up."""
     conn = get_connection()
     cursor = conn.cursor()
     if status == "approved":
         cursor.execute(
-            "UPDATE users SET guardianStatus = ?, guardianId = ?, guardianApprovedAt = ? WHERE id = ?",
+            """UPDATE users SET guardianStatus = ?, guardianId = ?, guardianApprovedAt = ?,
+                                approvalCode = NULL, approvalCodeTries = 0 WHERE id = ?""",
             (status, guardian_id, datetime.utcnow().isoformat(), child_id)
         )
     else:
-        cursor.execute("UPDATE users SET guardianStatus = ? WHERE id = ?", (status, child_id))
+        cursor.execute("UPDATE users SET guardianStatus = ?, approvalCode = NULL, approvalCodeTries = 0 WHERE id = ?",
+                       (status, child_id))
     conn.commit()
     conn.close()
 
 
+def code_error(child):
+    """None if the request carries the code shown on the child's phone, else a 400 response.
+    Each wrong code counts; the 5th makes the code stop working until the child gets a new one."""
+    typed = re.sub(r"\D", "", str((request.get_json(silent=True) or {}).get("code") or ""))
+    code = child.get("approvalCode")
+    if not code:
+        message = _("{name} needs to open Africycle to get a new code first.", name=child["name"])
+    elif hmac.compare_digest(typed, code):
+        return None
+    else:
+        tries = (child.get("approvalCodeTries") or 0) + 1
+        if tries >= APPROVAL_CODE_TRIES:
+            set_approval_code(child["id"], None, tries)
+            message = _("Too many wrong codes. Ask {name} to open Africycle and tap New code, then type the new code.",
+                        name=child["name"])
+        else:
+            set_approval_code(child["id"], code, tries)
+            message = _("That code doesn't match the one on {name}'s phone. Check it and try again.",
+                        name=child["name"])
+    return jsonify({"message": message, "code": "approval_code"}), 400
+
+
 @guardian_bp.route("/guardian/children/<int:child_id>/approve", methods=["POST"])
+@limiter.limit("20 per hour")
 def approve_child(child_id):
+    """Body: {"code": the 6 digits shown on the child's phone}."""
     guardian = current_guardian()
     if not guardian:
         return jsonify({"message": _("Unauthorized")}), 401
     child = child_for(guardian, child_id, "pending")
     if not child:
         return jsonify({"message": _("No account is waiting for your approval")}), 404
+    error = code_error(child)
+    if error:
+        return error
     set_child_status(child_id, "approved", guardian["id"])
     return jsonify({"message": _("{name} can now sell on Africycle", name=child["name"])}), 200
 
 
 @guardian_bp.route("/guardian/children/<int:child_id>/decline", methods=["POST"])
+@limiter.limit("20 per hour")
 def decline_child(child_id):
+    """Body: {"code": the 6 digits shown on the child's phone}."""
     guardian = current_guardian()
     if not guardian:
         return jsonify({"message": _("Unauthorized")}), 401
     child = child_for(guardian, child_id, "pending")
     if not child:
         return jsonify({"message": _("No account is waiting for your approval")}), 404
+    error = code_error(child)
+    if error:
+        return error
     set_child_status(child_id, "declined")
     return jsonify({"message": _("You declined the account of {name}", name=child["name"])}), 200
+
+
+@guardian_bp.route("/me/approval-code", methods=["POST"])
+@limiter.limit("10 per hour")
+def new_code():
+    """A child waiting for approval gets a new code (after too many wrong ones)."""
+    payload = get_user_from_token()
+    child = get_user_by_id(payload["userId"]) if payload else None
+    if not child:
+        return jsonify({"message": _("Unauthorized")}), 401
+    if not child.get("isMinor") or child.get("guardianStatus") != "pending":
+        return jsonify({"message": _("Forbidden")}), 403
+    code = new_approval_code()
+    set_approval_code(child["id"], code)
+    return jsonify({"approvalCode": code}), 200
 
 
 @guardian_bp.route("/guardian/children/<int:child_id>/activity", methods=["GET"])

@@ -61,10 +61,18 @@ AfriI18n.whenReady(function () {
     }
   });
 
+  // A new admin account waits for another admin's approval: only that notice shows
+  function showApprovalWait() {
+    const approvalPanel = document.getElementById("approvalPanel");
+    document.querySelectorAll("main > section").forEach((section) => {
+      section.hidden = section !== approvalPanel;
+    });
+  }
+
   // What each logged action is called on the page
   const ACTION_NAMES = {
     login: t("Logged in"), wrong_code: t("Wrong two-step code"), flag: t("Flagged an account"),
-    unflag: t("Removed a flag"), two_step_on: t("Turned on two-step login"),
+    unflag: t("Removed a flag"), admin_approved: t("Approved an admin"), two_step_on: t("Turned on two-step login"),
     two_step_reset: t("Reset two-step login"), recording_saved: t("Saved a voice recording"),
     recording_deleted: t("Deleted a voice recording")
   };
@@ -96,6 +104,10 @@ AfriI18n.whenReady(function () {
     try {
       const response = await authFetch("/admin/stats");
       const data = await readJson(response);
+      if (response.status === 403 && data.code === "admin_approval") {
+        showApprovalWait();
+        return false;
+      }
       if (response.status === 403 && data.code === "two_step_setup") {
         showTwoStepSetup();
         return false;
@@ -104,6 +116,7 @@ AfriI18n.whenReady(function () {
         showMessage(pageMsg, data.message || t("Stats could not be loaded."), "error");
         return;
       }
+      document.getElementById("secretWarning").hidden = !data.weakSecret;
       document.getElementById("statTotal").textContent = AfriI18n.formatNumber(data.totalUsers);
       document.getElementById("statSellers").textContent = AfriI18n.formatNumber(data.sellerCount);
       document.getElementById("statBuyers").textContent = AfriI18n.formatNumber(data.buyerCount);
@@ -160,13 +173,21 @@ AfriI18n.whenReady(function () {
     }
     usersBody.innerHTML = list.map((u) => {
       const isSelf = u.userId === user.userId;
-      const status = u.isFlagged
-        ? `<span class="status status-flagged" title="${escapeHtml(u.flagReason || "")}">${t("Flagged")}</span>`
-        : `<span class="status status-completed">${t("Active")}</span>`;
+      // An admin account nobody approved yet may not be who it claims: approve it, or flag it
+      const waiting = u.role === "admin" && !u.adminApproved;
+      let status = `<span class="status status-completed">${t("Active")}</span>`;
+      if (u.isFlagged) {
+        status = `<span class="status status-flagged" title="${escapeHtml(u.flagReason || "")}">${t("Flagged")}</span>`;
+      } else if (waiting) {
+        status = `<span class="status status-pending">${t("Waiting for approval")}</span>`;
+      }
       let action = "";
-      if (!isSelf && u.role === "admin" && u.totpEnabled) {
+      if (!isSelf && waiting && !u.isFlagged) {
+        action = `<button class="btn btn-primary" type="button" data-approve="${u.userId}">${t("Approve")}</button>
+                  <button class="btn btn-danger" type="button" data-flag="${u.userId}">${t("Flag")}</button>`;
+      } else if (!isSelf && u.role === "admin" && !waiting && u.totpEnabled) {
         action = `<button class="btn btn-quiet" type="button" data-reset="${u.userId}">${t("Reset two-step login")}</button>`;
-      } else if (!isSelf && u.role !== "admin") {
+      } else if (!isSelf && (u.role !== "admin" || waiting)) {
         action = u.isFlagged
           ? `<button class="btn btn-quiet" type="button" data-unflag="${u.userId}">${t("Remove flag")}</button>`
           : `<button class="btn btn-danger" type="button" data-flag="${u.userId}">${t("Flag")}</button>`;
@@ -190,11 +211,15 @@ AfriI18n.whenReady(function () {
     const flagBtn = event.target.closest("button[data-flag]");
     const unflagBtn = event.target.closest("button[data-unflag]");
     const resetBtn = event.target.closest("button[data-reset]");
-    if (!flagBtn && !unflagBtn && !resetBtn) return;
+    const approveBtn = event.target.closest("button[data-approve]");
+    if (!flagBtn && !unflagBtn && !resetBtn && !approveBtn) return;
 
     let path;
     let body = {};
-    if (resetBtn) {
+    if (approveBtn) {
+      if (!window.confirm(t("Approve this admin account? It will be able to see every account and flag them."))) return;
+      path = `/admin/approve-admin/${approveBtn.dataset.approve}`;
+    } else if (resetBtn) {
       if (!window.confirm(t("Reset two-step login for this admin? They will set it up again at their next login."))) return;
       path = `/admin/two-step/reset/${resetBtn.dataset.reset}`;
     } else if (flagBtn) {

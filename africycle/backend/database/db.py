@@ -198,6 +198,13 @@ ADDED_COLUMNS = {
         ("totpSecret", "TEXT"),
         ("totpEnabled", "INTEGER DEFAULT 0"),
         ("totpLastStep", "INTEGER"),
+        # A new admin account works only once an existing admin approves it (the first
+        # admin is approved at sign-up). Admins who existed before this are approved.
+        ("adminApproved", "INTEGER DEFAULT 0", "UPDATE users SET adminApproved = 1 WHERE role = 'admin'"),
+        # A child's 6-digit code, shown on the child's phone, that the guardian types to
+        # approve or decline; and the wrong codes typed since (5 make the child get a new one)
+        ("approvalCode", "TEXT"),
+        ("approvalCodeTries", "INTEGER DEFAULT 0"),
     ],
     "notifications": [
         ("locationUpdatedAt", "TEXT"),

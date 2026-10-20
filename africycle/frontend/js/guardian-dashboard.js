@@ -65,6 +65,10 @@ AfriI18n.whenReady(function () {
             <td data-label="${t("Name")}"><bdi>${escapeHtml(c.name)}</bdi></td>
             <td data-label="${t("Phone")}"><bdi>${escapeHtml(AfriPhone.format(c.phoneNumber))}</bdi></td>
             <td data-label="${t("You are their")}">${escapeHtml(RELATIONS[c.guardianRelation] || c.guardianRelation || "")}</td>
+            <td data-label="${t("Code")}">
+              <input class="code-input" type="text" inputmode="numeric" autocomplete="off" maxlength="7"
+                     data-code="${c.id}" aria-label="${t("Code from your child's phone")}" translate="no">
+            </td>
             <td>
               <div class="row-actions">
                 <button class="btn btn-primary" type="button" data-approve="${c.id}">${t("Approve")}</button>
@@ -72,7 +76,7 @@ AfriI18n.whenReady(function () {
               </div>
             </td>
           </tr>`).join("")
-      : `<tr><td colspan="4" class="empty-row">${t("No children are waiting for your approval.")}</td></tr>`;
+      : `<tr><td colspan="5" class="empty-row">${t("No children are waiting for your approval.")}</td></tr>`;
   }
 
   pendingBody.addEventListener("click", async (event) => {
@@ -80,12 +84,21 @@ AfriI18n.whenReady(function () {
     const decline = event.target.closest("button[data-decline]");
     const button = approve || decline;
     if (!button) return;
-    if (decline && !window.confirm(t("Decline this account? The child won't be able to sell on Africycle."))) return;
 
     const id = approve ? approve.dataset.approve : decline.dataset.decline;
+    // The 6 digits shown on the child's phone: they prove this is really the child's guardian
+    const codeInput = pendingBody.querySelector(`input[data-code="${id}"]`);
+    const code = codeInput ? codeInput.value.replace(/\D/g, "") : "";
+    if (code.length !== 6) {
+      showMessage(pageMsg, t("Type the 6-digit code shown on your child's phone first."), "error");
+      if (codeInput) codeInput.focus();
+      return;
+    }
+    if (decline && !window.confirm(t("Decline this account? The child won't be able to sell on Africycle."))) return;
     button.disabled = true;
     try {
-      const response = await authFetch(`/guardian/children/${id}/${approve ? "approve" : "decline"}`, { method: "POST" });
+      const response = await authFetch(`/guardian/children/${id}/${approve ? "approve" : "decline"}`,
+        { method: "POST", body: JSON.stringify({ code }) });
       const data = await readJson(response);
       showMessage(pageMsg, data.message || t("That didn't work. Try again."), response.ok ? "success" : "error");
       await loadChildren();

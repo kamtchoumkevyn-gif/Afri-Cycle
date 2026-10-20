@@ -165,6 +165,11 @@ def login_id(client, phone, role):
     return response.get_json()["userId"]
 
 
+def child_code(client, child):
+    """The approval code shown on the child's phone, for the guardian to type."""
+    return {"code": client.get("/me", headers=auth_header(child, "seller")).get_json()["approvalCode"]}
+
+
 def test_child_registration_needs_full_guardian_details(client):
     assert register_child(client, guardianName="").status_code == 400
     assert register_child(client, guardianPhone="123").status_code == 400
@@ -202,7 +207,7 @@ def test_only_the_named_guardian_can_approve(client):
     pending = client.get("/guardian/children", headers=auth_header(guardian, "guardian")).get_json()["pending"]
     assert [c["id"] for c in pending] == [child]
 
-    assert client.post(f"/guardian/children/{child}/approve",
+    assert client.post(f"/guardian/children/{child}/approve", json=child_code(client, child),
                        headers=auth_header(guardian, "guardian")).status_code == 200
     assert client.get("/seller/nearby-buyers?lat=4.05&lng=9.7",
                       headers=auth_header(child, "seller")).status_code == 200
@@ -214,7 +219,7 @@ def test_a_parent_with_a_buyer_account_can_supervise(client):
     register_child(client, guardian_phone="699000001")
     child = login_id(client, "677000010", "seller")
     parent = new_user("699000001", "buyer")
-    assert client.post(f"/guardian/children/{child}/approve",
+    assert client.post(f"/guardian/children/{child}/approve", json=child_code(client, child),
                        headers=auth_header(parent, "buyer")).status_code == 200
 
 
@@ -222,7 +227,7 @@ def test_declined_child_stays_blocked(client):
     register_child(client, guardian_phone="699000001")
     child = login_id(client, "677000010", "seller")
     guardian = new_user("699000001", "guardian")
-    assert client.post(f"/guardian/children/{child}/decline",
+    assert client.post(f"/guardian/children/{child}/decline", json=child_code(client, child),
                        headers=auth_header(guardian, "guardian")).status_code == 200
     response = client.get("/seller/nearby-buyers?lat=4.05&lng=9.7", headers=auth_header(child, "seller"))
     assert response.status_code == 403 and "declined" in response.get_json()["message"]
@@ -232,7 +237,8 @@ def test_guardian_sees_the_childs_deliveries_sales_and_messages(client):
     register_child(client, guardian_phone="699000001")
     child = login_id(client, "677000010", "seller")
     guardian = new_user("699000001", "guardian")
-    client.post(f"/guardian/children/{child}/approve", headers=auth_header(guardian, "guardian"))
+    client.post(f"/guardian/children/{child}/approve", json=child_code(client, child),
+                headers=auth_header(guardian, "guardian"))
 
     category = new_category()
     buyer = new_buyer_with_profile("677000002", 4.05, 9.70, 200, category, name="Marie")
@@ -302,6 +308,8 @@ def test_init_db_upgrades_a_database_made_before_these_features(tmp_path, monkey
                        (phone,))
     cursor.execute("INSERT INTO chat_messages (senderId, receiverId, messageText, createdAt) "
                    "VALUES (2, 1, 'Sent before read receipts existed', '2026-10-01T09:00:00')")
+    cursor.execute("INSERT INTO users (phoneNumber, passwordHash, name, role) "
+                   "VALUES ('+237699999999', 'x', 'Admin from before', 'admin')")
     conn.commit()
     conn.close()
 
@@ -324,7 +332,12 @@ def test_init_db_upgrades_a_database_made_before_these_features(tmp_path, monkey
         # new form another account already has, or that isn't a number, stays as it was
         cursor.execute("SELECT phoneNumber FROM users ORDER BY id")
         assert [row["phoneNumber"] for row in cursor.fetchall()] == [
-            "+237677000001", "+237677000002", "+237677000003", "677000004", "+237677000004", "not a number"]
+            "+237677000001", "+237677000002", "+237677000003", "677000004", "+237677000004", "not a number",
+            "+237699999999"]
+        # Admins from before admin approvals keep their admin tools; nobody else is an approved admin
+        cursor.execute("SELECT role, adminApproved FROM users ORDER BY id")
+        assert {(row["role"], row["adminApproved"]) for row in cursor.fetchall()} == {("seller", 0), ("buyer", 0),
+                                                                                    ("admin", 1)}
         cursor.execute("SELECT name FROM app_settings")
         assert [row["name"] for row in cursor.fetchall()] == ["upgrade:international-phone-numbers"]  # done once
         for table in db.TABLES[db.FIRST_RELEASE_TABLE_COUNT:]:  # photos, notifications, settings

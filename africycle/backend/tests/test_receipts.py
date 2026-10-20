@@ -114,7 +114,8 @@ def test_a_guardian_sees_the_receipts_of_their_childs_sales(client):
                                         "role": "seller"}).get_json()["userId"]
     guardian = new_user("699000001", "guardian", "Mama Awa")
     headers = auth_header(guardian, "guardian")
-    assert client.post(f"/guardian/children/{child}/approve", headers=headers).status_code == 200
+    code = registered.get_json()["approvalCode"]
+    assert client.post(f"/guardian/children/{child}/approve", headers=headers, json={"code": code}).status_code == 200
     receipt = record_purchase(client, buyer, child, category)
     add_photo(client, buyer, receipt)
 

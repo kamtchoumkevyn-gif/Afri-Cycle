@@ -127,6 +127,11 @@ def compress(response):
     return response
 
 
+# Render sets RENDER_GIT_COMMIT to the commit it deployed. /health shows it, so the
+# live-site check (.github/workflows/site.yml) knows when a change is really live.
+DEPLOYED_COMMIT = os.environ.get("RENDER_GIT_COMMIT", "").strip()
+
+
 @app.route("/health")
 def health():
     """Also checks the database, so a broken connection shows up as an error."""
@@ -138,7 +143,10 @@ def health():
     except Exception:
         app.logger.exception("Health check: database unreachable")
         return jsonify({"status": "error", "database": database}), 503
-    return jsonify({"status": "ok", "database": database}), 200
+    answer = {"status": "ok", "database": database}
+    if DEPLOYED_COMMIT:
+        answer["version"] = DEPLOYED_COMMIT
+    return jsonify(answer), 200
 
 
 # ---- Installable app: the service worker ----

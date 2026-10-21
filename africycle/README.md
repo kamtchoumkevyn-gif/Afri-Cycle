@@ -330,7 +330,7 @@ Routes marked *anyone* need no login; all others need the header `Authorization:
 | POST | /login | anyone | Get a token (phoneNumber, optional `country`, password, optional role). Admins with two-step login on also send `code`; without it the answer is 401 with `code: "two_step_required"`. A flagged account gets 403 with `code: "suspended"` |
 | GET | /me | logged in | Own account, guardian status, and number of supervised children. A child waiting for approval also gets `approvalCode` (the 6 digits the guardian types) and `approvalCodeBlocked` (true after 5 wrong codes) |
 | POST | /me/approval-code | a child waiting for approval | A new `approvalCode` (after too many wrong ones) |
-| GET | /health | anyone | `status` and which `database` is in use |
+| GET | /health | anyone | `status`, which `database` is in use, and on Render the deployed commit (`version`) |
 | GET | /.well-known/assetlinks.json | anyone | Names the Android app and its signing key, so Chrome opens it full screen |
 | GET | /download/android | anyone | The Android app (APK): the copy in `frontend/downloads/`, or a redirect to `ANDROID_APK_URL` |
 | GET | /material-categories | logged in | List materials for dropdowns |
@@ -393,7 +393,7 @@ Create a Web Service from the GitHub repo with:
 
 Render may run several copies of the app at once (its `WEB_CONCURRENCY` setting). They share one database and one notification key, and take turns asking the routing service, so that's fine.
 
-After a deploy, open `/health` on the site: `{"status": "ok", "database": "postgres"}` means the new version is live and connected to Neon. If the site keeps showing an older version, open the service's **Events** in Render: a failed deploy leaves the previous version running, and its log ends with the reason.
+After a deploy, open `/health` on the site: `{"status": "ok", "database": "postgres", "version": "…"}` means the site is up and connected to Neon, and `version` is the commit Render runs (its `RENDER_GIT_COMMIT`). After each push to `master`, GitHub's **Live site check** (Actions) waits until that commit, or a newer one, is live, then checks the site's files. If the site keeps showing an older version, open the service's **Events** in Render: a failed deploy leaves the previous version running, and its log ends with the reason.
 
 ### Keep data between deploys (free)
 

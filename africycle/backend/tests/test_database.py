@@ -40,6 +40,14 @@ def test_health_reports_which_database_answered(client):
     assert data == {"status": "ok", "database": "postgres" if using_postgres() else "sqlite"}
 
 
+def test_health_names_the_deployed_commit_on_render(client, monkeypatch):
+    """The live-site check waits until the site runs the commit it pushed."""
+    import app as app_module
+
+    monkeypatch.setattr(app_module, "DEPLOYED_COMMIT", "7212d28c0ffee")
+    assert client.get("/health").get_json()["version"] == "7212d28c0ffee"
+
+
 def test_health_fails_when_the_database_is_unreachable(client, monkeypatch):
     import app as app_module
 

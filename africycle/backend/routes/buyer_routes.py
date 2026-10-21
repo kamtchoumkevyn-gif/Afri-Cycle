@@ -4,7 +4,8 @@ import math
 import re
 
 from flask import Blueprint, Response, request, jsonify
-from auth_utils import get_user_from_token
+from access import came_to
+from auth_utils import get_user_from_token, guardian_block
 from models.buyer_price import get_price_for_buyer_and_category, set_price as set_price_model
 from models.material_photo import delete_photo, get_photo, save_photo
 from models.transaction import create_transaction
@@ -217,12 +218,14 @@ def log_transaction():
     if not weight_kg or price_per_kg is None:
         return jsonify({"message": _("Enter a weight above 0 kg, and a price from 0 to 1,000,000 FCFA per kg")}), 400
 
-    # A receipt names a real collector (not the buyer) and a real material
+    # A receipt names a real collector (not the buyer) who came to this buyer (a trip),
+    # can trade (not suspended, an under-18 approved by their guardian), and a real material
     seller = get_user_by_id(seller_id) if isinstance(seller_id, int) and not isinstance(seller_id, bool) else None
     known_material = (isinstance(material_category_id, int) and not isinstance(material_category_id, bool)
                       and get_category_by_id(material_category_id))
     if (not seller or seller["id"] == payload["userId"] or seller.get("role") not in ("seller", "both")
-            or not known_material):
+            or seller.get("isFlagged") or guardian_block(seller["id"])
+            or not came_to(seller["id"], payload["userId"]) or not known_material):
         return jsonify({"message": _("Choose the collector and material, then enter weight and price.")}), 400
 
     transaction_id = create_transaction(

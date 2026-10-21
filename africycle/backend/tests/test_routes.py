@@ -1,4 +1,4 @@
-from helpers import auth_header, new_user, new_category, new_buyer_with_profile
+from helpers import auth_header, came_by, new_user, new_category, new_buyer_with_profile
 from models.notification import create_notification
 
 
@@ -106,6 +106,7 @@ def test_buyer_log_transaction_and_history(client):
     buyer = new_user("677000002", "buyer")
     seller = new_user("677000001", "seller", "Jean")
     category = new_category()
+    came_by(seller, buyer, category)
     headers = auth_header(buyer, "buyer")
 
     bad = client.post("/buyer/log-transaction", json={"sellerId": seller}, headers=headers)
@@ -254,6 +255,7 @@ def test_admin_flag_and_unflag(client):
 def test_chat_send_and_read(client):
     seller = new_user("677000001", "seller", "Jean")
     buyer = new_user("677000002", "buyer", "Marie")
+    came_by(seller, buyer)
 
     sent = client.post("/chat/send", json={"receiverId": buyer, "messageText": "On my way"},
                        headers=auth_header(seller, "seller"))

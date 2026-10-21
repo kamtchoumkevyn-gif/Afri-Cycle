@@ -2,7 +2,7 @@
 and both sides of the sale (and an under-18 seller's guardian) can see it."""
 import base64
 
-from helpers import auth_header, new_category, new_user
+from helpers import auth_header, came_by, new_category, new_user
 
 TINY_PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
@@ -15,6 +15,8 @@ def data_url(raw, mime="image/png"):
 
 
 def record_purchase(client, buyer, seller, category, weight=10, price=150):
+    """The seller comes to the buyer (a trip), then the buyer records the purchase."""
+    came_by(seller, buyer, category)
     response = client.post("/buyer/log-transaction", json={
         "sellerId": seller, "materialCategoryId": category, "weightKg": weight, "pricePerKg": price
     }, headers=auth_header(buyer, "buyer"))
@@ -153,6 +155,7 @@ def test_lists_of_purchases_and_sales_count_the_photos(client):
 def test_a_purchase_names_a_real_collector_and_material(client):
     buyer, seller, category = people()
     other_buyer = new_user("677000003", "buyer", "Not a seller")
+    came_by(seller, buyer, category)
     headers = auth_header(buyer, "buyer")
     for seller_id, material in ((9999, category), (seller, 9999), (other_buyer, category), (buyer, category),
                                 (str(seller), category), (seller, str(category)), (True, category)):

@@ -11,7 +11,7 @@ import pytest
 import directions
 import i18n
 import webpush
-from helpers import auth_header, new_category, new_user
+from helpers import auth_header, came_by, new_category, new_user
 from test_navigation_alerts import Device, FakePushService, osrm_answer
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
@@ -230,6 +230,7 @@ def test_each_phone_is_notified_in_the_language_chosen_on_it(client, push_servic
     service = push_service()
     jean = new_user("677000001", "seller", "Jean")
     marie = new_user("677000002", "buyer", "Marie")
+    came_by(jean, marie)
     phones = {"fr": Device(), "sw": Device(), "ar": Device(), "en": Device()}
     marie_headers = auth_header(marie, "buyer")
     # The page says which language it shows; a page that doesn't is covered by its header

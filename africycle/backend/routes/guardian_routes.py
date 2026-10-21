@@ -64,6 +64,10 @@ def list_children():
         (phones.stored_form(guardian["phoneNumber"]),)
     )
     pending = [dict(row) for row in cursor.fetchall()]
+    # Numbers aren't confirmed, so this list may be seen by whoever registered the
+    # guardian's number first: it shows the end of the child's number, not all of it
+    for child in pending:
+        child["phoneEnd"] = (child.pop("phoneNumber") or "")[-2:]
     cursor.execute(
         f"""SELECT {CHILD_FIELDS} FROM users
             WHERE isMinor = 1 AND guardianStatus = 'approved' AND guardianId = ?
@@ -224,10 +228,9 @@ def child_messages(child_id, other_user_id):
     if not child_for(guardian, child_id, "approved"):
         return jsonify({"message": _("Child not found")}), 404
 
-    other = get_user_by_id(other_user_id)
+    # Only the child's real conversations: other ids say nothing about other accounts
+    thread = get_conversation(child_id, other_user_id)
+    other = get_user_by_id(other_user_id) if thread else None
     if not other:
         return jsonify({"message": _("User not found")}), 404
-    return jsonify({
-        "otherUserName": other["name"],
-        "messages": get_conversation(child_id, other_user_id),
-    }), 200
+    return jsonify({"otherUserName": other["name"], "messages": thread}), 200

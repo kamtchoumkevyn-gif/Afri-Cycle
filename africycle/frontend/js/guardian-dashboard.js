@@ -63,7 +63,7 @@ AfriI18n.whenReady(function () {
       ? pending.map((c) => `
           <tr>
             <td data-label="${t("Name")}"><bdi>${escapeHtml(c.name)}</bdi></td>
-            <td data-label="${t("Phone")}"><bdi>${escapeHtml(AfriPhone.format(c.phoneNumber))}</bdi></td>
+            <td data-label="${t("Phone")}"><bdi dir="ltr">… ${escapeHtml(c.phoneEnd || "")}</bdi></td>
             <td data-label="${t("You are their")}">${escapeHtml(RELATIONS[c.guardianRelation] || c.guardianRelation || "")}</td>
             <td data-label="${t("Code")}">
               <input class="code-input" type="text" inputmode="numeric" autocomplete="off" maxlength="7"

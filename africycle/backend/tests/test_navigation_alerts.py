@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 import directions
 import webpush
-from helpers import auth_header, new_buyer_with_profile, new_category, new_user
+from helpers import auth_header, came_by, new_buyer_with_profile, new_category, new_user
 from models.app_setting import get_setting
 from models.push_subscription import get_subscriptions_for_user
 
@@ -230,6 +230,8 @@ def test_unread_messages_are_counted_until_the_conversation_is_opened(client):
     jean = new_user("677000001", "seller", "Jean")
     marie = new_user("677000002", "buyer", "Marie")
     paul = new_user("677000003", "buyer", "Paul")
+    came_by(jean, marie)
+    came_by(jean, paul)
     for sender, text in ((marie, "Bonjour"), (marie, "Are you coming?"), (paul, "I pay 260 FCFA")):
         assert client.post("/chat/send", json={"receiverId": jean, "messageText": text},
                            headers=auth_header(sender, "buyer")).status_code == 201
@@ -416,6 +418,7 @@ def test_new_message_reaches_the_receivers_phone(client, push_service):
     service = push_service()
     jean = new_user("677000001", "seller", "Jean Mbarga")
     marie = new_user("677000002", "buyer", "Marie")
+    came_by(jean, marie)
     phone = Device()
     client.post("/push/subscribe", json={"endpoint": service.base + "/push/marie-phone", "keys": phone.keys()},
                 headers=auth_header(marie, "buyer"))
@@ -444,6 +447,7 @@ def test_device_that_turned_notifications_off_is_forgotten(client, push_service)
     service = push_service(answer=410)
     jean = new_user("677000001", "seller", "Jean")
     marie = new_user("677000002", "buyer", "Marie")
+    came_by(jean, marie)
     client.post("/push/subscribe", json={"endpoint": service.base + "/push/old-phone", "keys": Device().keys()},
                 headers=auth_header(marie, "buyer"))
     client.post("/chat/send", json={"receiverId": marie, "messageText": "Hello"}, headers=auth_header(jean, "seller"))
@@ -455,6 +459,7 @@ def test_unreachable_push_service_doesnt_break_sending(client, monkeypatch):
     monkeypatch.setenv("PUSH_TEST_ENDPOINT_PREFIX", "http://127.0.0.1:9/")  # nothing listens there
     jean = new_user("677000001", "seller", "Jean")
     marie = new_user("677000002", "buyer", "Marie")
+    came_by(jean, marie)
     client.post("/push/subscribe", json={"endpoint": "http://127.0.0.1:9/push/x", "keys": Device().keys()},
                 headers=auth_header(marie, "buyer"))
     response = client.post("/chat/send", json={"receiverId": marie, "messageText": "Hello"}, headers=auth_header(jean, "seller"))

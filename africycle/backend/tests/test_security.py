@@ -135,6 +135,7 @@ def test_log_transaction_rejects_bad_numbers(client):
     seller = new_user("677000001", "seller")
     buyer = new_user("677000002", "buyer")
     category = new_category()
+    create_notification(seller, buyer, category)  # the seller came to the buyer
     headers = auth_header(buyer, "buyer")
     for weight, price in (("-1", "100"), ("NaN", "100"), ("10", "-100"), ("10", "Infinity")):
         body = (f'{{"sellerId": {seller}, "materialCategoryId": {category}, '

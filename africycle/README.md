@@ -107,6 +107,10 @@ People under 18 can sell scrap with a parent or guardian watching over the accou
   - **New admins need approval.** The first admin is let in at sign-up. After that, an account registered with a listed number opens no admin tool, not even the two-step setup, until an existing admin taps **Approve** on its row. Until then it can be flagged, in case it isn't who it claims to be. Admins from before this rule stayed approved. Still remove numbers from `ADMIN_PHONE_NUMBERS` once their admin accounts exist.
   - **Guardians type the child's code.** Approving or declining a child needs the 6-digit code shown on the child's phone, so someone who registers the guardian's number first can't take over the child's account. 5 wrong codes stop the code until the child asks for a new one.
   - Confirming every number by SMS would also stop people signing up with someone else's number, at a cost per message.
+- **Who sees whom:** buyers with a buying point are public. Any seller sees their prices, buying point and phone number, and can message them. Everyone else (sellers, under-18 sellers, guardians and admins) is seen only by the people they deal with: the other side of a trip or a purchase, or someone they already exchanged messages with. Asking about anyone else answers "not found", so changing a number in a request reveals nothing about other accounts (`backend/access.py`; every route is tried as the wrong person in `tests/test_access.py`, which also fails when a new route with an id has no rule yet).
+  - A purchase can only name a collector who told that buyer they were coming, so nobody can put a sale on someone else's record.
+  - Suspended buyers disappear from sellers' lists.
+  - Until a guardian approves a child, the waiting list shows only the last two digits of the child's number, in case someone else registered the guardian's number.
 - **The login secret:** `JWT_SECRET_KEY` signs every login, so anyone who knows or guesses it can log in as anyone. Use a random one of at least 32 characters (for example, the output of `python -c "import secrets; print(secrets.token_urlsafe(48))"`). The admin page shows a red warning while it is shorter. Changing it logs everyone out and makes every admin's saved two-step key unreadable, so reset two-step login for all admins in Neon's SQL Editor as described under **Lost phone**, then each admin sets it up again.
 - **Libraries:** `requirements.txt` asks for versions without the known security holes (flask-cors 6.0 or later, gunicorn 22.0 or later), and Render installs the newest versions at each build. The map library, Leaflet 1.9.3, is served from `frontend/vendor/leaflet`; its pop-ups show HTML as given (CVE-2025-69993, not fixed in any release), so the app escapes every name and text in them.
 - **Pages** only run the site's own scripts (Content-Security-Policy), everything users type is escaped before it is shown, and database queries always use placeholders.
@@ -271,6 +275,7 @@ africycle/
     config.py          secret key, admin phone list, token lifetime
     extensions.py      rate limiter
     auth_utils.py      reads the logged-in user from the JWT, checked against the account
+    access.py          who may see or message whom (public buyers, people who deal with each other)
     totp.py            admins' two-step login codes (authenticator apps)
     database/db.py     SQLite or Postgres connection and all 13 tables
     database/upgrades.py  one-time changes to saved data (e.g. numbers to +237...)
@@ -335,16 +340,16 @@ Routes marked *anyone* need no login; all others need the header `Authorization:
 | POST | /buyer/material-photo | buyer | Upload a reference photo for a priced material (materialCategoryId, image as a data URL, 400 KB max) |
 | DELETE | /buyer/material-photo/<materialId> | buyer | Remove that photo |
 | GET | /photos/<id> | logged in | The photo itself |
-| POST | /buyer/log-transaction | buyer | Record a cash purchase (sellerId: a collector, materialCategoryId, weightKg, pricePerKg); answers with its `transactionId` |
+| POST | /buyer/log-transaction | buyer | Record a cash purchase (sellerId: a collector who told you they were coming, materialCategoryId, weightKg, pricePerKg); answers with its `transactionId` |
 | GET | /buyer/transaction-history | buyer | List own purchases, with `photoCount` |
 | GET | /receipts/<id> | the buyer, the seller, the seller's guardian, admin | A purchase's receipt: names, material, weight, price, total, date and `photoIds`; `canAddPhotos` for the buyer |
 | POST | /receipts/<id>/photos | the buyer who recorded it | Add a photo of the material (image as a data URL, 400 KB max, 3 per receipt) |
 | DELETE | /receipts/<id>/photos/<photoId> | the buyer who recorded it | Remove that photo |
 | GET | /receipt-photos/<id> | those who can see the receipt | The photo itself |
 | GET | /seller/sales | seller | Purchases buyers recorded from you, with `photoCount` |
-| GET | /seller/nearby-buyers | seller | Buyers within a radius, highest price first, with their coordinates |
-| GET | /seller/buyer-profile/<id> | seller | A buyer's hours, prices, and photos |
-| GET | /seller/contact-buyer/<id> | seller | A buyer's phone number |
+| GET | /seller/nearby-buyers | seller | Buyers within a radius, highest price first, with their coordinates (suspended buyers left out) |
+| GET | /seller/buyer-profile/<id> | seller | A buyer's hours, prices, and photos (buyers with a buying point only) |
+| GET | /seller/contact-buyer/<id> | seller | A buyer's phone number (buyers with a buying point only; anyone else answers 404) |
 | POST | /seller/notify-buyer | seller | Tell a buyer you are coming (buyerId, materialCategoryId; `onTheWay: true` starts the trip in transit) |
 | GET | /notifications | buyer or seller | Deliveries you sent or received, with where the buyer is (buyerLatitude, buyerLongitude) |
 | PATCH | /notifications/<id>/location | sending seller | Update live location |
@@ -352,12 +357,12 @@ Routes marked *anyone* need no login; all others need the header `Authorization:
 | GET | /directions?from=lat,lng&to=lat,lng&mode=foot | logged in | Road route (`mode`: foot or car, up to 300 km): distance in metres, duration in seconds, the line, and turn-by-turn steps. 30 a minute |
 | GET | /chat/conversations | logged in | People you have messaged, with unread counts |
 | GET | /chat/unread | logged in | Unread messages: total, per sender, and the newest one |
-| GET | /chat/messages/<userId> | logged in | Messages with one person; marks them read unless `?read=0` |
-| POST | /chat/send | logged in | Send a message (also notifies the receiver's phones) |
+| GET | /chat/messages/<userId> | logged in | Messages with one person you deal with (see Security, *Who sees whom*; anyone else answers 404); marks them read unless `?read=0` |
+| POST | /chat/send | logged in | Send a message to a buyer with a buying point or someone you deal with (also notifies the receiver's phones) |
 | GET | /push/key | logged in | The app's public key, which browsers need to turn notifications on |
 | POST | /push/subscribe | logged in | Turn notifications on for this device (the browser's PushSubscription as JSON, plus `language`, the language its notifications should come in) |
 | DELETE | /push/subscribe | logged in | Turn them off for this device (`endpoint`) |
-| GET | /guardian/children | guardian named by the child | Children waiting for approval and children supervised |
+| GET | /guardian/children | guardian named by the child | Children waiting for approval (name, relation and `phoneEnd`, the last two digits of their number) and children supervised |
 | POST | /guardian/children/<id>/approve, /guardian/children/<id>/decline | guardian named by the child | Let the child trade, or not. Body: `code`, the 6 digits shown on the child's phone; a wrong one answers 400 with `code: "approval_code"` |
 | GET | /guardian/children/<id>/activity | the child's guardian | The child's deliveries, sales, and conversations |
 | GET | /guardian/children/<id>/messages/<userId> | the child's guardian | One of the child's conversations, read only |

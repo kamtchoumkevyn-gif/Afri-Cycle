@@ -3,6 +3,7 @@ import math
 from flask import Blueprint, request, jsonify
 
 import alerts
+from access import account_id, is_public_buyer
 from auth_utils import get_user_from_token, guardian_block
 from database.db import get_connection
 from models.notification import create_notification, find_active_notification, update_status
@@ -57,10 +58,11 @@ def nearby_buyers():
         FROM buyer_profile bp
         JOIN users u ON u.id = bp.userId
         JOIN buyer_prices pr ON pr.buyerId = bp.userId
+        WHERE u.role IN ('buyer', 'both') AND COALESCE(u.isFlagged, 0) = 0
     """
     params = ()
     if material_category_id:
-        query += " WHERE pr.materialCategoryId = ?"
+        query += " AND pr.materialCategoryId = ?"
         params = (material_category_id,)
 
     cursor.execute(query, params)
@@ -91,6 +93,8 @@ def buyer_profile_view(buyer_id):
     payload, error = require_seller()
     if error:
         return error
+    if not is_public_buyer(buyer_id):  # never a seller's, child's, guardian's or admin's details
+        return jsonify({"message": _("Buyer not found")}), 404
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -147,16 +151,16 @@ def notify_buyer():
         return jsonify({"message": "buyerId and materialCategoryId are required"}), 400
     if buyer_id == payload["userId"]:
         return jsonify({"message": _("You cannot notify yourself")}), 400
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT role FROM users WHERE id = ?", (buyer_id,))
-    buyer = cursor.fetchone()
-    cursor.execute("SELECT id FROM material_category WHERE id = ?", (material_category_id,))
-    material = cursor.fetchone()
-    conn.close()
-    if not buyer or buyer["role"] not in ("buyer", "both"):
+    if not is_public_buyer(buyer_id):
         return jsonify({"message": _("Buyer not found")}), 404
+    material_category_id = account_id(material_category_id)
+    material = None
+    if material_category_id is not None:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM material_category WHERE id = ?", (material_category_id,))
+        material = cursor.fetchone()
+        conn.close()
     if not material:
         return jsonify({"message": _("Material not found")}), 404
 
@@ -188,6 +192,8 @@ def contact_buyer(buyer_id):
     payload, error = require_seller()
     if error:
         return error
+    if not is_public_buyer(buyer_id):  # only buyers' numbers are public, never anyone else's
+        return jsonify({"message": _("Buyer not found")}), 404
 
     conn = get_connection()
     cursor = conn.cursor()

@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from i18n import _
 
 import alerts
+from access import may_contact
 from auth_utils import get_user_from_token, guardian_block
 from database.db import get_connection
 from models.chat import (get_conversation, get_conversations_for_user, mark_conversation_read,
@@ -45,6 +46,9 @@ def messages(other_user_id):
     payload = get_user_from_token()
     if not payload:
         return jsonify({"message": _("Unauthorized")}), 401
+    # Someone you don't deal with answers like a missing account: no name, no age
+    if not may_contact(payload["userId"], other_user_id):
+        return jsonify({"message": _("User not found")}), 404
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -88,12 +92,9 @@ def send():
     if blocked:
         return blocked
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE id = ?", (receiver_id,))
-    exists = cursor.fetchone()
-    conn.close()
-    if not exists:
+    # Anyone can write to a buyer with a buying point; anyone else (a seller, a child,
+    # a guardian, an admin) only to the people they deal with (access.py)
+    if not may_contact(payload["userId"], receiver_id):
         return jsonify({"message": _("Receiver not found")}), 404
 
     message_id = send_message(payload["userId"], receiver_id, message_text)

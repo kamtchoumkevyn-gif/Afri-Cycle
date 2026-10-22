@@ -1037,6 +1037,15 @@ const AfriGuide = (function () {
   // recorded."... Progress ("Loading...") isn't said: what follows it is.
   const PROGRESS = /(\.\.\.|…)$/;
   let lastActionAt = 0; // the person's last touch or key
+
+  // A message's own words, without a button inside it ("Try again" is said when touched)
+  function messageWords(message) {
+    if (!message.querySelector("button")) return message.textContent;
+    const copy = message.cloneNode(true);
+    Array.prototype.forEach.call(copy.querySelectorAll("button"), (button) => button.parentNode.removeChild(button));
+    return copy.textContent;
+  }
+
   function watchMessages() {
     ["pointerdown", "keydown"].forEach((kind) => document.addEventListener(kind, () => {
       lastActionAt = Date.now();
@@ -1044,7 +1053,7 @@ const AfriGuide = (function () {
     const lastSaid = new WeakMap(); // message -> { text, at }
     const check = (message) => {
       if (!prefs.aloud || inGuide(message) || !visible(message)) return;
-      const text = clean(message.textContent);
+      const text = clean(messageWords(message));
       if (!text || PROGRESS.test(text)) return;
       const last = lastSaid.get(message);
       const now = Date.now();

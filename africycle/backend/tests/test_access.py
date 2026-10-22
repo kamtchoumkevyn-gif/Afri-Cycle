@@ -246,7 +246,7 @@ def test_another_guardian_sees_nothing_of_a_child(client):
 # Routes anyone may use without logging in
 PUBLIC = {
     "serve_index", "serve_frontend", "serve_asset_links", "serve_service_worker", "download_android_app",
-    "health", "auth_bp.login", "auth_bp.register", "material_bp.list_categories",
+    "health", "ping", "auth_bp.login", "auth_bp.register", "material_bp.list_categories",
     "guide_bp.recording_audio", "guide_bp.recorded_languages", "guide_bp.recordings_for",
 }
 

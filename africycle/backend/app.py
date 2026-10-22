@@ -149,6 +149,17 @@ def health():
     return jsonify(answer), 200
 
 
+@app.route("/ping")
+def ping():
+    """A quick answer that doesn't touch the database. GitHub visits it during the day so
+    Render's free server doesn't fall asleep (.github/workflows/keep-awake.yml), and the
+    pages ask it to know when the server answers again (frontend/js/api.js). The database
+    (Neon's free plan counts the hours it is awake) still sleeps between real visits."""
+    response = jsonify({"status": "ok"})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 # ---- Installable app: the service worker ----
 
 def is_saved_on_device(path):

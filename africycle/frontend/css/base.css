@@ -282,6 +282,13 @@ select:focus {
   color: var(--danger);
 }
 
+/* "Try again" under "Can't reach the server" (api.js) */
+.msg .msg-retry {
+  display: flex;
+  margin-top: 8px;
+  border-color: currentColor;
+}
+
 .msg-success {
   background-color: var(--green-tint);
   color: var(--green-dark);

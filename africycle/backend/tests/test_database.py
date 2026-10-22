@@ -40,6 +40,21 @@ def test_health_reports_which_database_answered(client):
     assert data == {"status": "ok", "database": "postgres" if using_postgres() else "sqlite"}
 
 
+def test_ping_answers_without_the_database(client, monkeypatch):
+    """GitHub visits /ping all day to keep the server awake: it must not keep Neon's
+    database awake too (its free plan counts the hours the database runs)."""
+    import app as app_module
+
+    def no_database():
+        raise AssertionError("/ping must not open the database")
+
+    monkeypatch.setattr(app_module, "get_connection", no_database)
+    response = client.get("/ping")
+    assert response.status_code == 200 and response.get_json() == {"status": "ok"}
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.mimetype == "application/json"  # the pages check it's Africycle answering
+
+
 def test_health_names_the_deployed_commit_on_render(client, monkeypatch):
     """The live-site check waits until the site runs the commit it pushed."""
     import app as app_module

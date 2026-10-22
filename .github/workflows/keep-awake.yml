@@ -1,0 +1,34 @@
+# Keeps the live site awake during the day in Cameroon.
+#
+# Render's free plan puts the server to sleep after 15 minutes without visits, and the
+# next visitor then waits about a minute, which on mobile data can look like "Can't reach
+# the server". Visiting /ping every 5 minutes from 06:00 to 22:00 Cameroon time (UTC+1)
+# keeps it awake. /ping doesn't touch the database, so Neon's database still sleeps
+# between real visits (its free plan counts the hours it runs).
+#
+# Render gives 750 free hours a month per account, shared by all its free services; this
+# keeps Africycle up about 16 hours a day, around 500 hours a month. GitHub may start a
+# scheduled run a few minutes late, and stops schedules in a public repository after 60
+# days without changes: Actions > Keep the site awake > Enable workflow turns it back on.
+# Also runs by hand: Run workflow.
+name: Keep the site awake
+
+on:
+  schedule:
+    - cron: "*/5 5-20 * * *" # every 5 minutes, 06:00 to 21:55 in Cameroon
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keep-awake
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Visit the site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Visit /ping
+        run: curl -fsS --max-time 100 --retry 2 --retry-delay 10 https://afri-cycle.onrender.com/ping
